@@ -1,16 +1,13 @@
 # Agentic Workflows Harness
 
-Centralized, portable GitHub Agentic Workflows (`gh-aw`) setup for:
+Centralized, portable GitHub Agentic Workflows (`gh-aw`) setup for AI-assisted issue triage and tiered fixing.
 
-- AI issue triage (classify, label, detect duplicates, ask for missing info)
-- Tiered automated fixing:
-  - **Small / minor**: agent proposes PR; eligible for auto-merge after checks (no human review required)
-  - **Medium**: agent proposes PR; human review required
-  - **Complex**: mandatory design discussion / approval before any code is written
-- Strong prompt-injection protection via `gh-aw` safe-outputs + threat detection
-- Reusable across multiple repositories with local fine-tuning
+Two independent axes control autonomy and blast radius:
 
-This repository is the **source of truth**. Consuming repos install workflows with `gh aw add` and import shared components. Local customizations (labels, paths, complexity heuristics, models, credit caps) are preserved on update via 3-way merge.
+- **Complexity** — measures design impact. Higher complexity reduces autonomy and requires more human design input before code is written.
+- **Risk** — measures blast radius. Higher risk tightens constraints on what may be changed automatically and requires stronger review gates.
+
+The two axes are assessed and labeled separately so each can be tuned independently per repository.
 
 ## Quick Start (Consuming Repo)
 
@@ -21,17 +18,17 @@ gh extension install github/gh-aw
 # Install the triage workflow (pin to a tag in production)
 gh aw add vscheuber/agentic-workflows/issue-triage@main
 
-# Or install the fixer routing workflow
+# Install the routing workflow
 gh aw add vscheuber/agentic-workflows/tiered-fixer@main
 
-# Compile and push the generated .lock.yml files
+# Compile and commit the generated lock files
 gh aw compile
 git add .github/workflows
 git commit -m "Add agentic workflows"
 git push
 ```
 
-Update later with:
+Update later while preserving local customizations:
 ```bash
 gh aw update
 ```
@@ -39,79 +36,86 @@ gh aw update
 ## Architecture
 
 ### Layers
-1. **Triage** (`workflows/issue-triage.md`) — runs on new/edited issues. Classifies complexity, type, priority. Uses safe-outputs for labels and comments.
-2. **Routing / Fixer** (`workflows/tiered-fixer.md`) — reacts to triage labels.
-   - Small → assign to Copilot cloud agent + enable auto-merge path
-   - Medium → assign to Copilot cloud agent (reviews still required)
-   - Complex → comment requesting design discussion; do **not** assign an agent until a human adds `design-approved`
-3. **Shared components** (`shared/`) — safety policy, label sets, MCP configs, prompt fragments. Imported by workflows so they stay DRY.
+1. **Triage** (`workflows/issue-triage.md`) — runs on new or edited issues. Classifies type, priority, complexity, and risk. Applies labels and posts a summary via safe-outputs.
+2. **Routing** (`workflows/tiered-fixer.md`) — reacts to the complexity and risk labels and decides the next action:
+   - High complexity without `design-approved` → request design discussion only
+   - High risk → assign agent only under tight constraints; human review always required
+   - Low complexity + low risk → highest autonomy path (agent PR eligible for auto-merge after checks)
+   - Other combinations → agent assignment with appropriate review requirements
+3. **Shared components** (`shared/`) — reusable safety defaults, axis definitions, and prompt fragments.
 
-### Safety Model (from today’s discussion)
-- Agent job is **read-only**.
-- All writes go through validated **safe-outputs** (allowlists, max counts, sanitization).
-- Automatic **threat detection** job scans proposed outputs and patches for prompt injection, secret leaks, and malicious changes before anything is applied.
-- Network firewall, compile-time validation, and credit/turn caps.
-- Auto-merge for small fixes is optional and should be paired with strict CI + independent reviewer if possible. Residual risk remains; prefer human review for anything non-mechanical.
+### Safety Model
+- The agent job runs read-only.
+- All writes occur through validated safe-outputs (allowlists, maxima, sanitization).
+- A threat-detection job scans proposed outputs and patches for prompt injection, secret leaks, and malicious changes before any write is applied.
+- Network access, credit budgets, and execution time are capped.
+- Auto-merge is reserved for the lowest complexity and risk combinations and still depends on repository branch protection and required status checks.
 
-## Recommended Labels (create these in consuming repos)
+## Recommended Labels
 
-| Label | Purpose |
-|-------|---------|
-| `complexity/small` | Eligible for auto-fix without human review |
-| `complexity/medium` | Agent fix + human review required |
-| `complexity/complex` | Design discussion mandatory before code |
-| `design-approved` | Human signal that design is accepted; unblocks agent |
-| `needs-info` | Missing reproduction / details |
-| `duplicate` | Strong duplicate match |
-| `priority/p0` … `priority/p2` | Priority |
-| `ready-for-agent` | Explicit go-ahead |
+Create these in consuming repositories:
+
+| Label | Axis | Meaning |
+|-------|------|---------|
+| `complexity/low` | Complexity | Mechanical or minimal design impact; high autonomy possible |
+| `complexity/medium` | Complexity | Bounded design decisions; moderate autonomy |
+| `complexity/high` | Complexity | Significant design impact; design discussion required before code |
+| `risk/low` | Risk | Limited blast radius |
+| `risk/medium` | Risk | Normal code changes |
+| `risk/high` | Risk | Security, auth, data integrity, availability, or public API impact; tight constraints |
+| `design-approved` | Gate | Human signal that design discussion is complete |
+| `needs-info` | Quality | Missing reproduction steps or details |
+| `duplicate` | Quality | Strong duplicate match |
+| `priority/p0` … `priority/p2` | Priority | Urgency |
+| `ready-for-agent` | Gate | Explicit go-ahead for agent assignment |
+
+## Routing Matrix (default)
+
+| Complexity \ Risk | Low | Medium | High |
+|-------------------|-----|--------|------|
+| Low | Agent + auto-merge eligible | Agent + human review | Agent + human review + tight path limits |
+| Medium | Agent + human review | Agent + human review | Human review required; agent only if explicitly approved |
+| High | Design discussion first | Design discussion first | Design discussion first; extra review gates |
+
+Repositories may override the matrix locally.
 
 ## Fine-tuning per Repository
 
-In a consuming repo you can:
-- Override labels, allowed paths, or credit caps in the local workflow markdown.
-- Pass parameters via `imports: ... with:` if the shared component declares `import-schema`.
-- Add repo-specific instructions in the markdown body after the import.
-- Keep the core safety and routing logic in this central repo.
+Consuming repositories can:
+- Adjust the allowed label lists and credit caps in the local workflow files.
+- Add repository-specific instructions in the markdown body.
+- Import shared components and pass parameters where `import-schema` is declared.
+- Keep core routing and safety logic in this central repository.
 
-Example local override sketch:
-```yaml
-imports:
-  - uses: vscheuber/agentic-workflows/shared/safety-policy.md@main
-    with:
-      max_ai_credits: 50
-      allowed_paths: ["src/**", "lib/**"]
-```
+Local edits are preserved by the 3-way merge performed by `gh aw update`.
 
 ## Structure
 
 ```
 .
 ├── README.md
-├── aw.yml                          # package manifest (optional)
+├── aw.yml
 ├── workflows/
 │   ├── issue-triage.md
 │   └── tiered-fixer.md
 └── shared/
     ├── safety-policy.md
-    ├── complexity-labels.md
+    ├── axes.md
     └── prompts/
         └── triage-core.md
 ```
 
-## Cost & Ops Notes
+## Operational Notes
 
-- Inference is billed via the chosen engine (Copilot AI Credits by default, or provider API keys).
-- Set `max-ai-credits` and `timeout-minutes` in every workflow.
-- Public repos use free Actions minutes; private repos draw from the plan.
-- Monitor with `gh aw logs` and `gh aw audit`.
+- Inference cost depends on the chosen engine (Copilot AI Credits by default or a provider API key).
+- Set `max-ai-credits` and `timeout-minutes` on every workflow.
+- Monitor usage with `gh aw logs` and `gh aw audit`.
+- Public repositories use free GitHub Actions minutes; private repositories consume plan minutes.
 
 ## Next Steps
 
-1. Create the recommended labels in target repositories.
+1. Create the recommended labels in each target repository.
 2. Install and compile the workflows.
-3. Configure branch protection / auto-merge rules for the small tier (bypass or auto-approve only for tightly constrained cases).
-4. Optionally add an independent reviewer agent workflow.
-5. Point engines at a self-hosted inference endpoint if desired (OpenAI-compatible base URL).
-
-See the individual workflow files for the concrete prompts and safe-output configurations.
+3. Configure branch protection and auto-merge rules that respect the risk and complexity labels.
+4. Optionally add an independent reviewer workflow for medium and high-risk changes.
+5. Point the engine at a self-hosted OpenAI-compatible endpoint if required.
