@@ -1,0 +1,10 @@
+manifest-version: "1"
+name: Agentic Workflows Harness
+description: Centralized issue triage and tiered fixing workflows with safe-outputs.
+emoji: "🤖"
+min-version: v0.40.0
+files:
+  - workflows/issue-triage.md
+  - workflows/tiered-fixer.md
+  - shared/safety-policy.md
+  - shared/complexity-labels.md
