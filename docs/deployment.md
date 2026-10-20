@@ -11,6 +11,7 @@ Step-by-step instructions for installing the agentic-workflows harness in a cons
   ```
 - Issues enabled on the target repository (Settings → General → Features → Issues).
 - For organization repositories, the Grok (by xAI) GitHub App (or equivalent token) must be installed on the organization.
+- A Copilot engine credential (see below).
 
 ## 1. Install the workflow files
 
@@ -78,18 +79,34 @@ git push
 
 Workflows must declare read-only GitHub permissions (`contents: read`, `issues: read`). All writes (comments, labels, creating or closing issues, opening pull requests) go through `safe-outputs`. Declaring `issues: write` (or similar) fails compilation in strict mode.
 
-### Compile warning you may see
+### Label filters
 
-```
-issue-worker.md: warning: workflow_dispatch workflow has no concurrency.job-discriminator
-```
+Each gate workflow listens only for its own signal label via `names:` under the trigger. Other label events are skipped and do not start the agent.
 
-This is non-blocking. It means that if two people manually dispatch `issue-worker` at the same time, gh-aw may treat them as the same concurrency group and cancel one. Normal issue events are unaffected. To silence it, add a discriminator under the workflow front matter:
+| Workflow | Runs when labeled |
+|----------|-------------------|
+| `issue-triage` | `issue-worker-ready` |
+| `plan-worker` | `issue-triage-handoff` |
+| `plan-triage` | `plan-worker-ready` |
+| `pr-worker` | `plan-triage-handoff` |
+| `pr-triage` | `pr-worker-ready` (on the pull request) |
 
-```yaml
-concurrency:
-  job-discriminator: ${{ github.run_id }}
-```
+### Copilot engine credential
+
+With `engine: copilot`, each run needs a Copilot credential. Choose one:
+
+1. **Repository secret** (simplest for a single user or when org billing is not enabled):
+   ```bash
+   gh secret set COPILOT_GITHUB_TOKEN --repo owner/repo
+   ```
+   Use a fine-grained or classic token that can call Copilot.
+
+2. **Organization billing** (preferred for an org):
+   - Enable centralized Copilot billing for the organization.
+   - Allow Copilot CLI to be billed to the organization.
+   - Add `copilot-requests: write` to the workflow permissions and recompile.
+
+Without one of these, activation fails with `None of the following secrets are set: COPILOT_GITHUB_TOKEN`.
 
 ## 4. Create labels
 
@@ -150,6 +167,7 @@ Low/low pull requests that carry `pr-triage-handoff` and pass required checks ca
 ## 7. Verify
 
 - Open a test issue (or dispatch `issue-worker` with an issue number).
+- Confirm only `issue-worker` starts. Other gates stay idle until their signal label is applied.
 - Confirm the issue receives `issue-worker-ready`, then `issue-triage-handoff` (or `backlog` / `needs-info`).
 - For an actionable issue, confirm a plan comment appears with the `<!-- gh-aw-workflow-id: plan-worker -->` marker and that complexity/risk labels are applied.
 - For a low/low item, confirm a pull request is opened and can auto-merge after checks.
@@ -195,6 +213,7 @@ git push
 ## Checklist
 
 - [ ] Issues enabled
+- [ ] `COPILOT_GITHUB_TOKEN` set (or org Copilot billing enabled)
 - [ ] Workflow `.md` files added (including `related-repo-closer` if split-repo routing is used)
 - [ ] Optional `.github/agentic-workflows/` config files added only if needed
 - [ ] Issue template present (or optional completeness override)
