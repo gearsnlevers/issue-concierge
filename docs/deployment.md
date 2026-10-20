@@ -66,6 +66,9 @@ notes: |
 When the worker links an issue it creates a canonical issue in the related repository, cross-links both sides, and applies the internal label `related-repo` to the original. The original stays open until the canonical issue is closed, at which point `related-repo-closer` closes it.
 
 
+
+The related-repo closer runs in the repository that owns the fix and writes to the original issue. `SIGNAL_TOKEN` cannot do that. Set `github-token` on `add-comment`, `add-labels`, and `close-issue` to the secret named in this repository's `related-repos.md` for the other repository.
+
 ### Release coupling
 
 Some split-repo projects need a release of the repository where the issue was reported before the reporter is done. Frodo is the example: a library fix is not usable from the CLI until a CLI release pins that library version. Releases are created by a maintainer. The harness does not create them.
