@@ -230,12 +230,12 @@ Then recompile (`gh aw compile`) and commit the lock file.
 
 ### Frodo
 
-Two tokens, one in each direction.
+Two tokens, one in each direction. The form links pre-fill the name, description, resource owner (`rockcarver`), a 90-day expiration, and Issues: Read and write. Repository access cannot be pre-filled: on each form, choose **Only select repositories** and select only the target listed below.
 
-| Worker repo | Creates issues in | Secret name | Token repository access |
-|-------------|-------------------|-------------|-------------------------|
-| `rockcarver/frodo-cli` | `rockcarver/frodo-lib` | `FRODO_LIB_ISSUES_TOKEN` | `rockcarver/frodo-lib` only |
-| `rockcarver/frodo-lib` | `rockcarver/frodo-cli` | `FRODO_CLI_ISSUES_TOKEN` | `rockcarver/frodo-cli` only |
+| Worker repo | Creates issues in | Secret name | Select only this repository | Form |
+|-------------|-------------------|-------------|-----------------------------|------|
+| `rockcarver/frodo-cli` | `rockcarver/frodo-lib` | `FRODO_LIB_ISSUES_TOKEN` | `rockcarver/frodo-lib` | [create](https://github.com/settings/personal-access-tokens/new?name=FRODO_LIB_ISSUES_TOKEN&description=Create+issues+in+rockcarver/frodo-lib+from+the+frodo-cli+issue+worker&target_name=rockcarver&expires_in=90&issues=write) |
+| `rockcarver/frodo-lib` | `rockcarver/frodo-cli` | `FRODO_CLI_ISSUES_TOKEN` | `rockcarver/frodo-cli` | [create](https://github.com/settings/personal-access-tokens/new?name=FRODO_CLI_ISSUES_TOKEN&description=Create+issues+in+rockcarver/frodo-cli+from+the+frodo-lib+issue+worker&target_name=rockcarver&expires_in=90&issues=write) |
 
 Store each secret on the worker repository (or as an org secret visible to that repository). The `secret` field in that repo's `related-repos.md` must match, and `issue-worker.md` must reference `${{ secrets.<that name> }}`.
 
