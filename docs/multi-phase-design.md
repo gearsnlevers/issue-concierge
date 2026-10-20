@@ -18,6 +18,8 @@ Triage hand-off signals use `<triage-name>-handoff`.
 
 Blocking labels use the form `<thing>-required`. Removing the label is the human signal to continue.
 
+Labels are internal. Reporters are never asked to add, remove, or interpret them. All guidance to reporters is given in plain-language comments.
+
 Two independent axes are applied by the triage agents:
 
 - **Complexity** — design impact / autonomy
@@ -36,20 +38,20 @@ gh-aw injects a non-spoofable marker:
 
 ## Human interaction
 
-Reporter interaction stays in the issue phase.
+Reporter interaction stays in the issue phase and is conducted entirely through comments.
 
-When information is missing the issue worker posts an explicit request and issue triage applies `needs-info` (no hand-off).  
-A later comment from the reporter re-triggers the issue worker, which re-analyzes and re-applies `issue-worker-ready`. Issue triage then runs again and can clear `needs-info` and emit `issue-triage-handoff` once the issue is complete. Reporter replies therefore do not permanently stall the pipeline.
+When information is missing the issue worker posts an explicit, plain-language request. Issue triage applies the internal `needs-info` label and does not hand off.  
+A later comment from the reporter re-triggers the issue worker. Issue triage then re-evaluates and can clear `needs-info` and emit `issue-triage-handoff` once the issue is complete.
 
-The plan phase is a classification prerequisite. For high complexity it adds `plan-approval-required` and stops. A maintainer removes that label to resume.
+The plan phase is a classification prerequisite. For high complexity it adds the internal label `plan-approval-required` and stops. A maintainer removes that label to resume.
 
 Maintainer interaction on the actual change happens in the PR phase.
 
 ## Gates
 
 ### 1. Issue gate
-**Worker** → analysis comment + `issue-worker-ready` (also on reporter comments)  
-**Triage** → quality/priority labels. Emits `issue-triage-handoff` when actionable; applies `needs-info` otherwise. Can clear `needs-info` on re-evaluation.
+**Worker** → plain-language analysis comment + internal `issue-worker-ready`  
+**Triage** → internal quality/priority labels. Emits `issue-triage-handoff` when actionable; applies `needs-info` otherwise. Can clear `needs-info` on re-evaluation.
 
 ### 2. Plan gate
 **Worker** → rough plan + `plan-worker-ready`  
