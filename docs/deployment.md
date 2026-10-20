@@ -54,11 +54,14 @@ this: owner/this-repo
 related:
   - role: library          # free-form
     repo: owner/other-repo
+    secret: OTHER_REPO_ISSUES_TOKEN   # Actions secret that can create issues there
     when: |
       When an issue reported here should be tracked in the other repository.
 notes: |
   Optional free text.
 ```
+
+`secret` is optional. Set it when the worker should open the canonical issue in that repository. Each related repository can name a different secret.
 
 When the worker links an issue it creates a canonical issue in the related repository, cross-links both sides, and applies the internal label `related-repo` to the original. The original stays open until the canonical issue is closed, at which point `related-repo-closer` closes it.
 
@@ -169,21 +172,18 @@ Early gates use a light model and tight turn limits. Later gates keep the defaul
 
 If a repo uses `related-repos.md` and the worker creates the canonical issue in another repository, the default `GITHUB_TOKEN` cannot do that. It is scoped to the repository that runs the workflow.
 
-Create a fine-grained personal access token (or a GitHub App token) with:
+For each related repository that should receive issues, create a fine-grained token (or a GitHub App token) with Issues: Read and write on that repository. Store it under the secret name listed in that entry's `secret` field. The name is chosen by the deployment; it is not fixed by the harness.
 
-- Repository access: the related repositories (for example `rockcarver/frodo-lib`)
-- Permissions: Issues: Read and write
-
-Store it as an Actions secret named `HARNESS_CROSS_REPO_TOKEN` (org secret if several repos need it).
-
-In that repo's `issue-worker.md`:
+Then set `create-issue` in that repo's `issue-worker.md` to match:
 
 ```yaml
 create-issue:
   max: 1
   allowed-repos: ["owner/related-repo"]
-  github-token: ${{ secrets.HARNESS_CROSS_REPO_TOKEN }}
+  github-token: ${{ secrets.OTHER_REPO_ISSUES_TOKEN }}
 ```
+
+`create-issue` accepts one token. If several related repositories need different tokens, either give one token access to all of them and reuse that secret name, or use a custom safe-output job that selects the token from the `secret` field.
 
 ## 4. Create labels
 

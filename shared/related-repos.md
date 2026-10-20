@@ -12,6 +12,7 @@ this: owner/repo
 related:
   - role: library          # free-form role name
     repo: owner/other-repo
+    secret: OTHER_REPO_ISSUES_TOKEN   # Actions secret used to create issues there
     when: |
       When an issue reported here should be tracked in the other repository.
 
@@ -22,7 +23,9 @@ notes: |
 ### Rules
 - `related` is a list (zero or more entries).
 - Each entry needs `role` and `repo`; `when` is recommended.
-- No fixed key names beyond `this`, `related`, `role`, `repo`, `when`, `notes`.
+- `secret` is the name of the Actions secret that can create issues in that repository.
+  Each related repository can name its own secret. The same name may be reused when one token covers several repositories.
+- No other fixed key names beyond `this`, `related`, `role`, `repo`, `secret`, `when`, `notes`.
 
 ## Linked-issue behavior
 
