@@ -74,6 +74,23 @@ git push
 
 `gh aw compile` generates the lock files that GitHub Actions actually runs. Re-run it whenever the markdown sources change.
 
+### Permissions
+
+Workflows must declare read-only GitHub permissions (`contents: read`, `issues: read`). All writes (comments, labels, creating or closing issues, opening pull requests) go through `safe-outputs`. Declaring `issues: write` (or similar) fails compilation in strict mode.
+
+### Compile warning you may see
+
+```
+issue-worker.md: warning: workflow_dispatch workflow has no concurrency.job-discriminator
+```
+
+This is non-blocking. It means that if two people manually dispatch `issue-worker` at the same time, gh-aw may treat them as the same concurrency group and cancel one. Normal issue events are unaffected. To silence it, add a discriminator under the workflow front matter:
+
+```yaml
+concurrency:
+  job-discriminator: ${{ github.run_id }}
+```
+
 ## 4. Create labels
 
 The workflows apply and react to specific labels. Create them once per repository:
