@@ -93,6 +93,23 @@ Create these in consuming repositories:
 
 Repositories may override the matrix locally.
 
+## Repository configuration
+
+The harness relies on ordinary GitHub branch protection and auto-merge. Recommended settings for the default branch:
+
+| Setting | Value | Reason |
+|---------|-------|--------|
+| Require a pull request before merging | On | Direct pushes bypass the PR gate |
+| Required approving reviews | 1 | Human review for medium/high; set to 0 only for pure low/low auto-merge experiments |
+| Dismiss stale pull request approvals | On | New commits invalidate prior approval |
+| Require status checks to pass | On (your CI) | Auto-merge waits for green checks |
+| Require conversation resolution | Optional | Cleaner review threads |
+| Allow force pushes | Off | Protects history |
+| Allow deletions | Off | Protects the branch |
+| Auto-merge | Enabled | Lets eligible low/low PRs merge when checks and reviews are satisfied |
+
+Also create the labels listed above. Without the labels the workflows cannot signal or classify.
+
 ## Fine-tuning per Repository
 
 Consuming repositories can:
@@ -136,6 +153,6 @@ Local edits are preserved by the 3-way merge performed by `gh aw update`.
 
 1. Create the recommended labels in each target repository.
 2. Install and compile the workflows.
-3. Configure branch protection and auto-merge rules.
+3. Configure branch protection and auto-merge as described above.
 4. Optionally inject an environment agent (see `shared/env-agent-contract.md` and `docs/multi-phase-design.md`).
 5. Point engines at a self-hosted OpenAI-compatible endpoint if required.
