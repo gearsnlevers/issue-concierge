@@ -9,3 +9,4 @@ files:
   - shared/safety-policy.md
   - shared/complexity.md
   - shared/risk.md
+  - docs/multi-phase-design.md
