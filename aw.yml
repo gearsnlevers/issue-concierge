@@ -1,12 +1,16 @@
 manifest-version: "1"
 name: Agentic Workflows Harness
-description: Centralized issue triage and tiered fixing with independent complexity and risk axes.
+description: Centralized multi-gate issue triage and tiered fixing.
 emoji: "🤖"
 min-version: v0.40.0
 files:
   - workflows/issue-triage.md
+  - workflows/plan-worker.md
+  - workflows/plan-triage.md
+  - workflows/pr-triage.md
   - workflows/tiered-fixer.md
   - shared/safety-policy.md
   - shared/complexity.md
   - shared/risk.md
+  - shared/env-agent-contract.md
   - docs/multi-phase-design.md
