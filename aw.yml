@@ -10,6 +10,7 @@ files:
   - workflows/plan-triage.md
   - workflows/pr-worker.md
   - workflows/pr-triage.md
+  - workflows/related-repo-closer.md
   - shared/safety-policy.md
   - shared/complexity.md
   - shared/risk.md
