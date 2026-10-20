@@ -2,6 +2,7 @@
 description: |
   Issue gate worker. Analyzes completeness and actionability.
   Guides reporters only through comments; never mentions internal labels.
+  Reads optional repository-specific completeness criteria.
 on:
   issues:
     types: [opened, reopened, edited]
@@ -39,17 +40,21 @@ engine: copilot
 - workflow_dispatch with `issue_number` → analyze that issue.
 - Otherwise do nothing.
 
+## Completeness criteria
+If the file `.github/agentic-workflows/issue-completeness.md` exists in the repository, read it and use those criteria to judge whether the issue is meaningful and what to ask for.
+If the file is absent, use generic criteria: reproduction steps, expected vs actual behavior, and environment.
+
 ## Analysis comment (reporter-facing)
 Read the issue body **and every comment**.
 Post a short, plain-language comment. Do not mention labels, gates, workflows, or any internal harness terms.
 
 Cover, in ordinary language:
-- Whether the report is clear enough to act on
+- Whether the report is clear enough to act on (according to the criteria above)
 - Apparent duplicates
 - Age and recent activity if relevant
 
 ### Missing information
-If details are absent, end with a direct request, for example:
+If required details are absent, end with a direct request that lists only the items still needed, for example:
 
 > To move this forward, please add:
 > - Steps to reproduce
