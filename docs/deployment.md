@@ -29,7 +29,19 @@ Alternatively, copy the six `.md` files from `workflows/` in this repository int
 
 Commit the files on a branch and open a pull request.
 
-## 2. Compile
+## 2. Optional: issue completeness criteria
+
+To tell the issue worker what makes an issue meaningful in this repository, copy the template:
+
+```bash
+mkdir -p .github/agentic-workflows
+curl -fsSL https://raw.githubusercontent.com/vscheuber/agentic-workflows/main/shared/issue-completeness.md \
+  -o .github/agentic-workflows/issue-completeness.md
+```
+
+Edit the file with repository-specific requirements (required fields, environment details, when to treat an issue as backlog or closeable). The issue worker reads this file when it exists and uses it instead of generic criteria. If the file is absent, generic criteria are used.
+
+## 3. Compile
 
 After the workflow files are on the default branch (or on the branch you will merge):
 
@@ -42,7 +54,7 @@ git push
 
 `gh aw compile` generates the lock files that GitHub Actions actually runs. Re-run it whenever the markdown sources change.
 
-## 3. Create labels
+## 4. Create labels
 
 The workflows apply and react to specific labels. Create them once per repository:
 
@@ -75,7 +87,7 @@ gh label create "complexity/low" --color 0e8a16 --description "Mechanical or min
 # … repeat for the remaining labels
 ```
 
-## 4. Branch protection / rulesets
+## 5. Branch protection / rulesets
 
 Recommended settings on the default branch:
 
@@ -91,13 +103,13 @@ Recommended settings on the default branch:
 
 These can be applied with classic branch protection or with a ruleset. Required reviews stay at 0 so low-complexity / low-risk pull requests can auto-merge after checks pass. Human review for medium and high items is enforced by the label gates and by maintainers, not by a blanket review requirement.
 
-## 5. Enable auto-merge (optional)
+## 6. Enable auto-merge (optional)
 
 Repository Settings → General → Pull Requests → Allow auto-merge.
 
 Low/low pull requests that carry `pr-triage-handoff` and pass required checks can then merge without further intervention.
 
-## 6. Verify
+## 7. Verify
 
 - Open a test issue (or dispatch `issue-worker` with an issue number).
 - Confirm the issue receives `issue-worker-ready`, then `issue-triage-handoff` (or `backlog` / `needs-info`).
@@ -128,6 +140,7 @@ Local edits to the installed workflow files are preserved by the 3-way merge per
 
 - [ ] Issues enabled
 - [ ] Workflow `.md` files added
+- [ ] Optional `.github/agentic-workflows/issue-completeness.md` added and edited
 - [ ] `gh aw compile` run and lock files committed
 - [ ] All recommended labels created
 - [ ] Branch protection / ruleset configured (require PR, status checks, no force-push)
