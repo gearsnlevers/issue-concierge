@@ -1,7 +1,7 @@
 ---
 description: |
-  Triages new and reopened issues. Assesses completeness, sets type, priority,
-  complexity, and risk labels, detects duplicates, and posts a concise report.
+  Issue gate. Assesses completeness and actionability. Applies quality and
+  priority labels only. Does not assign complexity or risk of a fix.
 on:
   issues:
     types: [opened, reopened, edited]
@@ -20,17 +20,11 @@ safe-outputs:
       - priority/p0
       - priority/p1
       - priority/p2
-      - complexity/low
-      - complexity/medium
-      - complexity/high
-      - risk/low
-      - risk/medium
-      - risk/high
       - duplicate
       - invalid
       - spam
-      - ready-for-agent
-    max: 6
+      - ready-for-plan
+    max: 5
   add-comment:
     max: 1
   set-issue-type:
@@ -38,43 +32,30 @@ safe-outputs:
   threat-detection:
     enabled: true
     continue-on-error: false
-max-ai-credits: 20
-timeout-minutes: 8
+max-ai-credits: 10
+timeout-minutes: 5
 engine: copilot
 ---
 
-# Issue Triage Assistant
+# Issue Gate
 
-Analyze issue #${{ github.event.issue.number }} and help maintainers understand and route it.
+Analyze issue #${{ github.event.issue.number }}.
 Base every conclusion on the issue, its discussion, and repository context. Do not invent missing details.
 
-## 1. Gather context
+## Analyze
 1. Read the issue and its comments.
-2. Inspect available labels and issue types.
-3. Search open and recent closed issues for the same symptoms, request, or expected behavior.
-4. Consult repository documentation when it clarifies expected behavior.
+2. Check for duplicates among open and recent closed issues.
+3. Decide whether the report is complete enough to act on (reproduction steps, expected vs actual, environment).
 
-## 2. Classify (two independent axes)
+If the repository defines an environment agent and reproduction would materially improve the assessment, you may note that in the comment. Do not attempt the reproduction yourself.
 
-**Complexity** (design impact / autonomy):
-- `complexity/low` — mechanical change, minimal design choice, narrow scope
-- `complexity/medium` — some design decisions but bounded
-- `complexity/high` — architectural, cross-cutting, or unclear requirements; design discussion required before code
+## Triage (this step)
+Apply only quality and priority labels from the allowed list.
+Do **not** apply complexity or risk labels.
 
-**Risk** (blast radius):
-- `risk/low` — limited blast radius (docs, tests, pure internal changes with good coverage)
-- `risk/medium` — normal code changes
-- `risk/high` — touches security, authentication, authorization, data integrity, availability, or public API surface
+- Missing details → `needs-info` + one concise clarifying comment.
+- Strong duplicate → `duplicate` + reference.
+- Complete and actionable → `ready-for-plan`.
+- Set type and priority as appropriate.
 
-Also classify:
-- Type: bug | feature | question | documentation | invalid | spam
-- Priority: p0 | p1 | p2
-
-## 3. Outputs (via safe-outputs only)
-- Add matching labels from the allowed list (at most one complexity label and one risk label).
-- If required details are missing, add `needs-info` and ask one concise clarifying question.
-- If a strong duplicate exists, add `duplicate` and reference the other issue.
-- You may add `ready-for-agent` when the issue is complete and the combination of complexity and risk is suitable for an agent.
-- Post at most one summary comment that states the complexity label, the risk label, confidence, and the recommended next step.
-
-Do not assign agents or create pull requests in this workflow.
+Post at most one summary comment.
