@@ -11,7 +11,7 @@ Two independent axes are applied by the triage agents:
 
 ### 1. Issue gate
 **Worker (Analyze)**  
-Read the issue and comments. Assess completeness and actionability. Optionally request the environment agent if the repository provides one and reproduction would add signal.
+Read the issue and comments. Assess completeness and actionability.
 
 **Triage**  
 Apply quality and priority labels (`needs-info`, `duplicate`, `priority/*`, `ready-for-plan`).  
@@ -31,23 +31,24 @@ High complexity stops here pending `design-approved`.
 
 ### 3. PR gate
 **Worker (Analyze and code)**  
-Implement the change (or the portion allowed by the plan triage). May call the environment agent for test generation or validation.
+Implement the change (or the portion allowed by the plan triage).
 
 **Triage**  
 Re-evaluate complexity and risk against the real diff. Prefer deterministic path and size rules where possible.  
 Output refined labels; may request changes or block auto-merge.
 
-### Environment agent (optional, injectable, used by workers)
-Not a gate itself. A repository-specific capability that any worker may call when deeper integration is required:
+### Environment agent (optional, injectable)
+Not a gate. A repository-specific capability that **any worker agent in any phase** may invoke if the consuming repository has defined it.
 
-- Attempt reproduction
-- Generate or update tests (Polly.js recordings/snapshots in frodo-lib / frodo-cli, or equivalent in other repos)
+Typical uses:
+- Attempt reproduction of a reported issue
+- Generate or update tests (Polly.js recordings/snapshots in frodo-lib / frodo-cli, or equivalent elsewhere)
 - Interact with external systems or MCP servers
 
-The harness defines only the contract. The consuming repository supplies the implementation or omits it. If omitted, workers proceed with reduced confidence and later triages reflect that.
+The harness defines only the contract (how a worker requests the call, what inputs are passed, what outputs are expected). The consuming repository supplies the implementation or omits it entirely. If omitted, workers proceed without it and later triages reflect the reduced confidence.
 
 ### Merge
-Normally non-agentic. Branch protection, required checks, and auto-merge rules act on the labels left by the PR triage. A separate agentic merge step is optional and usually unnecessary.
+Normally non-agentic. Branch protection, required checks, and auto-merge rules act on the labels left by the PR triage.
 
 ## Cost control
 - Issue gate: small credit budget, short timeout.
