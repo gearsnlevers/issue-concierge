@@ -15,5 +15,6 @@ files:
   - shared/risk.md
   - shared/env-agent-contract.md
   - shared/issue-completeness.md
+  - shared/related-repos.md
   - docs/multi-phase-design.md
   - docs/deployment.md
