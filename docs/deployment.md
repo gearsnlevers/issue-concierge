@@ -93,20 +93,60 @@ Each gate workflow listens only for its own signal label via `names:` under the 
 
 ### Copilot engine credential
 
-With `engine: copilot`, each run needs a Copilot credential. Choose one:
+With `engine: copilot`, each run needs a Copilot credential. Without it, activation fails with `None of the following secrets are set: COPILOT_GITHUB_TOKEN`.
 
-1. **Repository secret** (simplest for a single user or when org billing is not enabled):
-   ```bash
-   gh secret set COPILOT_GITHUB_TOKEN --repo owner/repo
-   ```
-   Use a fine-grained or classic token that can call Copilot.
+#### Option A — fine-grained personal access token (works today)
 
-2. **Organization billing** (preferred for an org):
-   - Enable centralized Copilot billing for the organization.
-   - Allow Copilot CLI to be billed to the organization.
-   - Add `copilot-requests: write` to the workflow permissions and recompile.
+The token **must** be a fine-grained PAT owned by a **personal account** that has a Copilot subscription. The Copilot Requests permission is not available on organization-owned tokens or classic PATs.
 
-Without one of these, activation fails with `None of the following secrets are set: COPILOT_GITHUB_TOKEN`.
+1. Open the pre-filled form:  
+   https://github.com/settings/personal-access-tokens/new?name=COPILOT_GITHUB_TOKEN&description=GitHub+Agentic+Workflows+-+Copilot+engine+authentication&user_copilot_requests=read
+2. Confirm:
+   - **Resource owner** is your user account, not an organization.
+   - **Repository access** is **Public repositories**. This setting is required for the Copilot Requests permission to appear; the token can still be used from private organization repositories once stored as a secret.
+   - **Account permissions → Copilot Requests** is **Read**.
+3. Generate the token and copy the value. GitHub shows it only once.
+
+##### Where to store it
+
+| Scope | When to use | How |
+|-------|-------------|-----|
+| **Organization secret** | Several repos in the same org (recommended for rockcarver) | One place to rotate. Restrict visibility to the repos that run the harness. |
+| **Repository secret** | A single user-owned repo, or when you do not want the token shared | Set it on each repository. |
+
+Organization secret (selected repositories):
+
+```bash
+gh secret set COPILOT_GITHUB_TOKEN --org rockcarver --repos frodo-lib,frodo-cli
+```
+
+All organization repositories:
+
+```bash
+gh secret set COPILOT_GITHUB_TOKEN --org rockcarver --visibility all
+```
+
+Repository secret:
+
+```bash
+gh secret set COPILOT_GITHUB_TOKEN --repo owner/repo
+```
+
+**Recommendation**
+
+- **Organization repositories** (rockcarver): use an **organization secret**, restricted to the repos that run the harness. One rotation point, no per-repo setup. The token is still tied to the person who created it and their Copilot plan; if that person leaves, create a new token from another member and update the org secret.
+- **User repositories** (vscheuber): use **repository secrets**. There is no organization to share a secret with. Setting the same token on each repo is fine for a small set.
+
+Usage is billed to the account that owns the token.
+
+#### Option B — organization Copilot billing (no PAT)
+
+If the organization has centralized Copilot billing and allows Copilot CLI to be billed to the organization:
+
+- Add `copilot-requests: write` to the workflow permissions.
+- Recompile.
+
+No `COPILOT_GITHUB_TOKEN` is required. Prefer this when available, because it is not tied to a personal account.
 
 ## 4. Create labels
 
@@ -213,7 +253,7 @@ git push
 ## Checklist
 
 - [ ] Issues enabled
-- [ ] `COPILOT_GITHUB_TOKEN` set (or org Copilot billing enabled)
+- [ ] `COPILOT_GITHUB_TOKEN` set (org secret for orgs, repo secret for user repos) or org Copilot billing enabled
 - [ ] Workflow `.md` files added (including `related-repo-closer` if split-repo routing is used)
 - [ ] Optional `.github/agentic-workflows/` config files added only if needed
 - [ ] Issue template present (or optional completeness override)
