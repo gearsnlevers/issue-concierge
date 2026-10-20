@@ -1,10 +1,12 @@
 ---
 description: |
-  Issue gate worker. Analyzes completeness and actionability of a new or existing issue.
-  Considers age and full comment history for long-lived issues.
+  Issue gate worker. Analyzes completeness and actionability.
+  Re-runs when the reporter comments so missing information does not permanently stall the pipeline.
 on:
   issues:
     types: [opened, reopened, edited]
+  issue_comment:
+    types: [created]
   workflow_dispatch:
     inputs:
       issue_number:
@@ -32,8 +34,9 @@ engine: copilot
 # Issue Worker
 
 ## Target issue
-- If triggered by an issue event, analyze issue #${{ github.event.issue.number }}.
-- If triggered by workflow_dispatch and `issue_number` is provided, analyze that issue.
+- Issue event → analyze issue #${{ github.event.issue.number }}.
+- Comment event → analyze the issue the comment belongs to (ignore bot comments).
+- workflow_dispatch with `issue_number` → analyze that issue.
 - Otherwise do nothing.
 
 ## Analysis
@@ -42,13 +45,22 @@ Produce a short analysis comment covering:
 - Completeness (reproduction steps, expected vs actual, environment)
 - Apparent duplicates
 - Whether the report is still actionable
-- Age and activity: how long the issue has been open, whether recent comments show continued interest or have gone stale
+- Age and activity
+
+### Missing information
+If required details are absent, end the comment with an explicit request, for example:
+
+> Please provide: reproduction steps, expected vs actual behavior, and environment (version / OS).
+
+Do not leave the ask implicit.
 
 ### Long-lived issues
-- If the issue is old, has little recent activity, and is not pressing (no active user impact, no security concern, no broken main path), note that it is a candidate for closure or rejection rather than indefinite retention.
-- If it is a valid bug or a reasonable enhancement that is simply not urgent, note that it may belong in the backlog rather than proceeding to a plan immediately.
-- Do not invent a roadmap. Base the suggestion only on the issue content, comments, and obvious severity.
+- Old, inactive, non-pressing issues → note as candidates for closure.
+- Valid but non-urgent → note as backlog candidates.
+- Do not invent a roadmap.
 
 If the repository defines an environment agent and a quick reproduction check would help, you may request it. Otherwise proceed without it.
 
-Add the label `issue-worker-ready` when the analysis comment is posted.
+## Signaling
+Always add (or re-add) the label `issue-worker-ready` after posting the analysis.
+This lets issue triage re-evaluate. A later reporter comment simply causes another analysis and another triage pass; the pipeline is not permanently stalled.
