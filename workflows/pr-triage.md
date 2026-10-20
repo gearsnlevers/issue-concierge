@@ -1,6 +1,6 @@
 ---
 description: |
-  PR gate triage. Runs when the coding agent signals completion with pr-ready.
+  PR gate triage. Runs when the coding agent signals completion with pr-worker-ready.
 on:
   pull_request:
     types: [labeled]
@@ -30,7 +30,7 @@ engine: copilot
 
 # PR Triage
 
-Triggered when a pull request receives the label `pr-ready`.
+Triggered when a pull request receives the label `pr-worker-ready`.
 That label is the completion signal from the PR worker / coding agent.
 
 Examine the pull request diff.
