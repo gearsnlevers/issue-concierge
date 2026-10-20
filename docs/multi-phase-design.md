@@ -1,54 +1,67 @@
-# Multi-Phase Triage Design
+# Multi-Gate Design
 
-Classification of complexity and risk is most accurate when performed against concrete artifacts (a plan, a diff). Early stages should stay cheap and limited.
+Each stage is a gate. A worker agent produces an artifact; a separate triage agent classifies that artifact and decides whether the next gate may open. Classification is never mixed into the same step that creates the artifact (except possibly the first issue gate).
 
-## Phases
+Two independent axes are applied by the triage agents:
 
-### 1. Issue triage (always on, cheap)
-- Trigger: issue opened / edited
-- Purpose: validity, completeness, priority, type, duplicate detection
-- Does **not** assign complexity or risk of a fix
-- Output: labels such as `needs-info`, `duplicate`, `priority/*`, `ready-for-plan`
-- Cost: low (small credit budget, short timeout)
+- **Complexity** — design impact / autonomy
+- **Risk** — blast radius
 
-### 2. Environment agent (optional, custom, injectable)
-- Trigger: label such as `needs-reproduction` or explicit command, only if the consuming repo supplies the capability
-- Purpose: deeper integration tasks that require a richer environment than a standard GitHub Actions sandbox
-  - Attempt reproduction of reported issues
-  - Generate or update tests (including recordings / snapshots)
-  - Interact with external systems, configuration stores, or MCP servers
-- Implementation is repository-specific. Examples:
-  - frodo-lib / frodo-cli: Polly.js recordings and snapshots for configuration-management tests
-  - Other repos: whatever local or self-hosted environment they provide
-- The harness only defines the contract (inputs, expected outputs, how it is invoked). The consuming repo injects the actual agent or workflow.
-- If the repo does not provide this capability, the phase is skipped and later stages proceed with reduced confidence.
+## Gates
 
-### 3. Plan triage
-- Trigger: after issue triage (and optionally after environment agent)
-- Purpose: produce or accept a short plan, then assign the first complexity and risk labels
-- High complexity stops here pending `design-approved`
-- Output: plan comment or file + `complexity/*` and `risk/*` labels
+### 1. Issue gate
+**Worker (Analyze)**  
+Read the issue and comments. Assess completeness and actionability. Optionally request the environment agent if the repository provides one and reproduction would add signal.
 
-### 4. PR triage
-- Trigger: pull request opened or synchronized
-- Purpose: re-evaluate complexity and risk against the real diff; apply deterministic path and size rules where possible
-- Can invoke the same environment agent when complex test generation or validation is required
-- Output: refined labels; may request changes or block auto-merge
+**Triage**  
+Apply quality and priority labels (`needs-info`, `duplicate`, `priority/*`, `ready-for-plan`).  
+Does **not** assign complexity or risk of a fix.
 
-### 5. Merge (usually non-agentic)
-- Handled by branch protection, required checks, and auto-merge rules based on the labels left by PR triage
-- A separate agentic merge step is optional and usually unnecessary for a first version
+This gate may be collapsed into a single agent for cost reasons; the later gates must not be.
+
+### 2. Plan gate
+Runs for almost every issue that passes the issue gate with enough actionable detail.
+
+**Worker (Analyze and create the plan)**  
+Produce a short, cheap, rough plan: expected touch points, rough size, notable risks, and whether a design discussion is likely. No code.
+
+**Triage**  
+Assign the first `complexity/*` and `risk/*` labels against the plan.  
+High complexity stops here pending `design-approved`.
+
+### 3. PR gate
+**Worker (Analyze and code)**  
+Implement the change (or the portion allowed by the plan triage). May call the environment agent for test generation or validation.
+
+**Triage**  
+Re-evaluate complexity and risk against the real diff. Prefer deterministic path and size rules where possible.  
+Output refined labels; may request changes or block auto-merge.
+
+### Environment agent (optional, injectable, used by workers)
+Not a gate itself. A repository-specific capability that any worker may call when deeper integration is required:
+
+- Attempt reproduction
+- Generate or update tests (Polly.js recordings/snapshots in frodo-lib / frodo-cli, or equivalent in other repos)
+- Interact with external systems or MCP servers
+
+The harness defines only the contract. The consuming repository supplies the implementation or omits it. If omitted, workers proceed with reduced confidence and later triages reflect that.
+
+### Merge
+Normally non-agentic. Branch protection, required checks, and auto-merge rules act on the labels left by the PR triage. A separate agentic merge step is optional and usually unnecessary.
 
 ## Cost control
-Issue triage stays small and fast. Later phases run only when earlier gates pass and only when the repository has enabled them. Credit caps and timeouts are set per workflow.
+- Issue gate: small credit budget, short timeout.
+- Plan worker: still cheap; only a rough plan.
+- Later workers and triages run only when earlier gates open them.
+- Credit caps and timeouts are set per workflow.
 
 ## Research note: environment agent options
-Thoroughly research how a consuming repository can supply a richer agent environment for reproduction and test generation. Options to evaluate:
+Thoroughly research how a consuming repository can supply a richer agent environment. Options to evaluate:
 
 - Self-hosted GitHub Actions runners with pre-installed tools, credentials, and MCP servers
 - Reusable workflow or composite action that the harness calls and that the consuming repo overrides
-- External agent (OpenHands, custom container, etc.) invoked via a webhook or `workflow_dispatch`
+- External agent (OpenHands, custom container, etc.) invoked via webhook or `workflow_dispatch`
 - gh-aw engine configuration that points at a self-hosted OpenAI-compatible endpoint with additional tools
-- How to keep the agent read-only or tightly sandboxed even when it needs limited write access for test fixtures
+- How to keep the agent tightly constrained even when it needs limited write access for test fixtures
 
-The harness must remain usable in repos that provide none of these capabilities.
+The harness must remain usable in repositories that provide none of these capabilities.
