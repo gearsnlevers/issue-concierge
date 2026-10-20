@@ -26,16 +26,13 @@ engine: copilot
 
 # PR Worker
 
-Triggered after plan triage has applied complexity and risk labels.
-Decides whether a coding agent may be assigned.
+Triggered when an issue receives `plan-triage-handoff`.
+Assign the Copilot cloud agent with these instructions:
 
-## Rules
-- `complexity/high` and no `design-approved` → comment requesting design discussion; do not assign.
-- Otherwise assign the Copilot cloud agent with these instructions:
-  - Implement the change described in the plan.
-  - When the pull request is opened (or updated and ready for review), add the label `pr-worker-ready` to the pull request.
-  - That label is the signal that the PR triage gate may run.
-  - If the repository defines an environment agent, you may request it for test generation.
-  - Human review is required unless both complexity and risk are low.
+- Implement the change described in the plan.
+- When the pull request is opened (or updated and ready for review), add the label `pr-worker-ready` to the pull request.
+- That label is the signal that the PR triage gate may run.
+- If the repository defines an environment agent, you may request it for test generation.
+- Human review is required unless both complexity and risk are low.
 
 Do not write code in this workflow; only route to the coding agent and tell it how to signal completion.
