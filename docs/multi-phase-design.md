@@ -21,6 +21,30 @@ Two independent axes are applied by the triage agents:
 - **Complexity** — design impact / autonomy
 - **Risk** — blast radius
 
+## Plan comment identity
+
+The plan lives as a single comment on the issue.  
+gh-aw injects a non-spoofable marker into every comment created by a workflow:
+
+```html
+<!-- gh-aw-workflow-id: plan-worker -->
+```
+
+`plan-triage` must classify only the comment that contains that exact marker.  
+Any other comment, even one that looks like a plan, is ignored.
+
+## Human intervention
+
+Low-complexity + low-risk issues are expected to move through the gates with little or no human comment.
+
+For medium, high-complexity, or high-risk items, humans may comment on the plan before coding begins.  
+The harness does not currently auto-revise the plan. Two practical patterns:
+
+1. **Human removes `plan-worker-ready` (or adds a `needs-plan-revision` label)** and the plan worker is re-triggered. The worker reads the new human comments and posts an updated plan comment (again carrying the workflow-id marker).
+2. **A short, explicit waiting period** is enforced by the consuming repository (for example a label such as `awaiting-human-input` that blocks `plan-triage` until a maintainer removes it or a timeout workflow clears it).
+
+No hard-coded time window is built into the central harness. Timing policy is left to the consuming repository so that simple issues are not delayed and complex issues can wait as long as the maintainers require.
+
 ## Gates
 
 ### 1. Issue gate
