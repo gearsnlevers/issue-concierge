@@ -37,7 +37,7 @@ engine: copilot
 
 # Issue Triage
 
-Triggered when an issue receives `analysis-ready`.
+Triggered when an issue receives `issue-worker-ready`.
 Read the analysis comment produced by the issue worker.
 
 Apply only quality and priority labels.
