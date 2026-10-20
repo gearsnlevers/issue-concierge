@@ -2,24 +2,27 @@
 
 Optional, repository-specific guidance for the issue worker.
 
-Copy this file to `.github/agentic-workflows/issue-completeness.md` in a consuming repository and edit it. The issue worker reads that file when it exists and uses it to decide what makes an issue meaningful in that repository.
+## Preferred source: issue template
 
-If the file is absent, the worker falls back to generic criteria (reproduction steps, expected vs actual, environment).
+By default the issue worker should treat the repository’s issue template as the definition of a meaningful issue.
 
-## Example (edit per repository)
+Look for, in order:
 
-An issue is meaningful when it includes:
+1. `.github/ISSUE_TEMPLATE/` (any `.md` or `.yml` form templates)
+2. `.github/ISSUE_TEMPLATE.md`
+3. This file, if a consuming repository has copied and customized it to `.github/agentic-workflows/issue-completeness.md`
 
-- Clear description of the problem or requested change
-- Steps to reproduce (for bugs) or acceptance criteria (for enhancements)
+Use the fields, checklists, and required sections from the template to decide what is missing and what to ask the reporter for.
+
+## Fallback
+
+If no issue template and no custom completeness file exist, use generic criteria:
+
+- Clear description
+- Steps to reproduce (bugs) or acceptance criteria (enhancements)
 - Expected vs actual behavior
-- Environment details relevant to this project (version, OS, configuration flags, etc.)
-- For this repository specifically: …
+- Environment (version, OS)
 
-An issue may be treated as not urgent when:
+## Custom override
 
-- …
-
-An issue may be closed when:
-
-- …
+A repository may still place a tailored file at `.github/agentic-workflows/issue-completeness.md` when the issue template is absent or insufficient. That file takes precedence over the generic fallback but is not required when a good issue template already exists.
