@@ -22,10 +22,11 @@ gh aw add vscheuber/agentic-workflows/issue-worker@main \
          vscheuber/agentic-workflows/plan-worker@main \
          vscheuber/agentic-workflows/plan-triage@main \
          vscheuber/agentic-workflows/pr-worker@main \
-         vscheuber/agentic-workflows/pr-triage@main
+         vscheuber/agentic-workflows/pr-triage@main \
+         vscheuber/agentic-workflows/related-repo-closer@main
 ```
 
-Alternatively, copy the six `.md` files from `workflows/` in this repository into `.github/workflows/` of the target.
+Alternatively, copy the seven `.md` files from `workflows/` in this repository into `.github/workflows/` of the target.
 
 Commit the files on a branch and open a pull request.
 
@@ -38,12 +39,12 @@ The files under `shared/` in the harness repository are templates. They are **no
 | `complexity.md` | No | Override the default complexity axis definitions used by plan triage |
 | `risk.md` | No | Override the default risk axis definitions used by plan triage |
 | `issue-completeness.md` | No | Override completeness criteria (issue template is preferred by default) |
-| `related-repos.md` | No | Enable split-repo transfer suggestions (see schema below) |
+| `related-repos.md` | No | Enable linked-issue routing for split-repo projects |
 | `env-agent-contract.md` | No | Contract for an optional injectable environment agent |
 | `safety-policy.md` | No | Reference only; not read by workflows |
 
 If `complexity.md` or `risk.md` are absent, plan triage uses built-in defaults.  
-If `related-repos.md` is absent, no transfer suggestions are made.
+If `related-repos.md` is absent, no linked-issue routing occurs.
 
 ### related-repos.md schema
 
@@ -53,14 +54,12 @@ related:
   - role: library          # free-form
     repo: owner/other-repo
     when: |
-      When to suggest this repository.
+      When an issue reported here should be tracked in the other repository.
 notes: |
   Optional free text.
 ```
 
-- `related` is a list (zero or more entries).
-- Each entry needs `role` and `repo`; `when` is recommended.
-- No fixed `primary` or `library` keys — use whatever roles you need.
+When the worker links an issue it creates a canonical issue in the related repository, cross-links both sides, and applies the internal label `related-repo` to the original. The original stays open until the canonical issue is closed, at which point `related-repo-closer` closes it.
 
 ## 3. Compile
 
@@ -90,6 +89,7 @@ The workflows apply and react to specific labels. Create them once per repositor
 | `plan-approval-required` | `b60205` | Remove to resume after high-complexity classification |
 | `needs-info` | `d4c5f9` | Missing reproduction steps or details |
 | `backlog` | `c5def5` | Valid but not urgent; do not plan or implement now |
+| `related-repo` | `fbca04` | Non-canonical issue; tracked in a related repository |
 | `issue-worker-ready` | `c2e0c6` | Issue worker finished |
 | `issue-triage-handoff` | `bfd4f2` | Issue triage finished; plan worker may run |
 | `plan-worker-ready` | `c2e0c6` | Plan worker finished |
@@ -136,6 +136,7 @@ Low/low pull requests that carry `pr-triage-handoff` and pass required checks ca
 - Confirm the issue receives `issue-worker-ready`, then `issue-triage-handoff` (or `backlog` / `needs-info`).
 - For an actionable issue, confirm a plan comment appears with the `<!-- gh-aw-workflow-id: plan-worker -->` marker and that complexity/risk labels are applied.
 - For a low/low item, confirm a pull request is opened and can auto-merge after checks.
+- For a split-repo case, confirm a canonical issue is created, the original receives `related-repo`, and the original is closed when the canonical issue closes.
 
 ## Updating deployments
 
@@ -145,7 +146,7 @@ Overwrite the workflow files on the PR branch and push:
 
 ```bash
 git checkout add-agentic-workflows   # or whatever branch the PR uses
-for wf in issue-worker issue-triage plan-worker plan-triage pr-worker pr-triage; do
+for wf in issue-worker issue-triage plan-worker plan-triage pr-worker pr-triage related-repo-closer; do
   curl -fsSL "https://raw.githubusercontent.com/vscheuber/agentic-workflows/main/workflows/${wf}.md" \
     -o ".github/workflows/${wf}.md"
 done
@@ -177,11 +178,11 @@ git push
 ## Checklist
 
 - [ ] Issues enabled
-- [ ] Workflow `.md` files added
+- [ ] Workflow `.md` files added (including `related-repo-closer` if split-repo routing is used)
 - [ ] Optional `.github/agentic-workflows/` config files added only if needed
 - [ ] Issue template present (or optional completeness override)
 - [ ] `gh aw compile` run and lock files committed
-- [ ] All recommended labels created
+- [ ] All recommended labels created (including `related-repo`)
 - [ ] Branch protection / ruleset configured (require PR, status checks, no force-push)
 - [ ] Auto-merge enabled (if low/low unattended merge is desired)
 - [ ] Test issue processed end-to-end
