@@ -15,11 +15,11 @@ Each stage is a gate. A worker agent produces an artifact; a separate triage age
 # One-time
 gh extension install github/gh-aw
 
-# Install the triage workflow (pin to a tag in production)
+# Install core workflows (pin to a tag in production)
 gh aw add vscheuber/agentic-workflows/issue-triage@main
-
-# Install the routing workflow
-gh aw add vscheuber/agentic-workflows/tiered-fixer@main
+gh aw add vscheuber/agentic-workflows/plan-worker@main
+gh aw add vscheuber/agentic-workflows/plan-triage@main
+gh aw add vscheuber/agentic-workflows/pr-triage@main
 
 # Compile and commit the generated lock files
 gh aw compile
@@ -40,7 +40,7 @@ See `docs/multi-phase-design.md` for the full model. Summary of gates:
 1. **Issue gate** — Analyze, then triage for validity, priority, and completeness. Does not assign fix complexity/risk. May be collapsed into one step.
 2. **Plan gate** — Worker produces a cheap rough plan for almost every actionable issue; triage assigns the first complexity and risk labels. High complexity waits for `design-approved`.
 3. **PR gate** — Worker implements; triage re-evaluates against the real diff (deterministic rules preferred).
-4. **Environment agent** (optional, injectable) — called by workers when deeper integration (reproduction, test generation, external systems) is required. Skipped if the repo does not provide it.
+4. **Environment agent** (optional, injectable) — any worker in any phase may invoke it if the consuming repository has defined an implementation. Used for reproduction, test generation, or external-system interaction. Skipped if absent.
 5. **Merge** — normally branch protection and auto-merge rules driven by the final labels.
 
 ### Safety Model
@@ -63,10 +63,10 @@ Create these in consuming repositories:
 | `risk/high` | Risk | Security, auth, data integrity, availability, or public API impact; tight constraints |
 | `design-approved` | Gate | Human signal that design discussion is complete |
 | `needs-info` | Quality | Missing reproduction steps or details |
-| `needs-reproduction` | Gate | Optional signal to invoke the environment agent |
+| `ready-for-plan` | Gate | Issue is actionable; plan worker may run |
+| `plan-ready` | Gate | Plan exists; plan triage may run |
 | `duplicate` | Quality | Strong duplicate match |
 | `priority/p0` … `priority/p2` | Priority | Urgency |
-| `ready-for-agent` | Gate | Explicit go-ahead for agent assignment |
 
 ## Routing Matrix (default)
 
@@ -84,7 +84,7 @@ Consuming repositories can:
 - Adjust allowed label lists and credit caps.
 - Add repository-specific instructions.
 - Import shared components.
-- Inject a custom environment agent.
+- Inject a custom environment agent (see `shared/env-agent-contract.md`).
 - Keep core routing and safety logic in this central repository.
 
 Local edits are preserved by the 3-way merge performed by `gh aw update`.
@@ -99,13 +99,15 @@ Local edits are preserved by the 3-way merge performed by `gh aw update`.
 │   └── multi-phase-design.md
 ├── workflows/
 │   ├── issue-triage.md
+│   ├── plan-worker.md
+│   ├── plan-triage.md
+│   ├── pr-triage.md
 │   └── tiered-fixer.md
 └── shared/
     ├── safety-policy.md
     ├── complexity.md
     ├── risk.md
-    └── prompts/
-        └── triage-core.md
+    └── env-agent-contract.md
 ```
 
 ## Operational Notes
@@ -119,5 +121,5 @@ Local edits are preserved by the 3-way merge performed by `gh aw update`.
 1. Create the recommended labels in each target repository.
 2. Install and compile the workflows.
 3. Configure branch protection and auto-merge rules.
-4. Optionally inject an environment agent (see `docs/multi-phase-design.md`).
+4. Optionally inject an environment agent (see `shared/env-agent-contract.md` and `docs/multi-phase-design.md`).
 5. Point engines at a self-hosted OpenAI-compatible endpoint if required.
