@@ -164,6 +164,27 @@ Early gates use a light model and tight turn limits. Later gates keep the defaul
 
 `issue-worker` also rate-limits `issue_comment` to 3 runs per user per 30 minutes so a chatty reporter does not restart the agent on every reply.
 
+
+## Cross-repository issue creation
+
+If a repo uses `related-repos.md` and the worker creates the canonical issue in another repository, the default `GITHUB_TOKEN` cannot do that. It is scoped to the repository that runs the workflow.
+
+Create a fine-grained personal access token (or a GitHub App token) with:
+
+- Repository access: the related repositories (for example `rockcarver/frodo-lib`)
+- Permissions: Issues: Read and write
+
+Store it as an Actions secret named `HARNESS_CROSS_REPO_TOKEN` (org secret if several repos need it).
+
+In that repo's `issue-worker.md`:
+
+```yaml
+create-issue:
+  max: 1
+  allowed-repos: ["owner/related-repo"]
+  github-token: ${{ secrets.HARNESS_CROSS_REPO_TOKEN }}
+```
+
 ## 4. Create labels
 
 The workflows apply and react to specific labels. Create them once per repository:
