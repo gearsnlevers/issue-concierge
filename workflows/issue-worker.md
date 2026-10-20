@@ -1,7 +1,7 @@
 ---
 description: |
   Issue gate worker. Analyzes completeness and actionability.
-  Re-runs when the reporter comments so missing information does not permanently stall the pipeline.
+  Guides reporters only through comments; never mentions internal labels.
 on:
   issues:
     types: [opened, reopened, edited]
@@ -39,28 +39,29 @@ engine: copilot
 - workflow_dispatch with `issue_number` → analyze that issue.
 - Otherwise do nothing.
 
-## Analysis
+## Analysis comment (reporter-facing)
 Read the issue body **and every comment**.
-Produce a short analysis comment covering:
-- Completeness (reproduction steps, expected vs actual, environment)
+Post a short, plain-language comment. Do not mention labels, gates, workflows, or any internal harness terms.
+
+Cover, in ordinary language:
+- Whether the report is clear enough to act on
 - Apparent duplicates
-- Whether the report is still actionable
-- Age and activity
+- Age and recent activity if relevant
 
 ### Missing information
-If required details are absent, end the comment with an explicit request, for example:
+If details are absent, end with a direct request, for example:
 
-> Please provide: reproduction steps, expected vs actual behavior, and environment (version / OS).
+> To move this forward, please add:
+> - Steps to reproduce
+> - What you expected vs what actually happened
+> - Environment (version, OS)
 
-Do not leave the ask implicit.
-
-### Long-lived issues
-- Old, inactive, non-pressing issues → note as candidates for closure.
-- Valid but non-urgent → note as backlog candidates.
-- Do not invent a roadmap.
+### Not actionable or not urgent
+- If the issue looks stale or no longer relevant, say so plainly and note that it may be closed.
+- If it is valid but not urgent, say that it has been noted for later and that no immediate work is planned.
 
 If the repository defines an environment agent and a quick reproduction check would help, you may request it. Otherwise proceed without it.
 
-## Signaling
-Always add (or re-add) the label `issue-worker-ready` after posting the analysis.
-This lets issue triage re-evaluate. A later reporter comment simply causes another analysis and another triage pass; the pipeline is not permanently stalled.
+## Signaling (internal)
+After posting the comment, add (or re-add) the label `issue-worker-ready`.
+That label is for the triage agent only; never refer to it in the comment.
