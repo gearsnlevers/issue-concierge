@@ -4,11 +4,12 @@ description: Centralized multi-gate issue triage and tiered fixing.
 emoji: "🤖"
 min-version: v0.40.0
 files:
+  - workflows/issue-worker.md
   - workflows/issue-triage.md
   - workflows/plan-worker.md
   - workflows/plan-triage.md
+  - workflows/pr-worker.md
   - workflows/pr-triage.md
-  - workflows/tiered-fixer.md
   - shared/safety-policy.md
   - shared/complexity.md
   - shared/risk.md
