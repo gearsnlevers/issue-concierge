@@ -24,7 +24,7 @@ engine: copilot
 
 # Plan Worker
 
-Triggered when an issue receives `ready-for-plan`.
+Triggered when an issue receives `issue-triage-handoff`.
 Produce a short, rough plan only. No code.
 
 ## Plan contents
