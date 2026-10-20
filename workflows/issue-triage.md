@@ -1,7 +1,7 @@
 ---
 description: |
-  Issue gate triage. Applies quality and priority labels after the issue worker.
-  May mark valid but non-urgent issues as backlog instead of handing off to planning.
+  Issue gate triage. Applies quality and priority labels.
+  Re-evaluates when the issue worker re-runs after a reporter comment.
 on:
   issues:
     types: [labeled]
@@ -25,6 +25,10 @@ safe-outputs:
       - backlog
       - issue-triage-handoff
     max: 5
+  remove-labels:
+    allowed:
+      - needs-info
+    max: 1
   add-comment:
     max: 1
   set-issue-type:
@@ -40,18 +44,20 @@ engine: copilot
 # Issue Triage
 
 Triggered when an issue receives `issue-worker-ready`.
-Read the analysis comment produced by the issue worker.
+Read the latest analysis comment produced by the issue worker.
 
 Apply only quality and priority labels.
 Do **not** apply complexity or risk labels.
 
-- Missing details → `needs-info`
+- Missing details → `needs-info` (do not emit hand-off)
 - Strong duplicate → `duplicate`
 - Invalid or spam → corresponding label
-- Valid but not urgent (enhancement, low-impact bug, stale but still reasonable) → `backlog`
-- Complete, actionable, and worth doing now → `issue-triage-handoff`
+- Valid but not urgent → `backlog`
+- Complete, actionable, and worth doing now → remove `needs-info` if present, then emit `issue-triage-handoff`
 
-`backlog` means the issue is kept but does not enter the plan gate.
+`backlog` keeps the issue open but does not enter the plan gate.
 `issue-triage-handoff` is the signal that the plan worker may run.
+
+A reporter reply causes the issue worker to re-analyze and re-apply `issue-worker-ready`. This triage then runs again and can clear `needs-info` and hand off once the issue is complete. Reporter interaction therefore does not permanently stall the pipeline.
 
 Post at most one short confirmation comment.
