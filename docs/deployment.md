@@ -118,7 +118,24 @@ Low/low pull requests that carry `pr-triage-handoff` and pass required checks ca
 - For an actionable issue, confirm a plan comment appears with the `<!-- gh-aw-workflow-id: plan-worker -->` marker and that complexity/risk labels are applied.
 - For a low/low item, confirm a pull request is opened and can auto-merge after checks.
 
-## Updating later
+## Updating deployments
+
+### While the install PR is still open
+
+Overwrite the workflow files on the PR branch and push:
+
+```bash
+git checkout add-agentic-workflows   # or whatever branch the PR uses
+for wf in issue-worker issue-triage plan-worker plan-triage pr-worker pr-triage; do
+  curl -fsSL "https://raw.githubusercontent.com/vscheuber/agentic-workflows/main/workflows/${wf}.md" \
+    -o ".github/workflows/${wf}.md"
+done
+git add .github/workflows/*.md
+git commit -m "Update agentic workflows to latest harness"
+git push
+```
+
+### After the workflows are on the default branch
 
 ```bash
 gh aw update
@@ -128,7 +145,7 @@ git commit -m "Update agentic workflows"
 git push
 ```
 
-Local edits to the installed workflow files are preserved by the 3-way merge performed by `gh aw update`.
+`gh aw update` pulls the latest markdown from the central repository and preserves local edits via a 3-way merge. Always recompile after an update.
 
 ## Organization vs user repositories
 
