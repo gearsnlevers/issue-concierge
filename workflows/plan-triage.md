@@ -1,7 +1,7 @@
 ---
 description: |
-  Plan gate triage. Assigns the first complexity and risk labels against the plan.
-  Only the newest comment that carries the plan-worker workflow-id marker is classified.
+  Plan gate triage. Assigns complexity and risk.
+  Adds plan-approval-required when human approval is needed; does not hand off while that label is present.
 on:
   issues:
     types: [labeled]
@@ -17,8 +17,9 @@ safe-outputs:
       - risk/low
       - risk/medium
       - risk/high
+      - plan-approval-required
       - plan-triage-handoff
-    max: 3
+    max: 4
   add-comment:
     max: 1
   threat-detection:
@@ -34,21 +35,24 @@ engine: copilot
 Triggered when an issue receives `plan-worker-ready`.
 
 ## Which comment is the plan
-Locate the newest comment that contains the exact marker:
+Locate the comment that contains the exact marker:
 
 ```html
 <!-- gh-aw-workflow-id: plan-worker -->
 ```
 
-That marker is inserted by gh-aw safe-outputs and cannot be forged by a human or by another agent.
-Ignore every other comment, even if it contains a heading such as "## Plan".
-If no comment carries the marker, do nothing and post a short note that the plan could not be found.
+Ignore every other comment. If no such comment exists, do nothing.
 
 ## Classification
-Read only that comment. Assign exactly one complexity label and one risk label.
-Use the definitions in the shared complexity and risk documents.
+Assign exactly one complexity label and one risk label.
 
-- If complexity is high and `design-approved` is absent, do **not** emit `plan-triage-handoff`.
-- Otherwise emit `plan-triage-handoff`. That label is the signal that the PR worker may assign a coding agent.
+## Approval gate
+If complexity is high:
+- Add the label `plan-approval-required`.
+- Do **not** emit `plan-triage-handoff` while that label is present.
+- Post a short comment: "High complexity. Remove the plan-approval-required label to resume."
 
-Post a one-line confirmation of the labels you applied.
+If `plan-approval-required` is absent (or has been removed by a human):
+- Emit `plan-triage-handoff`.
+
+The presence of `plan-approval-required` blocks the PR gate. Removing it is the human signal to continue.
