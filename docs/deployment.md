@@ -29,9 +29,11 @@ Alternatively, copy the six `.md` files from `workflows/` in this repository int
 
 Commit the files on a branch and open a pull request.
 
-## 2. Optional: issue completeness criteria
+## 2. Issue completeness (optional override)
 
-To tell the issue worker what makes an issue meaningful in this repository, copy the template:
+By default the issue worker uses the repository’s issue template (`.github/ISSUE_TEMPLATE/` or `.github/ISSUE_TEMPLATE.md`) as the definition of a complete issue.
+
+Only if the template is missing or insufficient, add an override:
 
 ```bash
 mkdir -p .github/agentic-workflows
@@ -39,7 +41,7 @@ curl -fsSL https://raw.githubusercontent.com/vscheuber/agentic-workflows/main/sh
   -o .github/agentic-workflows/issue-completeness.md
 ```
 
-Edit the file with repository-specific requirements (required fields, environment details, when to treat an issue as backlog or closeable). The issue worker reads this file when it exists and uses it instead of generic criteria. If the file is absent, generic criteria are used.
+Edit that file with repository-specific requirements. It takes precedence over the generic fallback.
 
 ## 3. Compile
 
@@ -140,7 +142,7 @@ Local edits to the installed workflow files are preserved by the 3-way merge per
 
 - [ ] Issues enabled
 - [ ] Workflow `.md` files added
-- [ ] Optional `.github/agentic-workflows/issue-completeness.md` added and edited
+- [ ] Issue template present (or optional `.github/agentic-workflows/issue-completeness.md` override)
 - [ ] `gh aw compile` run and lock files committed
 - [ ] All recommended labels created
 - [ ] Branch protection / ruleset configured (require PR, status checks, no force-push)
