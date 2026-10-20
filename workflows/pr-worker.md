@@ -1,6 +1,7 @@
 ---
 description: |
   PR gate worker. Assigns a coding agent when plan triage has opened the gate.
+  The coding agent must signal completion with the pr-ready label.
 on:
   issues:
     types: [labeled]
@@ -30,9 +31,11 @@ Decides whether a coding agent may be assigned.
 
 ## Rules
 - `complexity/high` and no `design-approved` → comment requesting design discussion; do not assign.
-- Otherwise assign the Copilot cloud agent.
-  - Include a short instruction summary based on the plan and the risk level.
-  - Note that human review is required unless both labels are low.
-  - If the repository defines an environment agent, the coding agent may request it for test generation.
+- Otherwise assign the Copilot cloud agent with these instructions:
+  - Implement the change described in the plan.
+  - When the pull request is opened (or updated and ready for review), add the label `pr-ready` to the pull request.
+  - That label is the signal that the PR triage gate may run.
+  - If the repository defines an environment agent, you may request it for test generation.
+  - Human review is required unless both complexity and risk are low.
 
-Do not write code in this workflow; only route to the coding agent.
+Do not write code in this workflow; only route to the coding agent and tell it how to signal completion.
