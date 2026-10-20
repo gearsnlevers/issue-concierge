@@ -7,4 +7,5 @@ files:
   - workflows/issue-triage.md
   - workflows/tiered-fixer.md
   - shared/safety-policy.md
-  - shared/axes.md
+  - shared/complexity.md
+  - shared/risk.md
