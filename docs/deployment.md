@@ -172,9 +172,52 @@ Early gates use a light model and tight turn limits. Later gates keep the defaul
 
 If a repo uses `related-repos.md` and the worker creates the canonical issue in another repository, the default `GITHUB_TOKEN` cannot do that. It is scoped to the repository that runs the workflow.
 
-For each related repository that should receive issues, create a fine-grained token (or a GitHub App token) with Issues: Read and write on that repository. Store it under the secret name listed in that entry's `secret` field. The name is chosen by the deployment; it is not fixed by the harness.
+Each related repository names its own Actions secret in the `secret` field. The name is chosen by the deployment. Create a fine-grained token that can write issues in that repository, and store it under that name.
 
-Then set `create-issue` in that repo's `issue-worker.md` to match:
+### Token requirements
+
+- Owner: a user who can create issues in the target repository (an org owner is simplest).
+- Type: fine-grained personal access token, or a GitHub App installation token.
+- Resource owner: the organization or user that owns the target repository.
+- Repository access: only the repository that will receive the issues.
+- Permissions: Issues: Read and write. Nothing else is required.
+- Expiration: set one. Record the date; the linked-issue flow stops when the token expires.
+
+`create-issue` accepts one token. If several related repositories need different tokens, either give one token access to all of them and reuse that secret name, or use a custom safe-output job that selects the token from the `secret` field.
+
+### Create a fine-grained token
+
+1. Open https://github.com/settings/personal-access-tokens/new
+2. Token name: something you will recognize, for example `frodo-lib issues from cli`.
+3. Expiration: pick a date. Note it.
+4. Resource owner: the organization or user that owns the target repository (`rockcarver` for the frodo repos).
+5. If the organization requires approval for fine-grained tokens, enter a justification. Org owners are approved automatically. Until approval, the token can only read public resources.
+6. Repository access: **Only select repositories**, then select only the target repository.
+7. Permissions → Repository permissions → **Issues**: **Read and write**.
+8. Generate the token and copy it. GitHub shows it once.
+
+### Store the secret
+
+Prefer an organization secret when several repositories in the org need the same token. Prefer a repository secret when only one repository uses it.
+
+Organization secret:
+
+1. Open `https://github.com/organizations/<org>/settings/secrets/actions`
+2. New organization secret.
+3. Name: the `secret` value from `related-repos.md`.
+4. Value: the token.
+5. Repository access: only the repository that runs the workflow (the one that creates the issue), not the target.
+
+Repository secret:
+
+1. Open `https://github.com/<owner>/<repo>/settings/secrets/actions`
+2. New repository secret.
+3. Name: the `secret` value from `related-repos.md`.
+4. Value: the token.
+
+### Wire the workflow
+
+In the repository that runs the worker, set `create-issue` to the same secret name and allowlist the target repository:
 
 ```yaml
 create-issue:
@@ -183,7 +226,18 @@ create-issue:
   github-token: ${{ secrets.OTHER_REPO_ISSUES_TOKEN }}
 ```
 
-`create-issue` accepts one token. If several related repositories need different tokens, either give one token access to all of them and reuse that secret name, or use a custom safe-output job that selects the token from the `secret` field.
+Then recompile (`gh aw compile`) and commit the lock file.
+
+### Frodo
+
+Two tokens, one in each direction.
+
+| Worker repo | Creates issues in | Secret name | Token repository access |
+|-------------|-------------------|-------------|-------------------------|
+| `rockcarver/frodo-cli` | `rockcarver/frodo-lib` | `FRODO_LIB_ISSUES_TOKEN` | `rockcarver/frodo-lib` only |
+| `rockcarver/frodo-lib` | `rockcarver/frodo-cli` | `FRODO_CLI_ISSUES_TOKEN` | `rockcarver/frodo-cli` only |
+
+Store each secret on the worker repository (or as an org secret visible to that repository). The `secret` field in that repo's `related-repos.md` must match, and `issue-worker.md` must reference `${{ secrets.<that name> }}`.
 
 ## 4. Create labels
 
