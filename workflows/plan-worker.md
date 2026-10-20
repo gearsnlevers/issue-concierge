@@ -1,10 +1,13 @@
 ---
 description: |
-  Plan gate worker. Produces a short, cheap, rough plan for actionable issues.
+  Plan gate worker. Produces or revises a short, cheap, rough plan.
+  Reacts to the initial hand-off and to later human comments.
   The plan comment is uniquely identified by the gh-aw-workflow-id marker.
 on:
   issues:
     types: [labeled]
+  issue_comment:
+    types: [created]
 permissions:
   contents: read
   issues: read
@@ -25,8 +28,11 @@ engine: copilot
 
 # Plan Worker
 
-Triggered when an issue receives `issue-triage-handoff`.
-Produce a short, rough plan only. No code.
+## When to run
+- An issue receives `issue-triage-handoff` → create the initial plan.
+- A human comments on an issue that already has a plan → revise the plan if the comment is relevant.
+
+Ignore comments that are from bots or that do not discuss the plan.
 
 ## Plan contents
 - Expected files or subsystems to touch
@@ -47,4 +53,4 @@ gh-aw automatically appends a hidden marker to every comment this workflow creat
 Do not try to add this marker yourself. The safe-outputs job inserts it.
 That marker is the unique, non-spoofable signature of the plan comment.
 
-Post the plan as a single comment and add the label `plan-worker-ready`.
+When revising, post a new comment (the newest comment that carries the marker becomes the current plan). Then ensure the label `plan-worker-ready` is present so plan triage re-evaluates.
