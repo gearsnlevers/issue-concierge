@@ -11,6 +11,7 @@ Each stage is a gate.
 
 - Workers signal completion with `<worker-name>-ready`.
 - Triage agents signal the next gate with `<triage-name>-handoff`.
+- Blocking conditions use `<thing>-required`. Removing the label resumes processing.
 
 ## Quick Start (Consuming Repo)
 
@@ -48,7 +49,7 @@ See `docs/multi-phase-design.md` for the full model.
 | Plan | `plan-worker` | `plan-worker-ready` | `plan-triage` | `plan-triage-handoff` |
 | PR | `pr-worker` | `pr-worker-ready` | `pr-triage` | `pr-triage-handoff` |
 
-The environment agent is optional and injectable. Any worker in any phase may invoke it if the consuming repository has defined an implementation.
+High complexity adds `plan-approval-required`. Removing that label allows the plan triage hand-off.
 
 ### Safety Model
 - Standard agents run read-only; writes go through validated safe-outputs.
@@ -64,11 +65,11 @@ Create these in consuming repositories:
 |-------|------|---------|
 | `complexity/low` | Complexity | Mechanical or minimal design impact; high autonomy possible |
 | `complexity/medium` | Complexity | Bounded design decisions; moderate autonomy |
-| `complexity/high` | Complexity | Significant design impact; design discussion required before code |
+| `complexity/high` | Complexity | Significant design impact |
 | `risk/low` | Risk | Limited blast radius |
 | `risk/medium` | Risk | Normal code changes |
-| `risk/high` | Risk | Security, auth, data integrity, availability, or public API impact; tight constraints |
-| `design-approved` | Gate | Human signal that design discussion is complete |
+| `risk/high` | Risk | Security, auth, data integrity, availability, or public API impact |
+| `plan-approval-required` | Gate | Remove to resume after high-complexity classification |
 | `needs-info` | Quality | Missing reproduction steps or details |
 | `issue-worker-ready` | Gate | Issue worker finished |
 | `issue-triage-handoff` | Gate | Issue triage finished; plan worker may run |
@@ -84,8 +85,8 @@ Create these in consuming repositories:
 | Complexity \ Risk | Low | Medium | High |
 |-------------------|-----|--------|------|
 | Low | Agent + auto-merge eligible | Agent + human review | Agent + human review + tight path limits |
-| Medium | Agent + human review | Agent + human review | Human review required; agent only if explicitly approved |
-| High | Design discussion first | Design discussion first | Design discussion first; extra review gates |
+| Medium | Agent + human review | Agent + human review | Human review required |
+| High | Stop until `plan-approval-required` is removed | Stop until `plan-approval-required` is removed | Stop until `plan-approval-required` is removed |
 
 Repositories may override the matrix locally.
 
