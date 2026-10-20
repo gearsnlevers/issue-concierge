@@ -7,7 +7,7 @@ Two independent axes control autonomy and blast radius:
 - **Complexity** — measures design impact. Higher complexity reduces autonomy and requires more human design input before code is written.
 - **Risk** — measures blast radius. Higher risk tightens constraints on what may be changed automatically and requires stronger review gates.
 
-Each stage is a gate. A worker agent produces an artifact and signals completion with a label. A separate triage agent reacts to that label.
+Each stage is a gate. A worker agent produces an artifact and signals completion with a label of the form `<worker-name>-ready`. A separate triage agent reacts to that label.
 
 ## Quick Start (Consuming Repo)
 
@@ -41,9 +41,9 @@ See `docs/multi-phase-design.md` for the full model.
 
 | Gate | Worker | Completion label | Triage |
 |------|--------|------------------|--------|
-| Issue | `issue-worker` | `analysis-ready` | `issue-triage` |
-| Plan | `plan-worker` | `plan-ready` | `plan-triage` |
-| PR | `pr-worker` (assigns coding agent) | `pr-ready` (on the PR) | `pr-triage` |
+| Issue | `issue-worker` | `issue-worker-ready` | `issue-triage` |
+| Plan | `plan-worker` | `plan-worker-ready` | `plan-triage` |
+| PR | `pr-worker` (assigns coding agent) | `pr-worker-ready` (on the PR) | `pr-triage` |
 
 The environment agent is optional and injectable. Any worker in any phase may invoke it if the consuming repository has defined an implementation.
 
@@ -67,10 +67,10 @@ Create these in consuming repositories:
 | `risk/high` | Risk | Security, auth, data integrity, availability, or public API impact; tight constraints |
 | `design-approved` | Gate | Human signal that design discussion is complete |
 | `needs-info` | Quality | Missing reproduction steps or details |
-| `analysis-ready` | Gate | Issue worker finished; issue triage may run |
+| `issue-worker-ready` | Gate | Issue worker finished; issue triage may run |
 | `ready-for-plan` | Gate | Issue is actionable; plan worker may run |
-| `plan-ready` | Gate | Plan exists; plan triage may run |
-| `pr-ready` | Gate | Coding agent finished; PR triage may run |
+| `plan-worker-ready` | Gate | Plan exists; plan triage may run |
+| `pr-worker-ready` | Gate | Coding agent finished; PR triage may run |
 | `duplicate` | Quality | Strong duplicate match |
 | `priority/p0` … `priority/p2` | Priority | Urgency |
 
