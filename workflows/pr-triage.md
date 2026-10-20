@@ -1,9 +1,9 @@
 ---
 description: |
-  PR gate triage. Re-evaluates complexity and risk against the real diff.
+  PR gate triage. Runs when the coding agent signals completion with pr-ready.
 on:
   pull_request:
-    types: [opened, synchronize, reopened]
+    types: [labeled]
 permissions:
   contents: read
   pull-requests: read
@@ -30,6 +30,9 @@ engine: copilot
 
 # PR Triage
 
+Triggered when a pull request receives the label `pr-ready`.
+That label is the completion signal from the PR worker / coding agent.
+
 Examine the pull request diff.
 Re-assign complexity and risk labels based on the actual changes.
 
@@ -37,7 +40,5 @@ Prefer concrete signals:
 - Paths touched (auth, security, migrations, public API → raise risk)
 - Number of files and size of the diff
 - Whether the change matches or exceeds the earlier plan
-
-If the repository defines an environment agent and additional validation or test generation is needed, note it; do not perform it yourself in this triage step.
 
 Post a short comment stating the final labels and any recommended next action (human review, design discussion, or eligible for auto-merge).
