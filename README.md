@@ -39,6 +39,8 @@ Update later while preserving local customizations:
 gh aw update
 ```
 
+For the full procedure (labels, branch protection, verification, organization installs) see [docs/deployment.md](docs/deployment.md).
+
 ## Architecture
 
 See `docs/multi-phase-design.md` for the full model.
@@ -61,7 +63,7 @@ Valid but non-urgent issues receive `backlog` and do not enter the plan gate.
 
 ## Recommended Labels
 
-Create these in consuming repositories:
+Create these in consuming repositories (full list and colors in [docs/deployment.md](docs/deployment.md)):
 
 | Label | Axis | Meaning |
 |-------|------|---------|
@@ -95,7 +97,7 @@ Repositories may override the matrix locally.
 
 ## Repository configuration
 
-The harness relies on ordinary GitHub branch protection and auto-merge. Recommended settings for the default branch:
+The harness relies on ordinary GitHub branch protection and auto-merge. Recommended settings for the default branch (details in [docs/deployment.md](docs/deployment.md)):
 
 | Setting | Value | Reason |
 |---------|-------|--------|
@@ -128,6 +130,7 @@ Local edits are preserved by the 3-way merge performed by `gh aw update`.
 ├── README.md
 ├── aw.yml
 ├── docs/
+│   ├── deployment.md
 │   └── multi-phase-design.md
 ├── workflows/
 │   ├── issue-worker.md
@@ -151,8 +154,6 @@ Local edits are preserved by the 3-way merge performed by `gh aw update`.
 
 ## Next Steps
 
-1. Create the recommended labels in each target repository.
-2. Install and compile the workflows.
-3. Configure branch protection and auto-merge as described above.
-4. Optionally inject an environment agent (see `shared/env-agent-contract.md` and `docs/multi-phase-design.md`).
-5. Point engines at a self-hosted OpenAI-compatible endpoint if required.
+1. Follow [docs/deployment.md](docs/deployment.md) to install, compile, label, and protect the target repository.
+2. Optionally inject an environment agent (see `shared/env-agent-contract.md` and `docs/multi-phase-design.md`).
+3. Point engines at a self-hosted OpenAI-compatible endpoint if required.
