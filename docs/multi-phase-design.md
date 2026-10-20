@@ -30,20 +30,28 @@ gh-aw injects a non-spoofable marker into every comment created by a workflow:
 <!-- gh-aw-workflow-id: plan-worker -->
 ```
 
-`plan-triage` must classify only the comment that contains that exact marker.  
+`plan-triage` must classify only the newest comment that contains that exact marker.  
 Any other comment, even one that looks like a plan, is ignored.
 
 ## Human intervention
 
 Low-complexity + low-risk issues are expected to move through the gates with little or no human comment.
 
-For medium, high-complexity, or high-risk items, humans may comment on the plan before coding begins.  
-The harness does not currently auto-revise the plan. Two practical patterns:
+For medium, high-complexity, or high-risk items, humans may comment on the plan.  
+The plan worker listens for `issue_comment` events. When a relevant human comment appears, it revises the plan and posts a new comment (again carrying the workflow-id marker). Plan triage then re-runs against the newest marked comment.
 
-1. **Human removes `plan-worker-ready` (or adds a `needs-plan-revision` label)** and the plan worker is re-triggered. The worker reads the new human comments and posts an updated plan comment (again carrying the workflow-id marker).
-2. **A short, explicit waiting period** is enforced by the consuming repository (for example a label such as `awaiting-human-input` that blocks `plan-triage` until a maintainer removes it or a timeout workflow clears it).
+No label is required to request a revision.
 
-No hard-coded time window is built into the central harness. Timing policy is left to the consuming repository so that simple issues are not delayed and complex issues can wait as long as the maintainers require.
+## Timing / waiting policy
+
+The central harness does not impose a waiting period.  
+Consuming repositories control timing by editing the local copies of the workflow files (the files installed by `gh aw add`). Typical local changes:
+
+- Add a condition that skips plan triage while a certain label is present.
+- Add a short delay or a separate timeout workflow.
+- Tighten or loosen the credit and timeout caps.
+
+These are ordinary edits to the markdown workflow files in the consuming repository. `gh aw update` preserves local changes via a 3-way merge. There is no separate configuration-property system; the workflow files themselves are the control surface.
 
 ## Gates
 
@@ -57,7 +65,7 @@ Does **not** assign complexity or risk of a fix.
 
 ### 2. Plan gate
 **Worker** (`workflows/plan-worker.md`)  
-Triggered by `issue-triage-handoff`. Emit `plan-worker-ready`.
+Triggered by `issue-triage-handoff` or by a later human comment. Emit `plan-worker-ready`.
 
 **Triage** (`workflows/plan-triage.md`)  
 Assign complexity and risk. Emit `plan-triage-handoff` only when coding may proceed (not when high complexity is waiting for `design-approved`).
