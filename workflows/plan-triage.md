@@ -29,7 +29,7 @@ engine: copilot
 
 # Plan Triage
 
-Triggered when an issue receives `plan-ready`.
+Triggered when an issue receives `plan-worker-ready`.
 Read the plan comment. Assign exactly one complexity label and one risk label.
 
 Use the definitions in the shared complexity and risk documents.
