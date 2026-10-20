@@ -1,6 +1,7 @@
 ---
 description: |
   Issue gate triage. Applies quality and priority labels after the issue worker.
+  May mark valid but non-urgent issues as backlog instead of handing off to planning.
 on:
   issues:
     types: [labeled]
@@ -21,6 +22,7 @@ safe-outputs:
       - duplicate
       - invalid
       - spam
+      - backlog
       - issue-triage-handoff
     max: 5
   add-comment:
@@ -45,8 +47,11 @@ Do **not** apply complexity or risk labels.
 
 - Missing details → `needs-info`
 - Strong duplicate → `duplicate`
-- Complete and actionable → `issue-triage-handoff`
-- Set type and priority as appropriate.
+- Invalid or spam → corresponding label
+- Valid but not urgent (enhancement, low-impact bug, stale but still reasonable) → `backlog`
+- Complete, actionable, and worth doing now → `issue-triage-handoff`
 
+`backlog` means the issue is kept but does not enter the plan gate.
 `issue-triage-handoff` is the signal that the plan worker may run.
+
 Post at most one short confirmation comment.
