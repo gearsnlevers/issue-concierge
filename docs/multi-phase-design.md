@@ -38,15 +38,18 @@ gh-aw injects a non-spoofable marker:
 
 Reporter interaction stays in the issue phase.
 
-The plan phase is a classification prerequisite. For high complexity it adds `plan-approval-required` and stops. A maintainer removes that label to resume; no new label needs to be chosen from a long list.
+When information is missing the issue worker posts an explicit request and issue triage applies `needs-info` (no hand-off).  
+A later comment from the reporter re-triggers the issue worker, which re-analyzes and re-applies `issue-worker-ready`. Issue triage then runs again and can clear `needs-info` and emit `issue-triage-handoff` once the issue is complete. Reporter replies therefore do not permanently stall the pipeline.
+
+The plan phase is a classification prerequisite. For high complexity it adds `plan-approval-required` and stops. A maintainer removes that label to resume.
 
 Maintainer interaction on the actual change happens in the PR phase.
 
 ## Gates
 
 ### 1. Issue gate
-**Worker** → `issue-worker-ready`  
-**Triage** → quality/priority labels + `issue-triage-handoff` when actionable.
+**Worker** → analysis comment + `issue-worker-ready` (also on reporter comments)  
+**Triage** → quality/priority labels. Emits `issue-triage-handoff` when actionable; applies `needs-info` otherwise. Can clear `needs-info` on re-evaluation.
 
 ### 2. Plan gate
 **Worker** → rough plan + `plan-worker-ready`  
