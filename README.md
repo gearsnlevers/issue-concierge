@@ -51,6 +51,8 @@ See `docs/multi-phase-design.md` for the full model.
 
 High complexity adds `plan-approval-required`. Removing that label allows the plan triage hand-off.
 
+Valid but non-urgent issues receive `backlog` and do not enter the plan gate.
+
 ### Safety Model
 - Standard agents run read-only; writes go through validated safe-outputs.
 - Threat detection scans proposed outputs before application.
@@ -71,6 +73,7 @@ Create these in consuming repositories:
 | `risk/high` | Risk | Security, auth, data integrity, availability, or public API impact |
 | `plan-approval-required` | Gate | Remove to resume after high-complexity classification |
 | `needs-info` | Quality | Missing reproduction steps or details |
+| `backlog` | Quality | Valid but not urgent; do not plan or implement now |
 | `issue-worker-ready` | Gate | Issue worker finished |
 | `issue-triage-handoff` | Gate | Issue triage finished; plan worker may run |
 | `plan-worker-ready` | Gate | Plan worker finished |
