@@ -78,11 +78,18 @@ release:
   pins: "@owner/package"
 ```
 
+Two close points:
+
+- The repository that owns the fix (the library) may close its issue when its own release contains the fix.
+- The repository that reported it (the CLI) stays open until a release there pins a library version that contains the fix.
+
 Behavior:
 
 - The issue worker tells the reporter that a release of this project will be needed.
-- When the canonical issue closes, the original issue stays open and gets `awaiting-release`.
-- `release-closer` runs on `release: published`. It closes an awaiting issue only when the release notes mention it, or the pinned package version's notes mention the canonical issue.
+- When the library issue closes, the CLI issue stays open and gets `awaiting-release`.
+- `release-closer` runs on `release: published` in each repository.
+  In the library it closes issues named in that release.
+  In the CLI it closes an awaiting issue only when the release pins the library version that contains the fix.
 
 ## 3. Compile
 
