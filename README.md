@@ -7,7 +7,7 @@ Two independent axes control autonomy and blast radius:
 - **Complexity** — measures design impact. Higher complexity reduces autonomy and requires more human design input before code is written.
 - **Risk** — measures blast radius. Higher risk tightens constraints on what may be changed automatically and requires stronger review gates.
 
-The two axes are assessed and labeled separately so each can be tuned independently per repository.
+The axes are applied at multiple stages. Early stages stay cheap; later stages have more concrete artifacts to classify.
 
 ## Quick Start (Consuming Repo)
 
@@ -35,20 +35,19 @@ gh aw update
 
 ## Architecture
 
-### Layers
-1. **Triage** (`workflows/issue-triage.md`) — runs on new or edited issues. Classifies type, priority, complexity, and risk. Applies labels and posts a summary via safe-outputs.
-2. **Routing** (`workflows/tiered-fixer.md`) — reacts to the complexity and risk labels and decides the next action:
-   - High complexity without `design-approved` → request design discussion only
-   - High risk → assign agent only under tight constraints; human review always required
-   - Low complexity + low risk → highest autonomy path (agent PR eligible for auto-merge after checks)
-   - Other combinations → agent assignment with appropriate review requirements
-3. **Shared components** (`shared/`) — reusable safety defaults, axis definitions, and prompt fragments.
+See `docs/multi-phase-design.md` for the full multi-phase model. Summary:
+
+1. **Issue triage** (always on, cheap) — validity, priority, completeness. Does not assign fix complexity/risk.
+2. **Environment agent** (optional, custom) — injectable deeper capability for reproduction, test generation (e.g. Polly.js recordings/snapshots), or interaction with external systems. Skipped if the repo does not provide it.
+3. **Plan triage** — first assignment of complexity and risk against a plan. High complexity gates on `design-approved`.
+4. **PR triage** — re-evaluate against the real diff; deterministic path/size rules preferred. Can again call the environment agent.
+5. **Merge** — normally handled by branch protection and auto-merge rules driven by the final labels.
 
 ### Safety Model
-- The agent job runs read-only.
-- All writes occur through validated safe-outputs (allowlists, maxima, sanitization).
+- The agent job runs read-only unless an explicitly injected environment agent is granted additional capabilities.
+- All writes from standard agents occur through validated safe-outputs (allowlists, maxima, sanitization).
 - A threat-detection job scans proposed outputs and patches for prompt injection, secret leaks, and malicious changes before any write is applied.
-- Network access, credit budgets, and execution time are capped.
+- Network access, credit budgets, and execution time are capped per workflow.
 - Auto-merge is reserved for the lowest complexity and risk combinations and still depends on repository branch protection and required status checks.
 
 ## Recommended Labels
@@ -65,6 +64,7 @@ Create these in consuming repositories:
 | `risk/high` | Risk | Security, auth, data integrity, availability, or public API impact; tight constraints |
 | `design-approved` | Gate | Human signal that design discussion is complete |
 | `needs-info` | Quality | Missing reproduction steps or details |
+| `needs-reproduction` | Gate | Optional signal to invoke the environment agent |
 | `duplicate` | Quality | Strong duplicate match |
 | `priority/p0` … `priority/p2` | Priority | Urgency |
 | `ready-for-agent` | Gate | Explicit go-ahead for agent assignment |
@@ -85,6 +85,7 @@ Consuming repositories can:
 - Adjust the allowed label lists and credit caps in the local workflow files.
 - Add repository-specific instructions in the markdown body.
 - Import shared components and pass parameters where `import-schema` is declared.
+- Inject a custom environment agent for reproduction and test generation.
 - Keep core routing and safety logic in this central repository.
 
 Local edits are preserved by the 3-way merge performed by `gh aw update`.
@@ -95,6 +96,8 @@ Local edits are preserved by the 3-way merge performed by `gh aw update`.
 .
 ├── README.md
 ├── aw.yml
+├── docs/
+│   └── multi-phase-design.md
 ├── workflows/
 │   ├── issue-triage.md
 │   └── tiered-fixer.md
@@ -109,7 +112,7 @@ Local edits are preserved by the 3-way merge performed by `gh aw update`.
 ## Operational Notes
 
 - Inference cost depends on the chosen engine (Copilot AI Credits by default or a provider API key).
-- Set `max-ai-credits` and `timeout-minutes` on every workflow.
+- Set `max-ai-credits` and `timeout-minutes` on every workflow. Early phases use smaller budgets.
 - Monitor usage with `gh aw logs` and `gh aw audit`.
 - Public repositories use free GitHub Actions minutes; private repositories consume plan minutes.
 
@@ -118,5 +121,5 @@ Local edits are preserved by the 3-way merge performed by `gh aw update`.
 1. Create the recommended labels in each target repository.
 2. Install and compile the workflows.
 3. Configure branch protection and auto-merge rules that respect the risk and complexity labels.
-4. Optionally add an independent reviewer workflow for medium and high-risk changes.
-5. Point the engine at a self-hosted OpenAI-compatible endpoint if required.
+4. Optionally inject an environment agent for reproduction and test generation (see `docs/multi-phase-design.md`).
+5. Point engines at a self-hosted OpenAI-compatible endpoint if required.
