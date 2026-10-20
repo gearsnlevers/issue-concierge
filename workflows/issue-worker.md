@@ -12,7 +12,7 @@ safe-outputs:
     max: 1
   add-labels:
     allowed:
-      - analysis-ready
+      - issue-worker-ready
     max: 1
   threat-detection:
     enabled: true
@@ -32,4 +32,4 @@ Produce a short analysis comment covering:
 
 If the repository defines an environment agent and a quick reproduction check would help, you may request it. Otherwise proceed without it.
 
-Add the label `analysis-ready` when the analysis comment is posted.
+Add the label `issue-worker-ready` when the analysis comment is posted.
