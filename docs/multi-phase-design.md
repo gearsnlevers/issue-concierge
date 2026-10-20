@@ -47,17 +47,22 @@ The plan phase is a classification prerequisite. For high complexity it adds the
 
 Maintainer interaction on the actual change happens in the PR phase.
 
-## Split-repo routing
+## Split-repo routing (linked issues)
 
-When a repository defines `.github/agentic-workflows/related-repos.md`, the issue worker can detect that an issue belongs in a related repository (for example a library issue reported against the CLI).
+When a repository defines `.github/agentic-workflows/related-repos.md`:
 
-It posts a plain-language comment with a link and does **not** emit `issue-worker-ready`, so the wrong repository does not continue into planning. A maintainer can still transfer the issue manually.
+1. The issue worker detects that an issue belongs in a related repository.
+2. It creates a canonical issue there and cross-links both sides with plain-language comments.
+3. It applies the internal label `related-repo` to the original issue and does not emit `issue-worker-ready`.
+4. The original issue stays open. Issue triage ignores it for planning.
+5. When the canonical issue is closed, `related-repo-closer` closes the original issue with a short notice.
 
 ## Gates
 
 ### 1. Issue gate
-**Worker** → plain-language analysis comment + internal `issue-worker-ready` (omitted if transfer is recommended)  
-**Triage** → internal quality/priority labels. Emits `issue-triage-handoff` when actionable; applies `needs-info` otherwise. Can clear `needs-info` on re-evaluation.
+**Worker** → plain-language analysis comment + internal `issue-worker-ready`  
+(or `related-repo` and no ready label if linked elsewhere)  
+**Triage** → internal quality/priority labels. Emits `issue-triage-handoff` when actionable; applies `needs-info` otherwise. Skips issues that already have `related-repo`.
 
 ### 2. Plan gate
 **Worker** → rough plan + `plan-worker-ready`  
