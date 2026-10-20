@@ -47,10 +47,16 @@ The plan phase is a classification prerequisite. For high complexity it adds the
 
 Maintainer interaction on the actual change happens in the PR phase.
 
+## Split-repo routing
+
+When a repository defines `.github/agentic-workflows/related-repos.md`, the issue worker can detect that an issue belongs in a related repository (for example a library issue reported against the CLI).
+
+It posts a plain-language comment with a link and does **not** emit `issue-worker-ready`, so the wrong repository does not continue into planning. A maintainer can still transfer the issue manually.
+
 ## Gates
 
 ### 1. Issue gate
-**Worker** → plain-language analysis comment + internal `issue-worker-ready`  
+**Worker** → plain-language analysis comment + internal `issue-worker-ready` (omitted if transfer is recommended)  
 **Triage** → internal quality/priority labels. Emits `issue-triage-handoff` when actionable; applies `needs-info` otherwise. Can clear `needs-info` on re-evaluation.
 
 ### 2. Plan gate
