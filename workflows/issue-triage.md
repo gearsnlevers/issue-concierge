@@ -21,7 +21,7 @@ safe-outputs:
       - duplicate
       - invalid
       - spam
-      - ready-for-plan
+      - issue-triage-handoff
     max: 5
   add-comment:
     max: 1
@@ -45,7 +45,8 @@ Do **not** apply complexity or risk labels.
 
 - Missing details → `needs-info`
 - Strong duplicate → `duplicate`
-- Complete and actionable → `ready-for-plan`
+- Complete and actionable → `issue-triage-handoff`
 - Set type and priority as appropriate.
 
+`issue-triage-handoff` is the signal that the plan worker may run.
 Post at most one short confirmation comment.
