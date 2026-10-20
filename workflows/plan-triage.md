@@ -16,7 +16,8 @@ safe-outputs:
       - risk/low
       - risk/medium
       - risk/high
-    max: 2
+      - plan-triage-handoff
+    max: 3
   add-comment:
     max: 1
   threat-detection:
@@ -33,6 +34,8 @@ Triggered when an issue receives `plan-worker-ready`.
 Read the plan comment. Assign exactly one complexity label and one risk label.
 
 Use the definitions in the shared complexity and risk documents.
-High complexity requires human design approval before any coding agent is assigned.
+
+- If complexity is high and `design-approved` is absent, do **not** emit `plan-triage-handoff`.
+- Otherwise emit `plan-triage-handoff`. That label is the signal that the PR worker may assign a coding agent.
 
 Post a one-line confirmation of the labels you applied.
