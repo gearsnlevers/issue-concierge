@@ -30,28 +30,17 @@ gh-aw injects a non-spoofable marker into every comment created by a workflow:
 <!-- gh-aw-workflow-id: plan-worker -->
 ```
 
-`plan-triage` must classify only the newest comment that contains that exact marker.  
+`plan-triage` must classify only the comment that contains that exact marker.  
 Any other comment, even one that looks like a plan, is ignored.
 
-## Human intervention
+## Human interaction
 
-Low-complexity + low-risk issues are expected to move through the gates with little or no human comment.
+Reporter interaction stays in the issue phase.  
+The issue worker asks for missing or unclear information. Once the issue is actionable, the reporter has had their chance to convey everything needed.
 
-For medium, high-complexity, or high-risk items, humans may comment on the plan.  
-The plan worker listens for `issue_comment` events. When a relevant human comment appears, it revises the plan and posts a new comment (again carrying the workflow-id marker). Plan triage then re-runs against the newest marked comment.
+The plan phase is only a classification prerequisite. It produces a rough plan so complexity and risk can be assigned. It does not wait for or incorporate further human comments.
 
-No label is required to request a revision.
-
-## Timing / waiting policy
-
-The central harness does not impose a waiting period.  
-Consuming repositories control timing by editing the local copies of the workflow files (the files installed by `gh aw add`). Typical local changes:
-
-- Add a condition that skips plan triage while a certain label is present.
-- Add a short delay or a separate timeout workflow.
-- Tighten or loosen the credit and timeout caps.
-
-These are ordinary edits to the markdown workflow files in the consuming repository. `gh aw update` preserves local changes via a 3-way merge. There is no separate configuration-property system; the workflow files themselves are the control surface.
+Maintainer interaction happens in the PR phase for anything that is not low-complexity and low-risk. Reviewers comment on the actual change; the coding agent (or a human) addresses those comments. Branch protection and required reviews enforce the gate.
 
 ## Gates
 
@@ -65,7 +54,7 @@ Does **not** assign complexity or risk of a fix.
 
 ### 2. Plan gate
 **Worker** (`workflows/plan-worker.md`)  
-Triggered by `issue-triage-handoff` or by a later human comment. Emit `plan-worker-ready`.
+Triggered by `issue-triage-handoff`. Produce a rough plan and emit `plan-worker-ready`.
 
 **Triage** (`workflows/plan-triage.md`)  
 Assign complexity and risk. Emit `plan-triage-handoff` only when coding may proceed (not when high complexity is waiting for `design-approved`).
