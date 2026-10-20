@@ -29,19 +29,38 @@ Alternatively, copy the six `.md` files from `workflows/` in this repository int
 
 Commit the files on a branch and open a pull request.
 
-## 2. Issue completeness (optional override)
+## 2. Optional shared configuration
 
-By default the issue worker uses the repository’s issue template (`.github/ISSUE_TEMPLATE/` or `.github/ISSUE_TEMPLATE.md`) as the definition of a complete issue.
+The files under `shared/` in the harness repository are templates. They are **not** required for a working deployment. Copy only the ones you need into `.github/agentic-workflows/` of the consuming repository.
 
-Only if the template is missing or insufficient, add an override:
+| File | Required? | Purpose |
+|------|-----------|---------|
+| `complexity.md` | No | Override the default complexity axis definitions used by plan triage |
+| `risk.md` | No | Override the default risk axis definitions used by plan triage |
+| `issue-completeness.md` | No | Override completeness criteria (issue template is preferred by default) |
+| `related-repos.md` | No | Enable split-repo transfer suggestions (see schema below) |
+| `env-agent-contract.md` | No | Contract for an optional injectable environment agent |
+| `safety-policy.md` | No | Reference only; not read by workflows |
 
-```bash
-mkdir -p .github/agentic-workflows
-curl -fsSL https://raw.githubusercontent.com/vscheuber/agentic-workflows/main/shared/issue-completeness.md \
-  -o .github/agentic-workflows/issue-completeness.md
+If `complexity.md` or `risk.md` are absent, plan triage uses built-in defaults.  
+If `related-repos.md` is absent, no transfer suggestions are made.
+
+### related-repos.md schema
+
+```yaml
+this: owner/this-repo
+related:
+  - role: library          # free-form
+    repo: owner/other-repo
+    when: |
+      When to suggest this repository.
+notes: |
+  Optional free text.
 ```
 
-Edit that file with repository-specific requirements. It takes precedence over the generic fallback.
+- `related` is a list (zero or more entries).
+- Each entry needs `role` and `repo`; `when` is recommended.
+- No fixed `primary` or `library` keys — use whatever roles you need.
 
 ## 3. Compile
 
@@ -159,7 +178,8 @@ git push
 
 - [ ] Issues enabled
 - [ ] Workflow `.md` files added
-- [ ] Issue template present (or optional `.github/agentic-workflows/issue-completeness.md` override)
+- [ ] Optional `.github/agentic-workflows/` config files added only if needed
+- [ ] Issue template present (or optional completeness override)
 - [ ] `gh aw compile` run and lock files committed
 - [ ] All recommended labels created
 - [ ] Branch protection / ruleset configured (require PR, status checks, no force-push)
