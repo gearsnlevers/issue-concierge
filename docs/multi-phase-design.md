@@ -16,6 +16,8 @@ Triage hand-off signals use `<triage-name>-handoff`.
 | coding agent finished | `pr-worker-ready` |
 | `pr-triage` finished | `pr-triage-handoff` |
 
+Blocking labels use the form `<thing>-required`. Removing the label is the human signal to continue.
+
 Two independent axes are applied by the triage agents:
 
 - **Complexity** — design impact / autonomy
@@ -24,50 +26,40 @@ Two independent axes are applied by the triage agents:
 ## Plan comment identity
 
 The plan lives as a single comment on the issue.  
-gh-aw injects a non-spoofable marker into every comment created by a workflow:
+gh-aw injects a non-spoofable marker:
 
 ```html
 <!-- gh-aw-workflow-id: plan-worker -->
 ```
 
-`plan-triage` must classify only the comment that contains that exact marker.  
-Any other comment, even one that looks like a plan, is ignored.
+`plan-triage` classifies only the comment that contains that marker.
 
 ## Human interaction
 
-Reporter interaction stays in the issue phase.  
-The issue worker asks for missing or unclear information. Once the issue is actionable, the reporter has had their chance to convey everything needed.
+Reporter interaction stays in the issue phase.
 
-The plan phase is only a classification prerequisite. It produces a rough plan so complexity and risk can be assigned. It does not wait for or incorporate further human comments.
+The plan phase is a classification prerequisite. For high complexity it adds `plan-approval-required` and stops. A maintainer removes that label to resume; no new label needs to be chosen from a long list.
 
-Maintainer interaction happens in the PR phase for anything that is not low-complexity and low-risk. Reviewers comment on the actual change; the coding agent (or a human) addresses those comments. Branch protection and required reviews enforce the gate.
+Maintainer interaction on the actual change happens in the PR phase.
 
 ## Gates
 
 ### 1. Issue gate
-**Worker** (`workflows/issue-worker.md`)  
-Emit `issue-worker-ready`.
-
-**Triage** (`workflows/issue-triage.md`)  
-Apply quality and priority labels. Emit `issue-triage-handoff` when the issue is actionable.  
-Does **not** assign complexity or risk of a fix.
+**Worker** → `issue-worker-ready`  
+**Triage** → quality/priority labels + `issue-triage-handoff` when actionable.
 
 ### 2. Plan gate
-**Worker** (`workflows/plan-worker.md`)  
-Triggered by `issue-triage-handoff`. Produce a rough plan and emit `plan-worker-ready`.
-
-**Triage** (`workflows/plan-triage.md`)  
-Assign complexity and risk. Emit `plan-triage-handoff` only when coding may proceed (not when high complexity is waiting for `design-approved`).
+**Worker** → rough plan + `plan-worker-ready`  
+**Triage** → complexity and risk labels.  
+If complexity is high, add `plan-approval-required` and do not emit `plan-triage-handoff` while the label is present.  
+When the label is absent, emit `plan-triage-handoff`.
 
 ### 3. PR gate
-**Worker** (`workflows/pr-worker.md`)  
-Triggered by `plan-triage-handoff`. Assigns a coding agent and instructs it to emit `pr-worker-ready` on the pull request.
+**Worker** → assigns coding agent (triggered by `plan-triage-handoff`)  
+**Triage** → re-evaluates against the diff, emits `pr-triage-handoff`.
 
-**Triage** (`workflows/pr-triage.md`)  
-Triggered by `pr-worker-ready`. Re-evaluates complexity and risk against the diff. Emit `pr-triage-handoff` when complete.
-
-### Environment agent (optional, injectable)
-Not a gate. Any worker in any phase may invoke it if the consuming repository has defined it. See `shared/env-agent-contract.md`.
+### Environment agent
+Optional. Any worker may invoke it if the consuming repository defines it.
 
 ### Merge
-Normally non-agentic. Branch protection and auto-merge rules act on the labels present after `pr-triage-handoff`.
+Branch protection and auto-merge rules act on the final labels.
