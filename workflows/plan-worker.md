@@ -1,6 +1,7 @@
 ---
 description: |
   Plan gate worker. Produces a short, cheap, rough plan for actionable issues.
+  The plan comment is uniquely identified by the gh-aw-workflow-id marker.
 on:
   issues:
     types: [labeled]
@@ -35,5 +36,15 @@ Produce a short, rough plan only. No code.
 - Open questions, if any
 
 If the repository defines an environment agent and a quick check would improve the plan, you may request it. Otherwise proceed without it.
+
+## Identity of the plan comment
+gh-aw automatically appends a hidden marker to every comment this workflow creates:
+
+```html
+<!-- gh-aw-workflow-id: plan-worker -->
+```
+
+Do not try to add this marker yourself. The safe-outputs job inserts it.
+That marker is the unique, non-spoofable signature of the plan comment.
 
 Post the plan as a single comment and add the label `plan-worker-ready`.
