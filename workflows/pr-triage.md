@@ -17,7 +17,8 @@ safe-outputs:
       - risk/low
       - risk/medium
       - risk/high
-    max: 2
+      - pr-triage-handoff
+    max: 3
   add-comment:
     max: 1
   threat-detection:
@@ -31,7 +32,6 @@ engine: copilot
 # PR Triage
 
 Triggered when a pull request receives the label `pr-worker-ready`.
-That label is the completion signal from the PR worker / coding agent.
 
 Examine the pull request diff.
 Re-assign complexity and risk labels based on the actual changes.
@@ -41,4 +41,6 @@ Prefer concrete signals:
 - Number of files and size of the diff
 - Whether the change matches or exceeds the earlier plan
 
-Post a short comment stating the final labels and any recommended next action (human review, design discussion, or eligible for auto-merge).
+Emit `pr-triage-handoff` when triage is complete. That label signals that merge rules (branch protection, auto-merge, required reviews) may now act on the final classification.
+
+Post a short comment stating the final labels and the recommended next action.
