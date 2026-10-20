@@ -100,13 +100,13 @@ The harness relies on ordinary GitHub branch protection and auto-merge. Recommen
 | Setting | Value | Reason |
 |---------|-------|--------|
 | Require a pull request before merging | On | Direct pushes bypass the PR gate |
-| Required approving reviews | 1 | Human review for medium/high; set to 0 only for pure low/low auto-merge experiments |
-| Dismiss stale pull request approvals | On | New commits invalidate prior approval |
+| Required approving reviews | 0 | Allows low/low auto-merge; human review for medium/high is enforced by labels and process, not by a blanket review requirement |
+| Dismiss stale pull request approvals | Off | Only relevant when required reviews > 0 |
 | Require status checks to pass | On (your CI) | Auto-merge waits for green checks |
-| Require conversation resolution | Optional | Cleaner review threads |
+| Require conversation resolution | Off | Optional; not required for the harness |
 | Allow force pushes | Off | Protects history |
 | Allow deletions | Off | Protects the branch |
-| Auto-merge | Enabled | Lets eligible low/low PRs merge when checks and reviews are satisfied |
+| Auto-merge | Enabled | Lets eligible low/low PRs merge when checks pass |
 
 Also create the labels listed above. Without the labels the workflows cannot signal or classify.
 
