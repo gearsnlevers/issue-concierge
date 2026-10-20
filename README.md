@@ -100,7 +100,8 @@ Local edits are preserved by the 3-way merge performed by `gh aw update`.
 │   └── tiered-fixer.md
 └── shared/
     ├── safety-policy.md
-    ├── axes.md
+    ├── complexity.md
+    ├── risk.md
     └── prompts/
         └── triage-core.md
 ```
