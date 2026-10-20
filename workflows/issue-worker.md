@@ -38,6 +38,7 @@ safe-outputs:
     max: 2
     target: "*"
   add-labels:
+    github-token: ${{ secrets.SIGNAL_TOKEN }}
     allowed:
       - issue-worker-ready
       - related-repo

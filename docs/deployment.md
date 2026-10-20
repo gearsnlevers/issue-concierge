@@ -168,6 +168,29 @@ Early gates use a light model and tight turn limits. Later gates keep the defaul
 `issue-worker` also rate-limits `issue_comment` to 3 runs per user per 30 minutes so a chatty reporter does not restart the agent on every reply.
 
 
+
+## Signal token
+
+Gate handoffs are labels. The next workflow starts on the `labeled` event.
+
+GitHub does not start a workflow from an event created by the default `GITHUB_TOKEN`. Safe-outputs apply labels as `github-actions[bot]`, so the next gate never runs unless the label is applied with a different token.
+
+Every deployment needs a secret named `SIGNAL_TOKEN` (rename it in the workflow frontmatter if you prefer another name). It is used as `github-token` on every `add-labels` safe-output.
+
+Create a fine-grained token:
+
+- Resource owner: the organization or user that owns the repository
+- Repository access: only the repositories that run the harness
+- Permissions: Issues: Read and write
+
+Pre-filled form for the frodo repositories (select only `rockcarver/frodo-lib` and `rockcarver/frodo-cli`):
+
+[Create SIGNAL_TOKEN](https://github.com/settings/personal-access-tokens/new?name=SIGNAL_TOKEN&description=Apply+harness+handoff+labels+so+the+next+gate+starts&target_name=rockcarver&expires_in=90&issues=write)
+
+Store it as an organization secret named `SIGNAL_TOKEN`, visible to the repositories that run the harness. Or store a repository secret of that name in each repository.
+
+After the secret exists, remove and re-add the handoff label (or re-run the worker) so the next gate starts.
+
 ## Cross-repository issue creation
 
 If a repo uses `related-repos.md` and the worker creates the canonical issue in another repository, the default `GITHUB_TOKEN` cannot do that. It is scoped to the repository that runs the workflow.
