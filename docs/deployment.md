@@ -148,6 +148,22 @@ If the organization has centralized Copilot billing and allows Copilot CLI to be
 
 No `COPILOT_GITHUB_TOKEN` is required. Prefer this when available, because it is not tied to a personal account.
 
+## Cost controls
+
+Early gates use a light model and tight turn limits. Later gates keep the default model.
+
+| Workflow | Model | max-turns | Extra |
+|----------|-------|-----------|-------|
+| issue-worker | small | 10 | skip if related-repo/duplicate/spam; rate-limit comments |
+| issue-triage | small | 8 | skip if related-repo/duplicate/spam |
+| plan-triage | small | 8 | |
+| related-repo-closer | small | 6 | |
+| plan-worker | default | — | |
+| pr-worker | default | — | |
+| pr-triage | default | — | |
+
+`issue-worker` also rate-limits `issue_comment` to 3 runs per user per 30 minutes so a chatty reporter does not restart the agent on every reply.
+
 ## 4. Create labels
 
 The workflows apply and react to specific labels. Create them once per repository:

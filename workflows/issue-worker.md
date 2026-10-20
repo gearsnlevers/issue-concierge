@@ -17,6 +17,15 @@ on:
         type: string
 concurrency:
   job-discriminator: ${{ github.run_id }}
+skip-if-match: "label:related-repo OR label:duplicate OR label:spam"
+user-rate-limit:
+  max-runs-per-window: 3
+  window: 30
+  events: [issue_comment]
+engine:
+  id: copilot
+  model: small
+max-turns: 10
 permissions:
   contents: read
   issues: read
@@ -35,7 +44,6 @@ safe-outputs:
     continue-on-error: false
 max-ai-credits: 16
 timeout-minutes: 5
-engine: copilot
 ---
 
 # Issue Worker
