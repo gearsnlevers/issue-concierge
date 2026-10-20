@@ -169,6 +169,25 @@ Early gates use a light model and tight turn limits. Later gates keep the defaul
 
 
 
+
+## Copilot coding agent token
+
+The PR worker assigns the Copilot coding agent. The default `GITHUB_TOKEN` cannot do that.
+
+Create a fine-grained token owned by a user with an active Copilot subscription:
+
+- Resource owner: the organization that owns the repositories
+- Repository access: the repositories that run the PR worker
+- Permissions: Actions, Contents, Issues, and Pull requests: Read and write
+
+Store it as a secret named `GH_AW_AGENT_TOKEN`. That name is read automatically by the assignment step. `pr-worker.md` also references it explicitly.
+
+Pre-filled form for the frodo repositories (select `rockcarver/frodo-lib` and `rockcarver/frodo-cli`):
+
+[Create GH_AW_AGENT_TOKEN](https://github.com/settings/personal-access-tokens/new?name=GH_AW_AGENT_TOKEN&description=Assign+the+Copilot+coding+agent+from+the+PR+worker&target_name=rockcarver&expires_in=90&actions=write&contents=write&issues=write&pull_requests=write)
+
+Copilot cloud agent must also be enabled for those repositories: `https://github.com/organizations/<org>/settings/copilot/cloud_agent`.
+
 ## Signal token
 
 Gate handoffs are labels. The next workflow starts on the `labeled` event.
