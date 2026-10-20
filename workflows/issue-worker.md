@@ -2,7 +2,7 @@
 description: |
   Issue gate worker. Analyzes completeness and actionability.
   Guides reporters only through comments; never mentions internal labels.
-  Reads optional repository-specific completeness criteria.
+  Prefers the repository issue template as the definition of a complete issue.
 on:
   issues:
     types: [opened, reopened, edited]
@@ -41,8 +41,13 @@ engine: copilot
 - Otherwise do nothing.
 
 ## Completeness criteria
-If the file `.github/agentic-workflows/issue-completeness.md` exists in the repository, read it and use those criteria to judge whether the issue is meaningful and what to ask for.
-If the file is absent, use generic criteria: reproduction steps, expected vs actual behavior, and environment.
+Determine what makes an issue meaningful by reading, in order:
+
+1. `.github/agentic-workflows/issue-completeness.md` (if present)
+2. Issue templates under `.github/ISSUE_TEMPLATE/` or `.github/ISSUE_TEMPLATE.md`
+3. Generic fallback: reproduction steps, expected vs actual behavior, environment
+
+Use the fields and required sections from the chosen source when deciding what is missing and what to request.
 
 ## Analysis comment (reporter-facing)
 Read the issue body **and every comment**.
@@ -54,12 +59,7 @@ Cover, in ordinary language:
 - Age and recent activity if relevant
 
 ### Missing information
-If required details are absent, end with a direct request that lists only the items still needed, for example:
-
-> To move this forward, please add:
-> - Steps to reproduce
-> - What you expected vs what actually happened
-> - Environment (version, OS)
+If required details are absent, end with a direct request that lists only the items still needed, phrased to match the issue template fields when a template exists.
 
 ### Not actionable or not urgent
 - If the issue looks stale or no longer relevant, say so plainly and note that it may be closed.
