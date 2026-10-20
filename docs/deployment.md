@@ -65,6 +65,25 @@ notes: |
 
 When the worker links an issue it creates a canonical issue in the related repository, cross-links both sides, and applies the internal label `related-repo` to the original. The original stays open until the canonical issue is closed, at which point `related-repo-closer` closes it.
 
+
+### Release coupling
+
+Some split-repo projects need a release of the repository where the issue was reported before the reporter is done. Frodo is the example: a library fix is not usable from the CLI until a CLI release pins that library version. Releases are created by a maintainer. The harness does not create them.
+
+Set this on the related entry in the consumer repository:
+
+```yaml
+release:
+  requires_consumer_release: true
+  pins: "@owner/package"
+```
+
+Behavior:
+
+- The issue worker tells the reporter that a release of this project will be needed.
+- When the canonical issue closes, the original issue stays open and gets `awaiting-release`.
+- `release-closer` runs on `release: published`. It closes an awaiting issue only when the release notes mention it, or the pinned package version's notes mention the canonical issue.
+
 ## 3. Compile
 
 After the workflow files are on the default branch (or on the branch you will merge):
@@ -297,6 +316,7 @@ The workflows apply and react to specific labels. Create them once per repositor
 | `needs-info` | `d4c5f9` | Missing reproduction steps or details |
 | `backlog` | `c5def5` | Valid but not urgent; do not plan or implement now |
 | `related-repo` | `fbca04` | Non-canonical issue; tracked in a related repository |
+| `awaiting-release` | `c5def5` | Fix is in the related repository; waiting for a release here that includes it |
 | `issue-worker-ready` | `c2e0c6` | Issue worker finished |
 | `issue-triage-handoff` | `bfd4f2` | Issue triage finished; plan worker may run |
 | `plan-worker-ready` | `c2e0c6` | Plan worker finished |
