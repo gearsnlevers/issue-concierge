@@ -12,7 +12,7 @@ safe-outputs:
     max: 1
   add-labels:
     allowed:
-      - plan-ready
+      - plan-worker-ready
     max: 1
   threat-detection:
     enabled: true
@@ -36,4 +36,4 @@ Produce a short, rough plan only. No code.
 
 If the repository defines an environment agent and a quick check would improve the plan, you may request it. Otherwise proceed without it.
 
-Post the plan as a single comment and add the label `plan-ready`.
+Post the plan as a single comment and add the label `plan-worker-ready`.
