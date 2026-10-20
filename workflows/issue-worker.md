@@ -9,6 +9,7 @@ on:
     types: [opened, reopened, edited]
   issue_comment:
     types: [created]
+  skip-if-match: "label:related-repo OR label:duplicate OR label:spam"
   workflow_dispatch:
     inputs:
       issue_number:
@@ -17,7 +18,6 @@ on:
         type: string
 concurrency:
   job-discriminator: ${{ github.run_id }}
-skip-if-match: "label:related-repo OR label:duplicate OR label:spam"
 user-rate-limit:
   max-runs-per-window: 3
   window: 30
