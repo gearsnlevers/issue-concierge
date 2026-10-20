@@ -1,7 +1,7 @@
 ---
 description: |
   Plan gate triage. Assigns the first complexity and risk labels against the plan.
-  Only the comment that carries the plan-worker workflow-id marker is classified.
+  Only the newest comment that carries the plan-worker workflow-id marker is classified.
 on:
   issues:
     types: [labeled]
@@ -34,7 +34,7 @@ engine: copilot
 Triggered when an issue receives `plan-worker-ready`.
 
 ## Which comment is the plan
-Locate the single comment that contains the exact marker:
+Locate the newest comment that contains the exact marker:
 
 ```html
 <!-- gh-aw-workflow-id: plan-worker -->
