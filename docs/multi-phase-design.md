@@ -43,7 +43,7 @@ Reporter interaction stays in the issue phase and is conducted entirely through 
 When information is missing the issue worker posts an explicit, plain-language request. Issue triage applies the internal `needs-info` label and does not hand off.  
 A later comment from the reporter re-triggers the issue worker. Issue triage then re-evaluates and can clear `needs-info` and emit `issue-triage-handoff` once the issue is complete.
 
-The plan phase is a classification prerequisite. For high complexity it adds the internal label `plan-approval-required` and stops. A maintainer removes that label to resume.
+The plan phase is a classification prerequisite. For high complexity it adds the internal label `plan-approval-required` and stops. A maintainer removes that label to resume: the `plan-approval-resume` workflow (plain Actions, no LLM) sees the removal and applies `plan-triage-handoff`, which starts the PR gate. It acts only on an open issue that carries `complexity/high`, has no `plan-triage-handoff` yet, and is not waiting on a dependency (`dependency-required`). It can also be run by hand with an issue number for an issue whose label was already removed.
 
 Maintainer interaction on the actual change happens in the PR phase.
 
@@ -75,8 +75,8 @@ Full rules: `shared/dependencies.md`.
 ### 2. Plan gate
 **Worker** → rough plan + `plan-worker-ready`  
 **Triage** → complexity and risk labels.  
-If complexity is high, add `plan-approval-required` and do not emit `plan-triage-handoff` while the label is present.  
-When the label is absent, emit `plan-triage-handoff`.
+If complexity is high, add `plan-approval-required` and do not emit `plan-triage-handoff`. Otherwise emit `plan-triage-handoff`.  
+Plan triage never resumes a high-complexity issue itself. Removing `plan-approval-required` is the signal; `plan-approval-resume` applies the handoff.
 
 ### 3. PR gate
 **Worker** → assigns coding agent (triggered by `plan-triage-handoff`)  
