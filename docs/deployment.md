@@ -248,7 +248,7 @@ Gate handoffs are labels. The next workflow starts on the `labeled` event.
 
 GitHub does not start a workflow from an event created by the default `GITHUB_TOKEN`. Safe-outputs apply labels as `github-actions[bot]`, so the next gate never runs unless the label is applied with a different token.
 
-Every deployment needs a secret named `SIGNAL_TOKEN` (rename it in the workflow frontmatter if you prefer another name). It is used as `github-token` on every `add-labels` safe-output. The dependency watcher (below) also uses it, outside gh-aw, to add and remove labels so that issue triage starts again after a dependency is finished. Issues: Read and write covers both.
+Every deployment needs a secret named `SIGNAL_TOKEN` (rename it in the workflow frontmatter if you prefer another name). It is used as `github-token` on every `add-labels` safe-output. The dependency watcher and plan approval resume (below) also use it, outside gh-aw, to change labels so the next gate starts. Issues: Read and write covers both.
 
 Create a fine-grained token:
 
@@ -276,6 +276,17 @@ Install it in every deployment. Copy two files:
 | `scripts/dependency-watch.mjs` | `.github/scripts/dependency-watch.mjs` |
 
 It is not a gh-aw workflow, so `gh aw compile` does not touch it. Update it by copying the files again.
+
+### Plan approval resume
+
+When a maintainer removes `plan-approval-required` from a high-complexity issue, a second plain Actions workflow (no LLM) hands the issue to the PR gate. Without it, removing the label does nothing. Install it in every deployment. Copy two files:
+
+| From this repository | To the consuming repository |
+|----------------------|-----------------------------|
+| `workflows/plan-approval-resume.yml` | `.github/workflows/plan-approval-resume.yml` |
+| `scripts/plan-approval-resume.mjs` | `.github/scripts/plan-approval-resume.mjs` |
+
+Requirements: `SIGNAL_TOKEN` with Issues: Read and write (it applies `plan-triage-handoff` so the PR gate starts), and the existing `plan-triage-handoff` label. It acts only on an open issue that has `complexity/high`, has no `plan-triage-handoff`, and is not labeled `dependency-required`. To resume an issue whose label was removed before the workflow was installed, run it from the Actions tab with the issue number.
 
 Requirements:
 
@@ -369,7 +380,7 @@ The workflows apply and react to specific labels. Create them once per repositor
 | `risk/low` | `0e8a16` | Limited blast radius |
 | `risk/medium` | `fbca04` | Normal code changes |
 | `risk/high` | `d93f0b` | Security, auth, data integrity, availability, or public API impact |
-| `plan-approval-required` | `b60205` | Remove to resume after high-complexity classification |
+| `plan-approval-required` | `b60205` | Remove to resume after high-complexity classification (`plan-approval-resume` hands the issue to the PR gate) |
 | `needs-info` | `d4c5f9` | Missing reproduction steps or details |
 | `backlog` | `c5def5` | Valid but not urgent; do not plan or implement now |
 | `dependency-required` | `b60205` | Waiting for a dependency; the watcher removes it when the dependency is finished |
@@ -475,6 +486,7 @@ git push
 - [ ] `gh aw compile` run and lock files committed
 - [ ] All recommended labels created (including `related-repo`, `dependency-required`, `dependency-satisfied`)
 - [ ] Dependency watcher installed (`dependency-watch.yml` and `dependency-watch.mjs`)
+- [ ] Plan approval resume installed (`plan-approval-resume.yml` and `plan-approval-resume.mjs`)
 - [ ] Branch protection / ruleset configured (require PR, status checks, no force-push)
 - [ ] Auto-merge enabled (if low/low unattended merge is desired)
 - [ ] Test issue processed end-to-end

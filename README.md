@@ -51,7 +51,7 @@ See `docs/multi-phase-design.md` for the full model.
 | Plan | `plan-worker` | `plan-worker-ready` | `plan-triage` | `plan-triage-handoff` |
 | PR | `pr-worker` | `pr-worker-ready` | `pr-triage` | `pr-triage-handoff` |
 
-High complexity adds `plan-approval-required`. Removing that label allows the plan triage hand-off.
+High complexity adds `plan-approval-required`. When a maintainer removes that label, `plan-approval-resume` (plain Actions, no LLM) applies `plan-triage-handoff` and the PR gate starts. See [docs/multi-phase-design.md](docs/multi-phase-design.md).
 
 Valid but non-urgent issues receive `backlog` and do not enter the plan gate.
 
@@ -75,7 +75,7 @@ Create these in consuming repositories (full list and colors in [docs/deployment
 | `risk/low` | Risk | Limited blast radius |
 | `risk/medium` | Risk | Normal code changes |
 | `risk/high` | Risk | Security, auth, data integrity, availability, or public API impact |
-| `plan-approval-required` | Gate | Remove to resume after high-complexity classification |
+| `plan-approval-required` | Gate | Added by plan triage for high complexity. Removing it resumes the issue (`plan-approval-resume` hands it to the PR gate) |
 | `needs-info` | Quality | Missing reproduction steps or details |
 | `dependency-required` | Gate | Issue declares a dependency that is not finished; the watcher removes it (see [shared/dependencies.md](shared/dependencies.md)) |
 | `dependency-satisfied` | Gate | Dependencies finished (or cleared by a maintainer); issue triage lets the issue through |
@@ -95,7 +95,7 @@ Create these in consuming repositories (full list and colors in [docs/deployment
 |-------------------|-----|--------|------|
 | Low | Agent + auto-merge eligible | Agent + human review | Agent + human review + tight path limits |
 | Medium | Agent + human review | Agent + human review | Human review required |
-| High | Stop until `plan-approval-required` is removed | Stop until `plan-approval-required` is removed | Stop until `plan-approval-required` is removed |
+| High | Stop until `plan-approval-required` is removed, then hand off | Stop until `plan-approval-required` is removed, then hand off | Stop until `plan-approval-required` is removed, then hand off |
 
 Repositories may override the matrix locally.
 
@@ -143,9 +143,11 @@ Local edits are preserved by the 3-way merge performed by `gh aw update`.
 │   ├── plan-triage.md
 │   ├── pr-worker.md
 │   ├── pr-triage.md
-│   └── dependency-watch.yml
+│   ├── dependency-watch.yml
+│   └── plan-approval-resume.yml
 ├── scripts/
-│   └── dependency-watch.mjs
+│   ├── dependency-watch.mjs
+│   └── plan-approval-resume.mjs
 └── shared/
     ├── dependencies.md
     ├── safety-policy.md
