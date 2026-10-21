@@ -69,6 +69,28 @@ When the worker links an issue it creates a canonical issue in the related repos
 
 The related-repo closer runs in the repository that owns the fix and writes to the original issue. `SIGNAL_TOKEN` cannot do that. Set `github-token` on `add-comment`, `add-labels`, and `close-issue` to the secret named in this repository's `related-repos.md` for the other repository.
 
+
+## Release token
+
+The release closer runs on `release: published` and `release: prereleased`. A release created with `GITHUB_TOKEN` does not trigger other workflows.
+
+Create the GitHub release with a fine-grained token, stored as `RELEASE_TOKEN`:
+
+- Resource owner: the account or organization that owns the repository
+- Repository access: the repositories that publish releases
+- Permission: Contents: Read and write
+
+Use it only for the step that creates the release:
+
+```yaml
+token: ${{ secrets.RELEASE_TOKEN }}
+```
+
+Pre-filled forms (select the repositories on the form):
+
+- [rockcarver](https://github.com/settings/personal-access-tokens/new?name=RELEASE_TOKEN&description=Create+releases+so+the+release+closer+runs&target_name=rockcarver&expires_in=90&contents=write)
+- [vscheuber](https://github.com/settings/personal-access-tokens/new?name=RELEASE_TOKEN&description=Create+releases+so+the+release+closer+runs&target_name=vscheuber&expires_in=90&contents=write)
+
 ### Release coupling
 
 Some split-repo projects need a release of the repository where the issue was reported before the reporter is done. Frodo is the example: a library fix is not usable from the CLI until a CLI release pins that library version. Releases are created by a maintainer. The harness does not create them.
