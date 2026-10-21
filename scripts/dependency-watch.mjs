@@ -204,8 +204,10 @@ async function findReleaseContaining(repo, sha, ctx) {
     .filter((r) => !r.draft && r.published_at)
     .sort((a, b) => a.published_at.localeCompare(b.published_at));
   for (const r of published) {
+    // The compare payload can be very large (file diffs); only the status is needed.
     const cmp = await ctx.api(
-      `repos/${repo}/compare/${sha}...${encodeURIComponent(r.tag_name)}`
+      `repos/${repo}/compare/${sha}...${encodeURIComponent(r.tag_name)}?per_page=1`,
+      { jq: '{status: .status}' }
     );
     if (cmp && (cmp.status === 'ahead' || cmp.status === 'identical')) return r;
   }
@@ -264,14 +266,16 @@ export async function evaluateIssue(issue, comments, ctx) {
 
 // ------------------------------------------------------------------ main
 
-function ghJson(path, token, { method = 'GET', body } = {}) {
+function ghJson(path, token, { method = 'GET', body, jq } = {}) {
   const args = ['api', path, '--method', method];
+  if (jq) args.push('--jq', jq);
   if (body) for (const [k, v] of Object.entries(body)) args.push('-f', `${k}=${v}`);
   try {
     const out = execFileSync('gh', args, {
       env: { ...process.env, GH_TOKEN: token },
       encoding: 'utf8',
       stdio: ['ignore', 'pipe', 'pipe'],
+      maxBuffer: 256 * 1024 * 1024,
     });
     return out ? JSON.parse(out) : null;
   } catch (e) {
@@ -313,7 +317,7 @@ export async function main(argv = process.argv.slice(2), env = process.env) {
   const ctx = {
     thisRepo,
     related,
-    api: async (p) => ghJson(p, readToken),
+    api: async (p, opts) => ghJson(p, readToken, opts),
     registryHasVersion,
     readPinnedVersion: (pkg) => {
       const spec = readPinned(pkg);

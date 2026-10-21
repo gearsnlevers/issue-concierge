@@ -66,7 +66,7 @@ function ctxFor(world, { pinned = null, registry = true, thisRepo = 'rockcarver/
   return {
     thisRepo,
     related,
-    api: async (p) => (p in world ? world[p] : null),
+    api: async (p) => (p in world ? world[p] : p.split('?')[0] in world ? world[p.split('?')[0]] : null),
     registryHasVersion: async () => registry,
     readPinnedVersion: () => pinned,
   };
@@ -195,4 +195,19 @@ test('comment wording is plain language and carries the marker', () => {
   assert.match(text, /has been merged but is not in a release yet/);
   assert.doesNotMatch(text, /744/);
   assert.doesNotMatch(text, /label|gate|harness|workflow|dependency-required/i);
+});
+
+test('the compare lookup asks for the status only (the full payload can exceed 1 MB)', async () => {
+  const w = { ...mergedPr, ...release('v5.0.0-9', 'ahead') };
+  const calls = [];
+  const ctx = ctxFor(w, { pinned: '5.0.0-9' });
+  const api = ctx.api;
+  ctx.api = async (p, opts) => {
+    calls.push([p, opts]);
+    return api(p, opts);
+  };
+  await resolveDependency(dep, ctx);
+  const compare = calls.find(([p]) => p.includes('/compare/'));
+  assert.ok(compare);
+  assert.equal(compare[1]?.jq, '{status: .status}');
 });
