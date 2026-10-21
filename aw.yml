@@ -11,6 +11,9 @@ files:
   - workflows/pr-worker.md
   - workflows/pr-triage.md
   - workflows/related-repo-closer.md
+  - workflows/dependency-watch.yml
+  - scripts/dependency-watch.mjs
+  - shared/dependencies.md
   - shared/safety-policy.md
   - shared/complexity.md
   - shared/risk.md

@@ -55,6 +55,8 @@ High complexity adds `plan-approval-required`. Removing that label allows the pl
 
 Valid but non-urgent issues receive `backlog` and do not enter the plan gate.
 
+An issue that declares `Depends on:` an unfinished issue or pull request receives `dependency-required` and stops at the issue gate. `dependency-watch` resolves it deterministically (no LLM) and resumes the issue. For split-repo projects, a library dependency counts only when it is merged, released, installable, and pinned by the consuming repository. See [shared/dependencies.md](shared/dependencies.md).
+
 ### Safety Model
 - Standard agents run read-only; writes go through validated safe-outputs.
 - Threat detection scans proposed outputs before application.
@@ -75,6 +77,8 @@ Create these in consuming repositories (full list and colors in [docs/deployment
 | `risk/high` | Risk | Security, auth, data integrity, availability, or public API impact |
 | `plan-approval-required` | Gate | Remove to resume after high-complexity classification |
 | `needs-info` | Quality | Missing reproduction steps or details |
+| `dependency-required` | Gate | Issue declares a dependency that is not finished; the watcher removes it (see [shared/dependencies.md](shared/dependencies.md)) |
+| `dependency-satisfied` | Gate | Dependencies finished (or cleared by a maintainer); issue triage lets the issue through |
 | `backlog` | Quality | Valid but not urgent; do not plan or implement now |
 | `issue-worker-ready` | Gate | Issue worker finished |
 | `issue-triage-handoff` | Gate | Issue triage finished; plan worker may run |
@@ -138,8 +142,12 @@ Local edits are preserved by the 3-way merge performed by `gh aw update`.
 │   ├── plan-worker.md
 │   ├── plan-triage.md
 │   ├── pr-worker.md
-│   └── pr-triage.md
+│   ├── pr-triage.md
+│   └── dependency-watch.yml
+├── scripts/
+│   └── dependency-watch.mjs
 └── shared/
+    ├── dependencies.md
     ├── safety-policy.md
     ├── complexity.md
     ├── risk.md
