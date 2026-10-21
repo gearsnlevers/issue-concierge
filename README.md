@@ -11,7 +11,7 @@ Each stage is a gate.
 
 - Workers signal completion with `<worker-name>-ready`.
 - Triage agents signal the next gate with `<triage-name>-handoff`.
-- Blocking conditions use `<thing>-required`. Removing the label resumes processing.
+- Blocking conditions use `<thing>-required`. Removing the label resumes processing. `dependency-required` is removed automatically by the dependency watcher when the work the issue depends on is finished.
 
 ## Quick Start (Consuming Repo)
 

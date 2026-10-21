@@ -248,7 +248,7 @@ Gate handoffs are labels. The next workflow starts on the `labeled` event.
 
 GitHub does not start a workflow from an event created by the default `GITHUB_TOKEN`. Safe-outputs apply labels as `github-actions[bot]`, so the next gate never runs unless the label is applied with a different token.
 
-Every deployment needs a secret named `SIGNAL_TOKEN` (rename it in the workflow frontmatter if you prefer another name). It is used as `github-token` on every `add-labels` safe-output.
+Every deployment needs a secret named `SIGNAL_TOKEN` (rename it in the workflow frontmatter if you prefer another name). It is used as `github-token` on every `add-labels` safe-output. The dependency watcher (below) also uses it, outside gh-aw, to add and remove labels so that issue triage starts again after a dependency is finished. Issues: Read and write covers both.
 
 Create a fine-grained token:
 
@@ -258,7 +258,7 @@ Create a fine-grained token:
 
 Pre-filled form for the frodo repositories (select only `rockcarver/frodo-lib` and `rockcarver/frodo-cli`):
 
-[Create SIGNAL_TOKEN](https://github.com/settings/personal-access-tokens/new?name=SIGNAL_TOKEN&description=Apply+harness+handoff+labels+so+the+next+gate+starts&target_name=rockcarver&expires_in=90&issues=write)
+[Create SIGNAL_TOKEN](https://github.com/settings/personal-access-tokens/new?name=SIGNAL_TOKEN&description=Apply+and+remove+harness+labels+so+the+next+gate+starts&target_name=rockcarver&expires_in=90&issues=write)
 
 Store it as an organization secret named `SIGNAL_TOKEN`, visible to the repositories that run the harness. Or store a repository secret of that name in each repository.
 
@@ -280,7 +280,7 @@ It is not a gh-aw workflow, so `gh aw compile` does not touch it. Update it by c
 Requirements:
 
 - `SIGNAL_TOKEN` (see below) with Issues: Read and write. The watcher uses it to remove and re-add `issue-worker-ready` so issue triage starts again.
-- The labels `dependency-required` and `dependency-satisfied` (step 4).
+- The labels `dependency-required` and `dependency-satisfied` (step 4). The watcher cannot add a label that does not exist.
 - Read access to the repositories named in dependencies. `github.token` is enough for public repositories.
 - For a related repository that needs a release before work can start, set `release.requires_consumer_release` and `release.pins` in `related-repos.md`. The watcher then also requires a published release and a matching pin in `package.json`.
 

@@ -14,6 +14,22 @@ followed by one or more references. A reference is `#N`, `owner/repo#N`, or a fu
 
 These are **not** dependencies: `Fixes`, `Closes`, `Resolves`, `Reported from`, and any reference in ordinary prose. Dependencies are never inferred from free text.
 
+## Who does what
+
+Nothing here needs a maintainer in the normal case. Both labels are set automatically.
+
+| Step | Done by |
+|------|---------|
+| Notice the `Depends on:` line and add `dependency-required` | Issue triage (an agent) |
+| Check whether the dependencies are finished | The watcher (plain Actions, no LLM), hourly, on demand, and when the label is added |
+| Post and update the status comment | The watcher |
+| Add `dependency-satisfied`, remove `dependency-required`, restart triage | The watcher |
+| Hand off to planning once the gate is cleared | Issue triage |
+
+Issue triage cannot check the registry or the pin (it has no shell or network access), so it never decides whether a dependency is finished. It only detects the declaration and sees `dependency-satisfied` as the signal that the watcher has cleared it.
+
+Maintainers only step in for the cases under "Needs a maintainer", or to skip the gate on purpose by adding `dependency-satisfied` by hand. That is an override, not part of the normal flow.
+
 ## Labels
 
 | Label | Meaning |
