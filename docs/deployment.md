@@ -350,6 +350,8 @@ The workflows apply and react to specific labels. Create them once per repositor
 | `pr-worker-ready` | `c2e0c6` | Coding agent finished |
 | `pr-triage-handoff` | `bfd4f2` | PR triage finished; merge rules may act |
 | `duplicate` | `cfd3d7` | Strong duplicate match |
+| `already-fixed` | `0e8a16` | A later change addresses the report; closed |
+| `invalid` | `e4e669` | Cannot reproduce; nothing relevant changed after the issue was opened |
 | `priority/p0` | `b60205` | Critical urgency |
 | `priority/p1` | `d93f0b` | High urgency |
 | `priority/p2` | `fbca04` | Normal urgency |
