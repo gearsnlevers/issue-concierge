@@ -24,7 +24,10 @@ Nothing here needs a maintainer in the normal case. Both labels are set automati
 | Check whether the dependencies are finished | The watcher (plain Actions, no LLM), hourly, on demand, and when the label is added |
 | Post and update the status comment | The watcher |
 | Add `dependency-satisfied`, remove `dependency-required`, restart triage | The watcher |
+| Hand the issue to triage even though it has a dependency (no hold, no "on hold" comment) | Issue worker |
 | Hand off to planning once the gate is cleared | Issue triage |
+
+The issue worker runs first and must not hold a dependent issue back itself. If it withholds `issue-worker-ready`, triage never runs, `dependency-required` is never applied, and the watcher never resumes the issue.
 
 Issue triage cannot check the registry or the pin (it has no shell or network access), so it never decides whether a dependency is finished. It only detects the declaration and sees `dependency-satisfied` as the signal that the watcher has cleared it.
 
