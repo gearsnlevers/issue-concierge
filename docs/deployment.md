@@ -248,7 +248,7 @@ Gate handoffs are labels. The next workflow starts on the `labeled` event.
 
 GitHub does not start a workflow from an event created by the default `GITHUB_TOKEN`. Safe-outputs apply labels as `github-actions[bot]`, so the next gate never runs unless the label is applied with a different token.
 
-Every deployment needs a secret named `SIGNAL_TOKEN` (rename it in the workflow frontmatter if you prefer another name). It is used as `github-token` on every `add-labels` safe-output.
+Every deployment needs a secret named `SIGNAL_TOKEN` (rename it in the workflow frontmatter if you prefer another name). It is used as `github-token` on every `add-labels` safe-output. The dependency watcher (below) also uses it, outside gh-aw, to add and remove labels so that issue triage starts again after a dependency is finished. Issues: Read and write covers both.
 
 Create a fine-grained token:
 
@@ -258,11 +258,33 @@ Create a fine-grained token:
 
 Pre-filled form for the frodo repositories (select only `rockcarver/frodo-lib` and `rockcarver/frodo-cli`):
 
-[Create SIGNAL_TOKEN](https://github.com/settings/personal-access-tokens/new?name=SIGNAL_TOKEN&description=Apply+harness+handoff+labels+so+the+next+gate+starts&target_name=rockcarver&expires_in=90&issues=write)
+[Create SIGNAL_TOKEN](https://github.com/settings/personal-access-tokens/new?name=SIGNAL_TOKEN&description=Apply+and+remove+harness+labels+so+the+next+gate+starts&target_name=rockcarver&expires_in=90&issues=write)
 
 Store it as an organization secret named `SIGNAL_TOKEN`, visible to the repositories that run the harness. Or store a repository secret of that name in each repository.
 
 After the secret exists, remove and re-add the handoff label (or re-run the worker) so the next gate starts.
+
+## Dependency watcher
+
+Issues can declare `Depends on: owner/repo#N`. Issue triage applies `dependency-required` and the issue waits. A plain GitHub Actions workflow, with no LLM, resolves the dependencies and resumes the issue. Rules and edge cases: [shared/dependencies.md](../shared/dependencies.md).
+
+Install it in every deployment. Copy two files:
+
+| From this repository | To the consuming repository |
+|----------------------|-----------------------------|
+| `workflows/dependency-watch.yml` | `.github/workflows/dependency-watch.yml` |
+| `scripts/dependency-watch.mjs` | `.github/scripts/dependency-watch.mjs` |
+
+It is not a gh-aw workflow, so `gh aw compile` does not touch it. Update it by copying the files again.
+
+Requirements:
+
+- `SIGNAL_TOKEN` (see below) with Issues: Read and write. The watcher uses it to remove and re-add `issue-worker-ready` so issue triage starts again.
+- The labels `dependency-required` and `dependency-satisfied` (step 4). The watcher cannot add a label that does not exist.
+- Read access to the repositories named in dependencies. `github.token` is enough for public repositories.
+- For a related repository that needs a release before work can start, set `release.requires_consumer_release` and `release.pins` in `related-repos.md`. The watcher then also requires a published release and a matching pin in `package.json`.
+
+Run it on demand from the Actions tab, optionally with an issue number.
 
 ## Cross-repository issue creation
 
@@ -350,6 +372,8 @@ The workflows apply and react to specific labels. Create them once per repositor
 | `plan-approval-required` | `b60205` | Remove to resume after high-complexity classification |
 | `needs-info` | `d4c5f9` | Missing reproduction steps or details |
 | `backlog` | `c5def5` | Valid but not urgent; do not plan or implement now |
+| `dependency-required` | `b60205` | Waiting for a dependency; the watcher removes it when the dependency is finished |
+| `dependency-satisfied` | `0e8a16` | Dependencies finished or cleared by a maintainer; issue triage lets the issue through |
 | `related-repo` | `fbca04` | Non-canonical issue; tracked in a related repository |
 | `waiting-for-release` | `c5def5` | Fix is merged; waiting for a release that includes it |
 | `released` | `0e8a16` | A release includes this fix |
@@ -449,7 +473,8 @@ git push
 - [ ] Optional `.github/agentic-workflows/` config files added only if needed
 - [ ] Issue template present (or optional completeness override)
 - [ ] `gh aw compile` run and lock files committed
-- [ ] All recommended labels created (including `related-repo`)
+- [ ] All recommended labels created (including `related-repo`, `dependency-required`, `dependency-satisfied`)
+- [ ] Dependency watcher installed (`dependency-watch.yml` and `dependency-watch.mjs`)
 - [ ] Branch protection / ruleset configured (require PR, status checks, no force-push)
 - [ ] Auto-merge enabled (if low/low unattended merge is desired)
 - [ ] Test issue processed end-to-end

@@ -16,7 +16,7 @@ Triage hand-off signals use `<triage-name>-handoff`.
 | coding agent finished | `pr-worker-ready` |
 | `pr-triage` finished | `pr-triage-handoff` |
 
-Blocking labels use the form `<thing>-required`. Removing the label is the human signal to continue.
+Blocking labels use the form `<thing>-required`. Removing the label is the human signal to continue. The exception is `dependency-required`, which a watcher removes when the work the issue depends on is finished (see Dependency gate).
 
 Labels are internal. Reporters are never asked to add, remove, or interpret them. All guidance to reporters is given in plain-language comments.
 
@@ -63,6 +63,14 @@ When a repository defines `.github/agentic-workflows/related-repos.md`:
 **Worker** → plain-language analysis comment + internal `issue-worker-ready`  
 (or `related-repo` and no ready label if linked elsewhere)  
 **Triage** → internal quality/priority labels. Emits `issue-triage-handoff` when actionable; applies `needs-info` otherwise. Skips issues that already have `related-repo`.
+
+#### Dependency gate
+
+An issue declares a dependency with a `Depends on:`, `Blocked by:`, or `Requires:` line. Issue triage detects the declaration and applies `dependency-required` instead of handing off. `plan-triage` and `pr-worker` also refuse to proceed while the label is present.
+
+The `dependency-watch` workflow (plain Actions, no LLM) resolves dependencies hourly, on demand, and when the label is added. Satisfied means merged, or closed as completed, in the same repository. For a related repository that requires a consumer release, it also means released, installable from the registry, and pinned by this repository. When every dependency is satisfied the watcher adds `dependency-satisfied`, removes `dependency-required`, and re-applies `issue-worker-ready` with the signal token so issue triage runs again and hands off.
+
+Full rules: `shared/dependencies.md`.
 
 ### 2. Plan gate
 **Worker** → rough plan + `plan-worker-ready`  
