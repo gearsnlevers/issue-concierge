@@ -232,6 +232,16 @@ Pre-filled form for the frodo repositories (select `rockcarver/frodo-lib` and `r
 
 Copilot cloud agent must also be enabled for those repositories: `https://github.com/organizations/<org>/settings/copilot/cloud_agent`.
 
+
+## Threat detection
+
+Threat detection is a second model call before safe outputs are applied. It is on for the two workflows that read untrusted content and then write:
+
+- `issue-worker` reads the raw report and can comment, label, and create an issue.
+- `pr-triage` reads a pull request.
+
+It is off on the other gates. Those classify our own comments or apply a fixed label list, and they do not write code.
+
 ## Signal token
 
 Gate handoffs are labels. The next workflow starts on the `labeled` event.
