@@ -41,7 +41,7 @@ When the issue worker decides an issue belongs in a related repository:
 3. It applies the internal label `related-repo` to the **original** (non-canonical) issue and does not start planning there.
 4. The original issue stays open.
 5. When the canonical issue is closed:
-   - If `release.requires_consumer_release` is set, the original issue stays open and gets `awaiting-release`. It closes when a release of this repository includes the fix.
+   - If `release.requires_consumer_release` is set, the original issue stays open and gets `waiting-for-release`. It closes when a release of this repository includes the fix.
    - Otherwise `related-repo-closer` closes the original issue with a short notice.
 
 The label `related-repo` is internal. Reporters never see or manage it.

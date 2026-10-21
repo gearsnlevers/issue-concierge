@@ -81,18 +81,11 @@ release:
   pins: "@owner/package"
 ```
 
-Two close points:
+GitHub's close-on-merge stays in place. `Fixes #N` may close the issue. Release state is tracked with labels.
 
-- The repository that owns the fix (the library) may close its issue when its own release contains the fix.
-- The repository that reported it (the CLI) stays open until a release there pins a library version that contains the fix.
-
-Behavior:
-
-- The issue worker tells the reporter that a release of this project will be needed.
-- When the library issue closes, the CLI issue stays open and gets `awaiting-release`.
-- `release-closer` runs on `release: published` in each repository.
-  In the library it closes issues named in that release.
-  In the CLI it closes an awaiting issue only when the release pins the library version that contains the fix.
+- When an issue is closed by a merged pull request, `waiting-for-release` adds that label and a comment.
+- When a release includes it, `release-closer` replaces `waiting-for-release` with `released` and comments.
+- A delegated CLI issue stays open. When the library issue closes, it gets `waiting-for-release`. It is closed only when a CLI release pins the library version that contains the fix, and then it gets `released`.
 
 ## 3. Compile
 
@@ -326,7 +319,8 @@ The workflows apply and react to specific labels. Create them once per repositor
 | `needs-info` | `d4c5f9` | Missing reproduction steps or details |
 | `backlog` | `c5def5` | Valid but not urgent; do not plan or implement now |
 | `related-repo` | `fbca04` | Non-canonical issue; tracked in a related repository |
-| `awaiting-release` | `c5def5` | Fix is in the related repository; waiting for a release here that includes it |
+| `waiting-for-release` | `c5def5` | Fix is merged; waiting for a release that includes it |
+| `released` | `0e8a16` | A release includes this fix |
 | `issue-worker-ready` | `c2e0c6` | Issue worker finished |
 | `issue-triage-handoff` | `bfd4f2` | Issue triage finished; plan worker may run |
 | `plan-worker-ready` | `c2e0c6` | Plan worker finished |
