@@ -25,6 +25,46 @@ Two independent axes are applied by the triage agents:
 - **Complexity** — design impact / autonomy
 - **Risk** — blast radius
 
+## Label lifecycle
+
+Gate labels are signals, not history. A label event starts the next workflow, so only the moment a gate label is added matters; once the next signal exists the earlier label has done its job and goes. At any moment an issue shows at most one gate label, which is where it is now. The history is in the timeline and in the plan comment. A plain Actions workflow, the **label janitor** (`label-janitor.yml` with `label-janitor.mjs`, no LLM, no secret), does the removing.
+
+**Gate labels**
+
+| Label | On | Added by | Removed when |
+|-------|----|----------|--------------|
+| `issue-worker-ready` | issue | issue worker (the dependency watcher re-adds it) | issue triage applies any outcome: `issue-triage-handoff`, `backlog`, `needs-info`, `dependency-required`, `scope-review`, `out-of-scope`, `duplicate`, `invalid`, `already-fixed` or `spam` |
+| `issue-triage-handoff` | issue | issue triage, or a maintainer (promote a `backlog` issue, override a scope decision) | `plan-worker-ready` is added |
+| `plan-worker-ready` | issue | plan worker | `plan-triage-handoff` or `plan-approval-required` is added |
+| `plan-triage-handoff` | issue | plan triage, or `plan-approval-resume` after approval | the coding agent is assigned to the issue |
+| `pr-worker-ready` | pull request | the coding agent | `pr-triage-handoff` is added to the pull request, or it closes |
+| `pr-triage-handoff` | pull request | PR triage | the pull request closes or merges |
+
+An earlier label is removed only when the evidence that replaces it is already there (the next label, or the assignee), so an item never loses its position. Removing a label starts nothing: the workflows listen for `labeled`, and `plan-approval-resume` ignores everything but `plan-approval-required`, which the janitor removes only from closed issues.
+
+**Everything else**
+
+| Label | Added by | Removed | After the issue closes |
+|-------|----------|---------|------------------------|
+| type (`enhancement`, `bug`, and so on) | issue template or triage | never | stays |
+| `complexity/*`, `risk/*` | plan triage | never | stays |
+| `low-hanging-fruit`, `priority/*` | issue triage | never | stays |
+| `duplicate`, `invalid`, `already-fixed`, `out-of-scope`, `spam` | issue triage | never | stays (it explains the closure) |
+| `related-repo` | issue worker | never | stays |
+| `waiting-for-release`, `released` | the `waiting-for-release` workflow, then the release closer | `waiting-for-release` goes when the release lands | `released` stays |
+| `dependency-required` | issue triage | the dependency watcher | removed |
+| `dependency-satisfied` | the dependency watcher, or a maintainer | never while the issue is open: triage needs it, or any later triage run would gate the issue again | removed |
+| `needs-info`, `backlog`, `scope-review`, `plan-approval-required` | triage, plan triage | triage or a maintainer | removed (they describe open work) |
+| any gate label still present | | | removed |
+
+Example: an issue that went through the whole pipeline ends with its type, `complexity/*`, `risk/*` and `released`.
+
+**When it runs.** On the label events that can change the answer (the gate labels, the triage outcomes and `plan-approval-required`), on assignment and on close, for issues and pull requests; hourly as a sweep for anything missed; and on demand. A manual run can clean one item, or with `include_closed` tidy old closed items once; `dry_run` reports without removing. It is idempotent and treats an already-absent label as success.
+
+**Do not read a gate label as proof that a phase happened.** Those labels are gone by the time the next phase is under way. Code and prompts that need to know "has this issue already been handed on" test for later evidence instead: `issue-triage-handoff`, `plan-worker-ready`, `plan-triage-handoff`, a `complexity/*` or `risk/*` label, or the coding agent as an assignee. `plan-approval-resume` and the scope rule in issue triage do exactly that.
+
+**Reopening** an issue puts it back at the issue gate: the worker re-adds `issue-worker-ready` and triage runs again. Because closing removed `dependency-satisfied`, triage gates the issue again if it still declares a dependency, and the watcher clears it again within the hour.
+
 ## Plan comment identity
 
 The plan lives as a single comment on the issue.  

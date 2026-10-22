@@ -39,6 +39,13 @@ test('does not hand off twice', () => {
   assert.equal(decide(issue(['complexity/high', 'plan-triage-handoff']), 'plan-approval-required').handoff, false);
 });
 
+test('does not hand off again once the coding agent is assigned, even though the hand-off label is gone', () => {
+  const v = decide(issue(['complexity/high'], { assignees: [{ login: 'vscheuber' }, { login: 'Copilot' }] }), 'plan-approval-required');
+  assert.deepEqual(v, { handoff: false, reason: 'already handed off' });
+  // A human assignee alone is not a hand-off.
+  assert.equal(decide(issue(['complexity/high'], { assignees: [{ login: 'vscheuber' }] }), 'plan-approval-required').handoff, true);
+});
+
 test('skips closed issues and pull requests', () => {
   assert.equal(decide(issue(['complexity/high'], { state: 'closed' }), 'plan-approval-required').handoff, false);
   assert.equal(decide(issue(['complexity/high'], { pull_request: {} }), 'plan-approval-required').handoff, false);

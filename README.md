@@ -55,6 +55,8 @@ See `docs/multi-phase-design.md` for the full model.
 | Plan | `plan-worker` | `plan-worker-ready` | `plan-triage` | `plan-triage-handoff` |
 | PR | `pr-worker` | `pr-worker-ready` | `pr-triage` | `pr-triage-handoff` |
 
+Gate labels are signals, not history: when the next signal exists the earlier gate label is removed, so an issue shows where it is now, and when an issue closes the labels that describe open work go too (the label janitor, plain Actions, no LLM). See [docs/multi-phase-design.md](docs/multi-phase-design.md#label-lifecycle) for the full table.
+
 High complexity adds `plan-approval-required`. When a maintainer removes that label, `plan-approval-resume` (plain Actions, no LLM) applies `plan-triage-handoff` and the PR gate starts. See [docs/multi-phase-design.md](docs/multi-phase-design.md).
 
 Valid but non-urgent issues receive `backlog` and do not enter the plan gate, with one exception: a low-hanging fruit (the issue worker judges the change small and low in risk, which is low complexity and low risk) receives `low-hanging-fruit` and is handed to the plan gate anyway. Plan triage then makes the real complexity and risk call. To move a `backlog` issue forward by hand, remove `backlog` and add `issue-triage-handoff`.
@@ -156,10 +158,12 @@ Local edits are preserved by the 3-way merge performed by `gh aw update`.
 │   ├── pr-triage.md
 │   ├── dependency-watch.yml
 │   ├── plan-approval-resume.yml
+│   ├── label-janitor.yml
 │   └── check-deployment.yml
 ├── scripts/
 │   ├── dependency-watch.mjs
 │   ├── plan-approval-resume.mjs
+│   ├── label-janitor.mjs
 │   └── check-deployment.mjs
 └── shared/
     ├── dependencies.md
