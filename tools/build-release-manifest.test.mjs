@@ -10,6 +10,7 @@ import {
   buildManifest,
   verifyManifest,
   classify,
+  validateLabels,
 } from './build-release-manifest.mjs';
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -73,6 +74,39 @@ test('verification catches a changed, resized or missing file', () => {
   const problems = verifyManifest(m, dir);
   assert.ok(problems.includes('digest mismatch: workflows/a.md'));
   assert.ok(problems.includes('missing: workflows/b.md'));
+});
+
+test('validateLabels accepts what GitHub accepts and names every problem otherwise', () => {
+  const ok = { name: 'a'.repeat(50), color: 'AbC123', description: 'd'.repeat(100) };
+  assert.deepEqual(validateLabels([ok]), []);
+  assert.deepEqual(validateLabels(undefined), []);
+  const problems = validateLabels([
+    { name: 'long-description', color: 'ffffff', description: 'd'.repeat(101) },
+    { name: 'n'.repeat(51), color: 'ffffff', description: 'x' },
+    { name: 'bad-color', color: '#fff', description: 'x' },
+    { name: 'twice', color: 'ffffff', description: 'x' },
+    { name: 'twice', color: 'ffffff', description: 'x' },
+    { color: 'ffffff', description: 'x' },
+  ]);
+  assert.equal(problems.length, 5);
+  assert.match(problems.join('\n'), /long-description: description is 101 characters \(maximum 100\)/);
+  assert.match(problems.join('\n'), /name is 51 characters/);
+  assert.match(problems.join('\n'), /bad-color: color must be six hex digits/);
+  assert.match(problems.join('\n'), /twice: listed twice/);
+  assert.match(problems.join('\n'), /a label has no name/);
+});
+
+test('a label GitHub would reject fails the build and the verification', () => {
+  const dir = fixture({ 'workflows/a.md': 'a\n' }, ['workflows/a.md']);
+  const req = JSON.parse(fs.readFileSync(path.join(dir, 'requirements.json'), 'utf8'));
+  req.labels = [{ name: 'too-wordy', color: 'ffffff', description: 'x'.repeat(113) }];
+  fs.writeFileSync(path.join(dir, 'requirements.json'), JSON.stringify(req));
+  assert.throws(() => buildManifest({ root: dir, version: '1.0.0' }), /too-wordy: description is 113 characters/);
+  req.labels = [{ name: 'fine', color: 'ffffff', description: 'ok' }];
+  fs.writeFileSync(path.join(dir, 'requirements.json'), JSON.stringify(req));
+  const m = buildManifest({ root: dir, version: '1.0.0' });
+  m.requires.labels[0].description = 'x'.repeat(101);
+  assert.match(verifyManifest(m, dir).join('\n'), /label fine: description is 101 characters/);
 });
 
 test('this repository: every deployable file is listed in aw.yml', () => {

@@ -425,12 +425,12 @@ The workflows apply and react to specific labels. Create them once per repositor
 | `risk/low` | `0e8a16` | Limited blast radius |
 | `risk/medium` | `fbca04` | Normal code changes |
 | `risk/high` | `d93f0b` | Security, auth, data integrity, availability, or public API impact |
-| `plan-approval-required` | `b60205` | Remove to resume after high-complexity classification (`plan-approval-resume` hands the issue to the PR gate) |
+| `plan-approval-required` | `b60205` | High complexity: remove to resume (`plan-approval-resume` hands the issue to the PR gate) |
 | `needs-info` | `d4c5f9` | Missing reproduction steps or details |
 | `backlog` | `c5def5` | Valid but not urgent; do not plan or implement now |
 | `low-hanging-fruit` | `bfdadc` | Valid but not urgent, small and low risk; handed to the plan gate anyway |
 | `out-of-scope` | `e4e669` | Matches an explicit exclusion in the project's scope; closed as not planned |
-| `scope-review` | `fbca04` | May not fit the project's scope; a maintainer decides (remove the label and add `issue-triage-handoff` to accept) |
+| `scope-review` | `fbca04` | May not fit the scope; a maintainer decides. To accept, remove it and add `issue-triage-handoff` |
 | `dependency-required` | `b60205` | Waiting for a dependency; the watcher removes it when the dependency is finished |
 | `dependency-satisfied` | `0e8a16` | Dependencies finished or cleared by a maintainer; issue triage lets the issue through |
 | `related-repo` | `fbca04` | Non-canonical issue; tracked in a related repository |

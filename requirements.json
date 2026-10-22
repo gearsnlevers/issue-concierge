@@ -37,7 +37,7 @@
     {
       "name": "plan-approval-required",
       "color": "b60205",
-      "description": "Remove to resume after high-complexity classification (`plan-approval-resume` hands the issue to the PR gate)"
+      "description": "High complexity: remove to resume (`plan-approval-resume` hands the issue to the PR gate)"
     },
     {
       "name": "needs-info",
@@ -62,7 +62,7 @@
     {
       "name": "scope-review",
       "color": "fbca04",
-      "description": "May not fit the project's scope; a maintainer decides (remove the label and add `issue-triage-handoff` to accept)"
+      "description": "May not fit the scope; a maintainer decides. To accept, remove it and add `issue-triage-handoff`"
     },
     {
       "name": "dependency-required",

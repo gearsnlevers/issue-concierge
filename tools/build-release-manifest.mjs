@@ -65,6 +65,26 @@ export function classify(file, install) {
   return { kind: 'script', dest };
 }
 
+/**
+ * Problems that would make GitHub reject a label (or the updater's create call):
+ * names up to 50 characters, descriptions up to 100, a six-digit hex color, no duplicates.
+ */
+export function validateLabels(labels) {
+  const problems = [];
+  const seen = new Set();
+  for (const l of labels || []) {
+    const name = String(l.name ?? '');
+    if (!name) problems.push('a label has no name');
+    if (name.length > 50) problems.push(`${name}: name is ${name.length} characters (maximum 50)`);
+    if (seen.has(name)) problems.push(`${name}: listed twice`);
+    seen.add(name);
+    const description = String(l.description ?? '');
+    if (description.length > 100) problems.push(`${name}: description is ${description.length} characters (maximum 100)`);
+    if (!/^[0-9a-fA-F]{6}$/.test(String(l.color ?? ''))) problems.push(`${name}: color must be six hex digits`);
+  }
+  return problems;
+}
+
 export function buildManifest({ root, version, tag, commit }) {
   const listed = parseManifestFiles(fs.readFileSync(path.join(root, 'aw.yml'), 'utf8'));
   const unlisted = findUnlisted(root, listed);
@@ -72,6 +92,8 @@ export function buildManifest({ root, version, tag, commit }) {
   const gone = listed.filter((f) => !fs.existsSync(path.join(root, f)));
   if (gone.length) throw new Error(`listed in aw.yml but missing: ${gone.join(', ')}`);
   const req = JSON.parse(fs.readFileSync(path.join(root, 'requirements.json'), 'utf8'));
+  const labelProblems = validateLabels(req.labels);
+  if (labelProblems.length) throw new Error(`requirements.json labels: ${labelProblems.join('; ')}`);
   const files = [...new Set(listed)].sort().map((p) => {
     const buf = fs.readFileSync(path.join(root, p));
     return { path: p, ...classify(p, req.install), sha256: sha256(buf), bytes: buf.length };
@@ -91,7 +113,7 @@ export function buildManifest({ root, version, tag, commit }) {
 
 /** Compare a manifest with the files under root. Returns a list of problems. */
 export function verifyManifest(manifest, root) {
-  const problems = [];
+  const problems = validateLabels(manifest.requires?.labels).map((p) => `label ${p}`);
   for (const f of manifest.files || []) {
     const p = path.join(root, f.path);
     if (!fs.existsSync(p)) {
