@@ -55,7 +55,7 @@ High complexity adds `plan-approval-required`. When a maintainer removes that la
 
 Valid but non-urgent issues receive `backlog` and do not enter the plan gate.
 
-An issue that declares `Depends on:` an unfinished issue or pull request receives `dependency-required` and stops at the issue gate. `dependency-watch` resolves it deterministically (no LLM) and resumes the issue. For split-repo projects, a library dependency counts only when it is merged, released, installable, and pinned by the consuming repository. See [shared/dependencies.md](shared/dependencies.md).
+An issue that declares `Depends on:` an unfinished issue or pull request receives `dependency-required` and stops at the issue gate. `dependency-watch` resolves it deterministically (no LLM) and resumes the issue, within a minute of a same-repository dependency merging or closing. For split-repo projects, a library dependency counts only when it is merged, released, installable, and pinned by the consuming repository. See [shared/dependencies.md](shared/dependencies.md).
 
 ### Safety Model
 - Standard agents run read-only; writes go through validated safe-outputs.
@@ -144,10 +144,12 @@ Local edits are preserved by the 3-way merge performed by `gh aw update`.
 │   ├── pr-worker.md
 │   ├── pr-triage.md
 │   ├── dependency-watch.yml
-│   └── plan-approval-resume.yml
+│   ├── plan-approval-resume.yml
+│   └── check-deployment.yml
 ├── scripts/
 │   ├── dependency-watch.mjs
-│   └── plan-approval-resume.mjs
+│   ├── plan-approval-resume.mjs
+│   └── check-deployment.mjs
 └── shared/
     ├── dependencies.md
     ├── safety-policy.md
