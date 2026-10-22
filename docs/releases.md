@@ -30,7 +30,7 @@ The release workflow (`Actions > Release`) is modeled on the release workflows o
 3. `release-preflight-action`: the tag does not exist yet, the version does not drift.
 4. `manifest-version-update-action`: writes the version into `package.json`.
 5. Release notes and `CHANGELOG.md`: `ai-changelog-action` when the repository secret `LLM_API_KEY` is set, otherwise GitHub's generated release notes.
-6. Commit `CHANGELOG.md` and `package.json`, build and verify `release-manifest.json` for that commit, create the annotated tag, publish the GitHub release with the manifest attached (as a prerelease when the version is one).
+6. Commit `CHANGELOG.md` and `package.json`, build and verify `release-manifest.json` for that commit, create the annotated tag, publish the GitHub release with the manifest attached (as a prerelease when the version is one). The release is created as a draft, the manifest is uploaded, and only then is it published, because an immutable release cannot take assets after publication.
 
 **Dry run.** Enable the `dry-run` input to compute everything without committing, tagging or publishing. The manifest, notes and changelog are uploaded as the `release-dry-run` artifact and the run summary shows the version it would cut.
 
@@ -40,7 +40,7 @@ The release workflow (`Actions > Release`) is modeled on the release workflows o
 3. Run `major` without `dry-run`.
 4. Then enable immutable releases (below).
 
-**If it fails midway.** The tag step is idempotent for the same commit and refuses to move an existing tag. If the commit was pushed but the release was not published, run the workflow again with the same release type after deleting the tag if it was created on the wrong commit; the version is recomputed from the tags.
+**If it fails midway.** The tag step is idempotent for the same commit and refuses to move an existing tag. If the commit was pushed but the release was not published, run the workflow again with the same release type after deleting the tag if it was created on the wrong commit; the version is recomputed from the tags. A draft release left behind by the failed run is deleted and recreated; a published release is never touched.
 
 **Secrets.** None is required. `LLM_API_KEY` (and optionally the repository variables used by `ai-changelog-action`) switches the notes to the AI changelog. The workflow uses the default `GITHUB_TOKEN`; if `main` ever gets branch protection that blocks the changelog commit, give the workflow a token that can bypass it, as the Frodo release pipelines do.
 
