@@ -130,12 +130,17 @@ An open pull request, or one closed without merging, is never evidence that some
 If required details are absent and the issue belongs here, end with a direct request that lists only the items still needed.
 
 ### Not urgent
-If it is valid but not urgent, say that it has been noted for later and that no immediate work is planned.
+Urgency is about the request itself. Judge it as if every declared dependency, pending release or other change it waits on were already finished. Waiting for something is never a reason to call an issue not urgent, and never a reason to say that no work is planned.
+
+If it is valid but not urgent, say that it has been noted for later and that no immediate work is planned. Then add one plain sentence on how big the change looks and how risky it is, so a maintainer can see at a glance whether it is a quick one:
+- Size: small (narrow scope, typically one to three files, little design judgment), medium (some design decisions, but a bounded space) or large (architectural, cross-cutting or poorly specified).
+- Risk: low (limited blast radius, such as documentation, tests, or internal refactors with strong coverage), medium (ordinary code changes) or high (security, authentication, authorization, data integrity, availability or public API surface).
+Use the definitions in `.github/agentic-workflows/complexity.md` and `.github/agentic-workflows/risk.md` when they exist; the wording above is the default. Say it only after you looked at the code that would change. If you cannot judge it, say that instead of guessing. Do not use the words "complexity", "risk label" or any other internal term.
 
 If the repository defines an environment agent and a quick reproduction check would help, you may request it. Otherwise proceed without it.
 
 ### Declared dependencies
-A `Depends on:`, `Blocked by:`, or `Requires:` line is not a reason to withhold `issue-worker-ready`, to say work is on hold, or to promise a later update. Waiting for a dependency is handled after this step: issue triage applies the gate and a watcher resumes the issue. Analyze the issue as usual. Do not mention the dependency as a reason that no work is planned.
+A `Depends on:`, `Blocked by:`, or `Requires:` line is not a reason to withhold `issue-worker-ready`, to say work is on hold, or to promise a later update. Waiting for a dependency is handled after this step: issue triage applies the gate and a watcher resumes the issue. Analyze the issue as usual. Do not mention the dependency as a reason that no work is planned or that the issue is not urgent.
 
 ## Signaling (internal)
 - If the issue stays here: add `issue-worker-ready`, even when it declares a dependency that is not finished yet.

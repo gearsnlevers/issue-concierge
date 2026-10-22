@@ -416,6 +416,7 @@ The workflows apply and react to specific labels. Create them once per repositor
 | `plan-approval-required` | `b60205` | Remove to resume after high-complexity classification (`plan-approval-resume` hands the issue to the PR gate) |
 | `needs-info` | `d4c5f9` | Missing reproduction steps or details |
 | `backlog` | `c5def5` | Valid but not urgent; do not plan or implement now |
+| `low-hanging-fruit` | `bfdadc` | Valid but not urgent, small and low risk; handed to the plan gate anyway |
 | `dependency-required` | `b60205` | Waiting for a dependency; the watcher removes it when the dependency is finished |
 | `dependency-satisfied` | `0e8a16` | Dependencies finished or cleared by a maintainer; issue triage lets the issue through |
 | `related-repo` | `fbca04` | Non-canonical issue; tracked in a related repository |
@@ -467,7 +468,8 @@ Low/low pull requests that carry `pr-triage-handoff` and pass required checks ca
 
 - Open a test issue (or dispatch `issue-worker` with an issue number).
 - Confirm only `issue-worker` starts. Other gates stay idle until their signal label is applied.
-- Confirm the issue receives `issue-worker-ready`, then `issue-triage-handoff` (or `backlog` / `needs-info`).
+- Confirm the issue receives `issue-worker-ready`, then `issue-triage-handoff` (or `backlog` / `needs-info`). A small, low-risk issue that is not urgent gets `low-hanging-fruit` together with `issue-triage-handoff`.
+- To promote a `backlog` issue by hand, remove `backlog` and add `issue-triage-handoff`; that is the same signal triage would have sent.
 - For an actionable issue, confirm a plan comment appears with the `<!-- gh-aw-workflow-id: plan-worker -->` marker and that complexity/risk labels are applied.
 - For a low/low item, confirm a pull request is opened and can auto-merge after checks.
 - For a split-repo case, confirm a canonical issue is created, the original receives `related-repo`, and the original is closed when the canonical issue closes.

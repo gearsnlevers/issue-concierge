@@ -57,7 +57,7 @@ See `docs/multi-phase-design.md` for the full model.
 
 High complexity adds `plan-approval-required`. When a maintainer removes that label, `plan-approval-resume` (plain Actions, no LLM) applies `plan-triage-handoff` and the PR gate starts. See [docs/multi-phase-design.md](docs/multi-phase-design.md).
 
-Valid but non-urgent issues receive `backlog` and do not enter the plan gate.
+Valid but non-urgent issues receive `backlog` and do not enter the plan gate, with one exception: a low-hanging fruit (the issue worker judges the change small and low in risk, which is low complexity and low risk) receives `low-hanging-fruit` and is handed to the plan gate anyway. Plan triage then makes the real complexity and risk call. To move a `backlog` issue forward by hand, remove `backlog` and add `issue-triage-handoff`.
 
 The harness only processes work from people. `issue-worker`, `issue-triage`, `plan-worker`, `plan-triage`, `pr-worker`, `related-repo-closer` and `waiting-for-release` skip issues authored by a bot (for example the `[aw] ... failed` issues gh-aw files about its own failures), and `issue-worker` also skips bot comments and comments on pull requests. The check is an activation condition, so a skipped event costs no AI credits. To process a bot-authored issue on purpose, run **Issue Worker** from the Actions tab with its issue number.
 
@@ -86,6 +86,7 @@ Create these in consuming repositories (full list and colors in [docs/deployment
 | `dependency-required` | Gate | Issue declares a dependency that is not finished; the watcher removes it (see [shared/dependencies.md](shared/dependencies.md)) |
 | `dependency-satisfied` | Gate | Dependencies finished (or cleared by a maintainer); issue triage lets the issue through |
 | `backlog` | Quality | Valid but not urgent; do not plan or implement now |
+| `low-hanging-fruit` | Quality | Valid but not urgent, small and low risk; handed to the plan gate anyway |
 | `issue-worker-ready` | Gate | Issue worker finished |
 | `issue-triage-handoff` | Gate | Issue triage finished; plan worker may run |
 | `plan-worker-ready` | Gate | Plan worker finished |
