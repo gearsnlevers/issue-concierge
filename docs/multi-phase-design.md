@@ -70,6 +70,10 @@ When a repository defines `.github/agentic-workflows/related-repos.md`:
 (or `related-repo` and no ready label if linked elsewhere)  
 **Triage** → internal quality/priority labels. Emits `issue-triage-handoff` when actionable; applies `needs-info` otherwise. Skips issues that already have `related-repo`.
 
+#### Not urgent, and low-hanging fruit
+
+The worker judges urgency as if every dependency were already finished: waiting for a dependency, a release or another change is never a reason to call an issue not urgent. A valid issue that is not urgent gets `backlog` and stays out of the plan gate, with one exception. When the worker also says the change is small and low in risk (low complexity and low risk, using `complexity.md` and `risk.md` when the repository defines them), triage treats it as low-hanging fruit: it applies `low-hanging-fruit` and emits `issue-triage-handoff`. Only that combination qualifies; a medium change is not low-hanging fruit even when it is low risk. Plan triage still makes the authoritative complexity and risk call afterwards and stops at `plan-approval-required` for high complexity, so a rough estimate at this gate cannot skip a gate. Why the worker's wording matters: triage reads the latest analysis comment, and an analysis written while a dependency was pending can say "not urgent" because of it. Triage disregards that part once the issue carries `dependency-satisfied`. A maintainer can move a `backlog` issue forward by removing `backlog` and adding `issue-triage-handoff`.
+
 #### Dependency gate
 
 An issue declares a dependency with a `Depends on:`, `Blocked by:`, or `Requires:` line. The issue worker analyzes the issue as usual and still adds `issue-worker-ready`. Issue triage detects the declaration and applies `dependency-required` instead of handing off. `plan-triage` and `pr-worker` also refuse to proceed while the label is present.

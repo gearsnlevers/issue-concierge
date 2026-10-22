@@ -50,6 +50,11 @@
       "description": "Valid but not urgent; do not plan or implement now"
     },
     {
+      "name": "low-hanging-fruit",
+      "color": "bfdadc",
+      "description": "Valid but not urgent, small and low risk; handed to the plan gate anyway"
+    },
+    {
       "name": "dependency-required",
       "color": "b60205",
       "description": "Waiting for a dependency; the watcher removes it when the dependency is finished"

@@ -38,6 +38,7 @@ safe-outputs:
       - already-fixed
       - spam
       - backlog
+      - low-hanging-fruit
       - dependency-required
       - issue-triage-handoff
     max: 5
@@ -81,7 +82,10 @@ Apply only quality and priority labels. Do **not** apply complexity or risk labe
 - Worker asked for more details before it could decide → `needs-info` (do not emit hand-off, do not close)
 - Invalid or spam → corresponding label
 - Declares a dependency that has not been cleared (see Dependencies below) → `dependency-required`. Do not emit `issue-triage-handoff`, do not apply `backlog` or `needs-info`, do not close the issue, and do not post a comment about it.
-- Valid but not urgent → `backlog`
+- Valid but not urgent:
+  - If the analysis says the change is small in size and low in risk (low complexity and low risk) → low-hanging fruit. Apply `low-hanging-fruit`, then emit `issue-triage-handoff`. Do not apply `backlog`. Both parts must be stated, and only that combination qualifies. If the analysis gives no size or risk, says it could not judge them, or says medium or large size, or medium or high risk, it is not low-hanging fruit.
+  - Otherwise → `backlog`.
+  - Never apply `backlog` because an analysis ties "not urgent" or "no immediate work planned" to a dependency (see Dependencies below).
 - Complete, actionable, and worth doing now → remove `needs-info` if present, then emit `issue-triage-handoff`
 
 Do not emit `issue-triage-handoff` for `already-fixed` or `invalid`.
@@ -92,7 +96,7 @@ Detect, do not resolve. A separate watcher decides when a dependency is finished
 An issue declares a dependency only with a line that starts with `Depends on:`, `Blocked by:`, or `Requires:`, followed by one or more issue or pull request references (`#N`, `owner/repo#N`, or a GitHub URL). Read the issue body and every comment. A reference in ordinary prose, or after `Fixes`, `Closes`, `Resolves`, or `Reported from`, is not a dependency. Do not infer dependencies from free text.
 
 - No declaration → no dependency gate. Continue as usual.
-- A declaration, and the issue has the label `dependency-satisfied` → the watcher or a maintainer has cleared it. Continue as usual.
+- A declaration, and the issue has the label `dependency-satisfied` → the watcher or a maintainer has cleared it. Continue as usual. An analysis written while the dependency was pending can say that no work is planned, or that the issue is not urgent, because of that dependency. Disregard that part. Judge the issue as if the dependency were finished, and apply the same checks as for any other issue.
 - A declaration, and no `dependency-satisfied` label → apply `dependency-required` and stop here.
 - The issue is marked `related-repo` → never gate it.
 
