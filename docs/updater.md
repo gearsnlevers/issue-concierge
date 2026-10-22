@@ -39,6 +39,8 @@ taken from the related repository in `related-repos.md` that names a `secret`, o
 
 **The token.** The updater needs one repository secret, `CONCIERGE_TOKEN`: a fine-grained personal access token limited to **this repository** with Contents, Pull requests and Workflows write. Workflows write is required because the update changes files under `.github/workflows/`, which the default token cannot push. A pull request opened with the default token would also not run its checks. Without the secret the updater runs as a dry run and only reports. Fine-grained tokens expire; put the expiry in your calendar.
 
+**Your CI.** Every update pull request changes `.github/concierge.yml` (the pin) and sometimes `.github/aw/actions-lock.json` (when the gh-aw version moves), besides the workflow definitions, their lock files and the scripts. If your code pipeline skips its tests for pull requests that touch no code, put `.github/concierge.yml` and `.github/aw/` on its non-code list next to `.github/workflows/` and `.github/scripts/`; otherwise each update runs the full test matrix. Keep the match exact (`concierge\.yml$`, not a prefix) so a stray file next to them still counts as code.
+
 **First adoption** (once per deployment, by hand):
 
 ```bash
@@ -75,3 +77,4 @@ Only a release's tag, its manifest and the files at the tag's commit, checked ag
 - **"supports one" related repository**: `related-repos.md` lists more than one repository with a secret. Remove or merge until one remains.
 - **Lock files change in every definition**: the release moved to a different gh-aw version; the pull request says so. That is expected for such releases.
 - **The pull request has no checks**: the branch was pushed with a token that cannot trigger them. Use `CONCIERGE_TOKEN`.
+- **The full test suite runs on every update pull request**: the deployment's code pipeline does not know `.github/concierge.yml` and `.github/aw/` are non-code. See "Your CI" under Setting it up.
