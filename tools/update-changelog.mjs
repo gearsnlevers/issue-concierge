@@ -7,12 +7,28 @@ import fs from 'node:fs';
 
 const HEADER = '# Changelog\n';
 
+/**
+ * Moves every heading in the notes one level down (GitHub's generated notes start with
+ * `## What's Changed`, which would otherwise sit at the level of the release heading it
+ * belongs under). Headings inside fenced code blocks are left alone.
+ */
+export function demoteHeadings(notes) {
+  let fenced = false;
+  return String(notes)
+    .split('\n')
+    .map((line) => {
+      if (/^\s*(```|~~~)/.test(line)) fenced = !fenced;
+      return !fenced && /^#{1,5}\s/.test(line) ? `#${line}` : line;
+    })
+    .join('\n');
+}
+
 /** Returns the changelog text with a new section for `tag` after the title. Throws if the tag is already present. */
 export function addRelease(existing, { tag, date, notes }) {
   const heading = `## [${tag}] - ${date}`;
   const text = existing && existing.trim() ? existing : HEADER;
   if (text.includes(`## [${tag}]`)) throw new Error(`CHANGELOG already has a section for ${tag}`);
-  const section = `${heading}\n\n${String(notes).trim()}\n`;
+  const section = `${heading}\n\n${demoteHeadings(String(notes).trim())}\n`;
   const lines = text.split('\n');
   const titleIdx = lines.findIndex((l) => /^# /.test(l));
   if (titleIdx === -1) return `${HEADER}\n${section}\n${text}`;

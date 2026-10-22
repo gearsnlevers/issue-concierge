@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { addRelease } from './update-changelog.mjs';
+import { addRelease, demoteHeadings } from './update-changelog.mjs';
 
 const args = (tag, notes = '- a change') => ({ tag, date: '2026-10-22', notes });
 
@@ -33,4 +33,18 @@ test('a file without a title gets one', () => {
   const out = addRelease('some text\n', args('v1.0.0'));
   assert.ok(out.startsWith('# Changelog\n'));
   assert.ok(out.includes('some text'));
+});
+
+test('headings in the notes move one level below the release heading', () => {
+  const notes = "## What's Changed\n* a thing\n\n## New Contributors\n* someone\n\n**Full Changelog**: https://example.com";
+  const out = addRelease('', args('v1.0.0', notes));
+  assert.ok(out.includes("## [v1.0.0] - 2026-10-22\n\n### What's Changed\n"));
+  assert.ok(out.includes('\n### New Contributors\n'));
+  assert.equal((out.match(/^## /gm) || []).length, 1); // only the release heading is level two
+  assert.ok(out.includes('**Full Changelog**: https://example.com'));
+});
+
+test('demoteHeadings leaves code fences, non-headings and deep levels alone', () => {
+  const text = '# A\n##### E\n###### F\n#hashtag\n```\n# not a heading\n```\n~~~\n## also code\n~~~\n## B';
+  assert.equal(demoteHeadings(text), '## A\n###### E\n###### F\n#hashtag\n```\n# not a heading\n```\n~~~\n## also code\n~~~\n### B');
 });
