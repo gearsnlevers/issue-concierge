@@ -22,22 +22,16 @@ safe-outputs:
   add-comment:
     max: 1
     target: "*"
-    # Cross-repo writes need both the related-repo secret from related-repos.md
-    # and an allowlist of the repositories they may target; without allowed-repos
-    # the safe output only acts in this repository.
-    # github-token: ${{ secrets.OTHER_REPO_ISSUES_TOKEN }}
-    # allowed-repos: ["owner/related-repo"]
+    # concierge:cross-repo
   add-labels:
-    # github-token: ${{ secrets.OTHER_REPO_ISSUES_TOKEN }}
-    # allowed-repos: ["owner/related-repo"]
+    # concierge:cross-repo
     allowed:
       - waiting-for-release
     max: 1
     target: "*"
   close-issue:
     max: 1
-    # github-token: ${{ secrets.OTHER_REPO_ISSUES_TOKEN }}
-    # allowed-repos: ["owner/related-repo"]
+    # concierge:cross-repo
   threat-detection:
     enabled: false
 max-ai-credits: 6

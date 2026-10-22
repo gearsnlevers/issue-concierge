@@ -19,6 +19,8 @@ files:
   - scripts/check-deployment.mjs
   - workflows/plan-approval-resume.yml
   - scripts/plan-approval-resume.mjs
+  - workflows/concierge-updater.yml
+  - scripts/concierge-updater.mjs
   - shared/dependencies.md
   - shared/safety-policy.md
   - shared/complexity.md

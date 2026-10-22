@@ -57,4 +57,4 @@ Turn on immutable releases for this repository (Settings, General) **after the f
 
 ## Consuming releases
 
-Each deployment pins a release (tag and commit) and checks for newer ones. The updater that opens the update pull request is built on top of this release process; until it exists, deployments adopt a release by hand: copy the files listed in the manifest at the tag, run `gh aw compile` with the manifest's gh-aw version, and verify each file against its digest.
+Each deployment pins a release (tag and commit) and checks for newer ones with the Concierge updater, which opens one update pull request per deployment. See [updater.md](updater.md).
