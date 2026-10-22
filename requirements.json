@@ -1,0 +1,151 @@
+{
+  "schema": 1,
+  "ghAw": {
+    "version": "v0.92.0"
+  },
+  "labels": [
+    {
+      "name": "complexity/low",
+      "color": "0e8a16",
+      "description": "Mechanical or minimal design impact; high autonomy possible"
+    },
+    {
+      "name": "complexity/medium",
+      "color": "fbca04",
+      "description": "Bounded design decisions; moderate autonomy"
+    },
+    {
+      "name": "complexity/high",
+      "color": "d93f0b",
+      "description": "Significant design impact"
+    },
+    {
+      "name": "risk/low",
+      "color": "0e8a16",
+      "description": "Limited blast radius"
+    },
+    {
+      "name": "risk/medium",
+      "color": "fbca04",
+      "description": "Normal code changes"
+    },
+    {
+      "name": "risk/high",
+      "color": "d93f0b",
+      "description": "Security, auth, data integrity, availability, or public API impact"
+    },
+    {
+      "name": "plan-approval-required",
+      "color": "b60205",
+      "description": "Remove to resume after high-complexity classification (`plan-approval-resume` hands the issue to the PR gate)"
+    },
+    {
+      "name": "needs-info",
+      "color": "d4c5f9",
+      "description": "Missing reproduction steps or details"
+    },
+    {
+      "name": "backlog",
+      "color": "c5def5",
+      "description": "Valid but not urgent; do not plan or implement now"
+    },
+    {
+      "name": "dependency-required",
+      "color": "b60205",
+      "description": "Waiting for a dependency; the watcher removes it when the dependency is finished"
+    },
+    {
+      "name": "dependency-satisfied",
+      "color": "0e8a16",
+      "description": "Dependencies finished or cleared by a maintainer; issue triage lets the issue through"
+    },
+    {
+      "name": "related-repo",
+      "color": "fbca04",
+      "description": "Non-canonical issue; tracked in a related repository"
+    },
+    {
+      "name": "waiting-for-release",
+      "color": "c5def5",
+      "description": "Fix is merged; waiting for a release that includes it"
+    },
+    {
+      "name": "released",
+      "color": "0e8a16",
+      "description": "A release includes this fix"
+    },
+    {
+      "name": "issue-worker-ready",
+      "color": "c2e0c6",
+      "description": "Issue worker finished"
+    },
+    {
+      "name": "issue-triage-handoff",
+      "color": "bfd4f2",
+      "description": "Issue triage finished; plan worker may run"
+    },
+    {
+      "name": "plan-worker-ready",
+      "color": "c2e0c6",
+      "description": "Plan worker finished"
+    },
+    {
+      "name": "plan-triage-handoff",
+      "color": "bfd4f2",
+      "description": "Plan triage finished; PR worker may run"
+    },
+    {
+      "name": "pr-worker-ready",
+      "color": "c2e0c6",
+      "description": "Coding agent finished"
+    },
+    {
+      "name": "pr-triage-handoff",
+      "color": "bfd4f2",
+      "description": "PR triage finished; merge rules may act"
+    },
+    {
+      "name": "duplicate",
+      "color": "cfd3d7",
+      "description": "Strong duplicate match"
+    },
+    {
+      "name": "already-fixed",
+      "color": "0e8a16",
+      "description": "A later change addresses the report; closed"
+    },
+    {
+      "name": "invalid",
+      "color": "e4e669",
+      "description": "Cannot reproduce; nothing relevant changed after the issue was opened"
+    }
+  ],
+  "secrets": [
+    {
+      "name": "COPILOT_GITHUB_TOKEN",
+      "required": true,
+      "purpose": "Runs the Copilot engine for the gh-aw workflows (or enable organization Copilot billing)"
+    },
+    {
+      "name": "SIGNAL_TOKEN",
+      "required": true,
+      "purpose": "Issues: Read and write. Applies and removes labels so the next gate starts"
+    },
+    {
+      "name": "GH_AW_AGENT_TOKEN",
+      "required": true,
+      "purpose": "Assigns the Copilot coding agent (pr-worker)"
+    }
+  ],
+  "perRelatedRepository": "For every related repository in .github/agentic-workflows/related-repos.md that names a secret: that secret, with Issues: Read and write on the other repository (used by issue-worker create-issue and the related-repo closer)",
+  "install": [
+    {
+      "from": "workflows/",
+      "to": ".github/workflows/"
+    },
+    {
+      "from": "scripts/",
+      "to": ".github/scripts/"
+    }
+  ]
+}

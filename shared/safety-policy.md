@@ -2,7 +2,7 @@
 # Shared safety defaults — import into other workflows as needed.
 # Example:
 # imports:
-#   - vscheuber/agentic-workflows/shared/safety-policy.md@main
+#   - vscheuber/repo-concierge/shared/safety-policy.md@main
 
 safe-outputs:
   threat-detection:

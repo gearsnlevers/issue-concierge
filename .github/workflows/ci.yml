@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    name: CI
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Validate plain workflow YAML
+        run: |
+          ruby -ryaml -e 'ARGV.each { |f| YAML.load_file(f) }; puts "yaml ok (#{ARGV.size} files)"' workflows/*.yml .github/workflows/*.yml
+
+      - name: Compile every workflow definition with gh-aw
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash tools/ci-compile-smoke.sh
+
+      - name: Build and verify the release manifest
+        run: |
+          node tools/build-release-manifest.mjs --version 0.0.0-ci --out "$RUNNER_TEMP/release-manifest.json"
+          node tools/build-release-manifest.mjs --verify "$RUNNER_TEMP/release-manifest.json"
