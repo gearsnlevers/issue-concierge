@@ -77,6 +77,8 @@ add-comment:
   allowed-repos: ["owner/related-repo"]
 ```
 
+(With the Concierge updater these two settings are generated from `related-repos.md`; the manual wiring below is for deployments that do not use it. See [updater.md](updater.md).)
+
 `allowed-repos` is a gh-aw allowlist in the workflow, not a GitHub permission. Without it the safe output only acts in the repository it runs in, however good the token is, and the closer fails with a missing-tool report. The token is a separate requirement: it needs Issues: Read and write on the other repository, which the check below cannot verify.
 
 

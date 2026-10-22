@@ -135,6 +135,11 @@
       "name": "GH_AW_AGENT_TOKEN",
       "required": true,
       "purpose": "Assigns the Copilot coding agent (pr-worker)"
+    },
+    {
+      "name": "CONCIERGE_TOKEN",
+      "required": false,
+      "purpose": "Optional. Lets the Concierge updater push its update branch and open the pull request: a fine-grained token for this repository only with Contents, Pull requests and Workflows write. Without it the updater only reports"
     }
   ],
   "perRelatedRepository": "For every related repository in .github/agentic-workflows/related-repos.md that names a secret: that secret, with Issues: Read and write on the other repository (used by issue-worker create-issue and the related-repo closer)",

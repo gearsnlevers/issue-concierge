@@ -15,7 +15,7 @@ Each stage is a gate.
 
 ## Releases
 
-Deployments pin a released version, not `main`. Each release carries notes and a `release-manifest.json` with a digest for every deployable file. Versioning rules, the release procedure and what a release contains: [docs/releases.md](docs/releases.md).
+Deployments pin a released version, not `main`. Each release carries notes and a `release-manifest.json` with a digest for every deployable file. Versioning rules, the release procedure and what a release contains: [docs/releases.md](docs/releases.md). Deployments pick releases up with the Concierge updater: [docs/updater.md](docs/updater.md).
 
 ## Quick Start (Consuming Repo)
 
