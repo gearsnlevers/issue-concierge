@@ -1,5 +1,12 @@
 # Changelog
 
+## [v1.0.6] - 2026-10-22
+
+### What's Changed
+* feat(workflows): name the workflows in run order and mark the dispatchable ones by @vscheuber in https://github.com/vscheuber/repo-concierge/pull/21
+
+**Full Changelog**: https://github.com/vscheuber/repo-concierge/compare/v1.0.5...v1.0.6
+
 ## [v1.0.5] - 2026-10-22
 
 ### What's Changed
