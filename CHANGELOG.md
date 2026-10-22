@@ -1,5 +1,12 @@
 # Changelog
 
+## [v1.0.2] - 2026-10-22
+
+### What's Changed
+* fix(pr-worker): send the coding agent's instructions as custom-instructions by @vscheuber in https://github.com/vscheuber/repo-concierge/pull/13
+
+**Full Changelog**: https://github.com/vscheuber/repo-concierge/compare/v1.0.1...v1.0.2
+
 ## [v1.0.1] - 2026-10-22
 
 ### What's Changed
