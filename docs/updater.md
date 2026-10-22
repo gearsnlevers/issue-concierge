@@ -42,6 +42,7 @@ taken from the related repository in `related-repos.md` that names a `secret`, o
 **First adoption** (once per deployment, by hand):
 
 ```bash
+export GH_TOKEN="$(gh auth token)"   # the updater reads GitHub unauthenticated (60 requests/hour) without one
 git checkout -b concierge/first-adoption
 mkdir -p .github/scripts
 for f in concierge-updater dependency-watch; do
@@ -51,7 +52,7 @@ node .github/scripts/concierge-updater.mjs --local --source vscheuber/repo-conci
 git add -A .github .gitattributes && git commit -m "chore: adopt Repo Concierge v1.0.0" && git push -u origin HEAD
 ```
 
-`--local` writes the verified files and the pin and compiles, without touching git; the bootstrap copies above are replaced by the verified ones. Open the pull request, check the diff (the first one shows every difference between the hand-installed files and the release), then add the `CONCIERGE_TOKEN` secret. From then on updates arrive as pull requests.
+`--local` writes the verified files and the pin and compiles, without touching git; it makes a few dozen API calls per deployment, which is why the token is exported first (a run without one stops with `API rate limit exceeded` partway through); the bootstrap copies above are replaced by the verified ones. Open the pull request, check the diff (the first one shows every difference between the hand-installed files and the release), then add the `CONCIERGE_TOKEN` secret. From then on updates arrive as pull requests.
 
 ## Commands
 
