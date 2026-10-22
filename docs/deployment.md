@@ -67,7 +67,17 @@ When the worker links an issue it creates a canonical issue in the related repos
 
 
 
-The related-repo closer runs in the repository that owns the fix and writes to the original issue. `SIGNAL_TOKEN` cannot do that. Set `github-token` on `add-comment`, `add-labels`, and `close-issue` to the secret named in this repository's `related-repos.md` for the other repository.
+The related-repo closer runs in the repository that owns the fix and writes to the original issue. `SIGNAL_TOKEN` cannot do that. On `add-comment`, `add-labels`, and `close-issue`, set both `github-token` to the secret named in this repository's `related-repos.md` for the other repository, and `allowed-repos` to that repository:
+
+```yaml
+add-comment:
+  max: 1
+  target: "*"
+  github-token: ${{ secrets.OTHER_REPO_ISSUES_TOKEN }}
+  allowed-repos: ["owner/related-repo"]
+```
+
+`allowed-repos` is a gh-aw allowlist in the workflow, not a GitHub permission. Without it the safe output only acts in the repository it runs in, however good the token is, and the closer fails with a missing-tool report. The token is a separate requirement: it needs Issues: Read and write on the other repository, which the check below cannot verify.
 
 
 ## Release token
@@ -277,6 +287,8 @@ Install it in every deployment. Copy two files:
 
 It is not a gh-aw workflow, so `gh aw compile` does not touch it. Update it by copying the files again.
 
+It runs hourly, on demand, when `dependency-required` is added, and on the events a dependency can be waiting for (an issue closes, a pull request merges, a release is published, `package.json` changes on the default branch), so a merged dependency does not wait for the next scheduled run.
+
 ### Plan approval resume
 
 When a maintainer removes `plan-approval-required` from a high-complexity issue, a second plain Actions workflow (no LLM) hands the issue to the PR gate. Without it, removing the label does nothing. Install it in every deployment. Copy two files:
@@ -296,6 +308,25 @@ Requirements:
 - For a related repository that needs a release before work can start, set `release.requires_consumer_release` and `release.pins` in `related-repos.md`. The watcher then also requires a published release and a matching pin in `package.json`.
 
 Run it on demand from the Actions tab, optionally with an issue number.
+
+## Deployment check
+
+`check-deployment` catches the configuration mistakes that otherwise surface as a failed run weeks later. It reads the compiled `.lock.yml` files (what actually runs) and compares them with `.github/agentic-workflows/related-repos.md`. For every related repository that names a `secret`, it requires that:
+
+- `issue-worker` has `create-issue` enabled with `allowed-repos` containing the repository and `github-token` set to that secret;
+- `related-repo-closer` has `add-comment`, `add-labels` and `close-issue` enabled with the same `allowed-repos` and `github-token`.
+
+It reports a warning for a related repository without a secret, or for an allowed repository that `related-repos.md` does not list. It runs on pull requests that touch the workflows or `related-repos.md`, and on demand. Install it in every deployment, even those without related repositories (it then passes immediately). Copy three files:
+
+| From this repository | To the consuming repository |
+|----------------------|-----------------------------|
+| `workflows/check-deployment.yml` | `.github/workflows/check-deployment.yml` |
+| `scripts/check-deployment.mjs` | `.github/scripts/check-deployment.mjs` |
+| `scripts/dependency-watch.mjs` | `.github/scripts/dependency-watch.mjs` (already installed for the watcher; the check imports its parser) |
+
+Run it locally with `node .github/scripts/check-deployment.mjs` after `gh aw compile`.
+
+What it cannot check, and you must: that the secret exists (`gh secret list`, or organization settings) and that the token has Issues: Read and write on the target repository and may be used by this repository.
 
 ## Cross-repository issue creation
 
@@ -486,6 +517,7 @@ git push
 - [ ] `gh aw compile` run and lock files committed
 - [ ] All recommended labels created (including `related-repo`, `dependency-required`, `dependency-satisfied`)
 - [ ] Dependency watcher installed (`dependency-watch.yml` and `dependency-watch.mjs`)
+- [ ] Deployment check installed (`check-deployment.yml` and `check-deployment.mjs`) and passing; for each related repository the secret exists and its token has Issues: Read and write on that repository
 - [ ] Plan approval resume installed (`plan-approval-resume.yml` and `plan-approval-resume.mjs`)
 - [ ] Branch protection / ruleset configured (require PR, status checks, no force-push)
 - [ ] Auto-merge enabled (if low/low unattended merge is desired)

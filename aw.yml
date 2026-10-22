@@ -13,6 +13,8 @@ files:
   - workflows/related-repo-closer.md
   - workflows/dependency-watch.yml
   - scripts/dependency-watch.mjs
+  - workflows/check-deployment.yml
+  - scripts/check-deployment.mjs
   - workflows/plan-approval-resume.yml
   - scripts/plan-approval-resume.mjs
   - shared/dependencies.md

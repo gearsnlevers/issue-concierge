@@ -21,7 +21,7 @@ Nothing here needs a maintainer in the normal case. Both labels are set automati
 | Step | Done by |
 |------|---------|
 | Notice the `Depends on:` line and add `dependency-required` | Issue triage (an agent) |
-| Check whether the dependencies are finished | The watcher (plain Actions, no LLM), hourly, on demand, and when the label is added |
+| Check whether the dependencies are finished | The watcher (plain Actions, no LLM): hourly, on demand, when the label is added, and when an issue closes, a pull request merges, a release is published, or `package.json` changes on the default branch |
 | Post and update the status comment | The watcher |
 | Add `dependency-satisfied`, remove `dependency-required`, restart triage | The watcher |
 | Hand the issue to triage even though it has a dependency (no hold, no "on hold" comment) | Issue worker |
@@ -69,14 +69,14 @@ The watcher never resumes these on its own. It keeps the gate closed and says so
 
 ## What the watcher does
 
-Runs hourly, on demand, and when `dependency-required` is added to an issue.
+Runs hourly, on demand, when `dependency-required` is added to an issue, and on the events a dependency can be waiting for: an issue is closed, a pull request is merged, a release is published, or `package.json` or `package-lock.json` changes on the default branch. Label events and manual runs evaluate one issue; every other event evaluates all waiting issues. Without the event triggers a merged dependency could wait for the next scheduled run, and GitHub runs schedules on a best-effort basis (hourly slots are sometimes skipped for hours).
 
 1. For each open issue labeled `dependency-required`, resolve every declared dependency.
 2. If all are satisfied: add `dependency-satisfied`, remove `dependency-required`, then remove and re-add `issue-worker-ready` with `SIGNAL_TOKEN`. Re-adding the label starts issue triage again; re-adding a label that is already present would not.
 3. Otherwise keep the label and keep one plain-language status comment up to date. The comment carries a hidden marker so it is edited in place, never repeated.
 4. A failed lookup (API, registry, network) changes nothing. The issue is retried on the next run.
 
-Cross-repository dependencies are found by polling, because a workflow cannot subscribe to events in another repository. The hourly interval is enough: registry publishing alone lags a release by about half an hour.
+Cross-repository dependencies are found by polling, because a workflow cannot subscribe to events in another repository. A library release therefore reaches the consuming repository through its own schedule, or earlier when the consumer's `package.json` changes (for example a Dependabot bump of the pin). The hourly interval is enough: registry publishing alone lags a release by about half an hour.
 
 ## Edge cases
 

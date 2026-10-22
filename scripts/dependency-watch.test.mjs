@@ -47,7 +47,7 @@ test('parseDependencies: explicit declarations only', () => {
 
 test('parseRelatedRepos: frodo-style entry', () => {
   assert.deepEqual(RELATED.related, [
-    { repo: 'rockcarver/frodo-lib', requiresConsumerRelease: true, pins: '@rockcarver/frodo-lib' },
+    { repo: 'rockcarver/frodo-lib', secret: 'FRODO_LIB_ISSUES_TOKEN', requiresConsumerRelease: true, pins: '@rockcarver/frodo-lib' },
   ]);
   assert.equal(RELATED.this, 'rockcarver/frodo-cli');
 });
