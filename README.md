@@ -159,11 +159,13 @@ Local edits are preserved by the 3-way merge performed by `gh aw update`.
 │   ├── dependency-watch.yml
 │   ├── plan-approval-resume.yml
 │   ├── label-janitor.yml
+│   ├── pr-ready-signal.yml
 │   └── check-deployment.yml
 ├── scripts/
 │   ├── dependency-watch.mjs
 │   ├── plan-approval-resume.mjs
 │   ├── label-janitor.mjs
+│   ├── pr-ready-signal.mjs
 │   └── check-deployment.mjs
 └── shared/
     ├── dependencies.md

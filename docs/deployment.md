@@ -301,6 +301,17 @@ When a maintainer removes `plan-approval-required` from a high-complexity issue,
 | `workflows/plan-approval-resume.yml` | `.github/workflows/plan-approval-resume.yml` |
 | `scripts/plan-approval-resume.mjs` | `.github/scripts/plan-approval-resume.mjs` |
 
+### PR ready signal
+
+The coding agent cannot add labels, so a plain Actions workflow (no LLM) adds `pr-worker-ready` to its pull request when it finishes, which starts PR triage. Install it with the other plain workflows. It needs `SIGNAL_TOKEN` (Issues: Read and write) so the label event starts triage.
+
+| From this repository | To the consuming repository |
+|----------------------|-----------------------------|
+| `workflows/pr-ready-signal.yml` | `.github/workflows/pr-ready-signal.yml` |
+| `scripts/pr-ready-signal.mjs` | `.github/scripts/pr-ready-signal.mjs` |
+
+It imports `label-janitor.mjs`, so install that too. The triggers and what each one means are in [multi-phase-design.md](multi-phase-design.md#3-pr-gate). To signal a pull request by hand, run the workflow with its number.
+
 ### Label janitor
 
 A plain Actions workflow (no LLM) keeps issues and pull requests showing where they are: it removes an earlier gate label once the next signal exists, and the labels that describe open work when an issue closes. Install it with the other plain workflows; it needs no secret.
@@ -539,6 +550,7 @@ git push
 - [ ] Deployment check installed (`check-deployment.yml` and `check-deployment.mjs`) and passing; for each related repository the secret exists and its token has Issues: Read and write on that repository
 - [ ] Plan approval resume installed (`plan-approval-resume.yml` and `plan-approval-resume.mjs`)
 - [ ] Label janitor installed (`label-janitor.yml` and `label-janitor.mjs`)
+- [ ] PR ready signal installed (`pr-ready-signal.yml` and `pr-ready-signal.mjs`; needs `SIGNAL_TOKEN`)
 - [ ] Branch protection / ruleset configured (require PR, status checks, no force-push)
 - [ ] Auto-merge enabled (if low/low unattended merge is desired)
 - [ ] Test issue processed end-to-end
