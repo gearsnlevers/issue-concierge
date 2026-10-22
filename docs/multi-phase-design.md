@@ -25,6 +25,36 @@ Two independent axes are applied by the triage agents:
 - **Complexity** — design impact / autonomy
 - **Risk** — blast radius
 
+## Workflow names
+
+The Actions sidebar sorts workflows by display name, so the names carry the order. They are all in the form `Concierge <phase><step> [▸ ]<Name>`:
+
+- **`Concierge`** groups the harness together, ahead of the repository's own workflows.
+- **The code** (a digit for the phase, a letter for the step) puts the workflows in the order they run. Workers and triages come first in each phase; the helpers that serve a phase sit after them; phase 4 holds what is not tied to one gate.
+- **`▸`** marks a workflow that can be started by hand (it has `workflow_dispatch`). Workflows that run only on events carry no marker.
+
+| Name | Runs when |
+|------|-----------|
+| `Concierge 1a ▸ Issue Worker` | an issue is opened, edited or commented (and by hand for one issue) |
+| `Concierge 1b Issue Triage` | `issue-worker-ready` |
+| `Concierge 1c ▸ Dependency Watch` | hourly, on dependency events, and on demand |
+| `Concierge 2a Plan Worker` | `issue-triage-handoff` |
+| `Concierge 2b Plan Triage` | `plan-worker-ready` |
+| `Concierge 2c ▸ Plan Approval Resume` | a maintainer removes `plan-approval-required` (and by hand) |
+| `Concierge 3a PR Worker` | `plan-triage-handoff` |
+| `Concierge 3b ▸ PR Ready Signal` | the coding agent finishes (and by hand for one pull request) |
+| `Concierge 3c PR Triage` | `pr-worker-ready` |
+| `Concierge 4a ▸ Label Janitor` | after gate labels change, on assignment and on close, hourly, and on demand |
+| `Concierge 4b Related Repo Closer` | a linked issue in a related repository closes |
+| `Concierge 4c Waiting for Release` | an issue closes because a pull request merged |
+| `Concierge 4d Release Closer` | a release is published |
+| `Concierge 4e ▸ Updater` | daily, and on demand |
+| `Concierge 4f ▸ Check Deployment` | on pull requests, and on demand |
+
+The ordering holds whether the sidebar counts punctuation or ignores it, because the code is unique and sits before the marker. Names stay within about 40 characters (the longest is 35); longer ones truncate in the sidebar.
+
+To add a workflow, give it the next free step letter in its phase (or a new phase digit), add `▸` only if it has `workflow_dispatch`, and set the name in the frontmatter (`name:`) of a gh-aw definition or at the top of a plain workflow. `tools/workflow-names.test.mjs` checks the format, that codes are unique, that the markers match what each workflow actually allows, and that sorting the names sorts the pipeline. File names are separate: they keep their stems (`issue-worker`, `label-janitor`) so reordering the display names never means renaming files.
+
 ## Label lifecycle
 
 Gate labels are signals, not history. A label event starts the next workflow, so only the moment a gate label is added matters; once the next signal exists the earlier label has done its job and goes. At any moment an issue shows at most one gate label, which is where it is now. The history is in the timeline and in the plan comment. A plain Actions workflow, the **label janitor** (`label-janitor.yml` with `label-janitor.mjs`, no LLM, no secret), does the removing.
