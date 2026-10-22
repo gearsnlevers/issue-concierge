@@ -167,9 +167,16 @@ jobs:
           IS_PRERELEASE: ${{ steps.version.outputs.preRelease }}
         run: |
           set -euo pipefail
-          args=(release create "${TAG}" release-manifest.json --title "Repo Concierge ${TAG}" --notes-file RELEASE_NOTES.md)
+          # Immutable releases accept assets only before publication: create a
+          # draft, upload the manifest, then publish. A draft left behind by a
+          # failed run is replaced; a published release is never touched.
+          if gh release list --json tagName,isDraft --jq '.[] | select(.isDraft) | .tagName' | grep -xF "${TAG}" >/dev/null; then
+            gh release delete "${TAG}" --yes
+          fi
+          args=(release create "${TAG}" release-manifest.json --draft --title "Repo Concierge ${TAG}" --notes-file RELEASE_NOTES.md)
           if [ "${IS_PRERELEASE}" = "true" ]; then args+=(--prerelease); fi
           gh "${args[@]}"
+          gh release edit "${TAG}" --draft=false
 
       - name: Upload dry-run artifacts
         if: env.DRY_RUN == 'true'
