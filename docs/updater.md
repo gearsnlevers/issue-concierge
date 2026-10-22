@@ -77,4 +77,5 @@ Only a release's tag, its manifest and the files at the tag's commit, checked ag
 - **"supports one" related repository**: `related-repos.md` lists more than one repository with a secret. Remove or merge until one remains.
 - **Lock files change in every definition**: the release moved to a different gh-aw version; the pull request says so. That is expected for such releases.
 - **The pull request has no checks**: the branch was pushed with a token that cannot trigger them. Use `CONCIERGE_TOKEN`.
+- **"no stable release of … found, but vX is pinned"**: the run failed on purpose. The release list came back empty or without a usable release, which cannot be right for a pinned deployment. It is usually a transient GitHub API problem; run the workflow again. If it persists, the pinned release was deleted or the channel in `.github/concierge.yml` does not match any release.
 - **The full test suite runs on every update pull request**: the deployment's code pipeline does not know `.github/concierge.yml` and `.github/aw/` are non-code. See "Your CI" under Setting it up.

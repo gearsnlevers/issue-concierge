@@ -213,11 +213,26 @@ test('up to date: nothing is touched', async () => {
   assert.deepEqual(h.calls.git, []);
 });
 
-test('no release yet, and a missing target, are reported', async () => {
+test('no release yet is reported on a first adoption; a missing target fails', async () => {
   const h = harness();
+  const first = deployment({});
+  assert.equal((await run({ root: first.root, source: 'o/concierge' }, h.ctx())).status, 'no-release');
   const d = deployment({}, pinned('v1.0.0'));
-  assert.equal((await run({ root: d.root }, h.ctx())).status, 'no-release');
   await assert.rejects(run({ root: d.root, target: 'v9.9.9' }, h.ctx()), /release v9\.9\.9 not found/);
+});
+
+test('a pinned deployment that finds no usable release fails instead of reporting success', async () => {
+  // An empty release list (a bad read during an API incident) must not look like "nothing to do".
+  const empty = harness();
+  const d = deployment({}, pinned('v1.0.0'));
+  await assert.rejects(run({ root: d.root }, empty.ctx()), /no stable release of o\/concierge found, but v1\.0\.0 is pinned/);
+  assert.deepEqual(empty.calls.git, []);
+
+  // Only prereleases and drafts on the stable channel: also nothing usable.
+  const odd = harness();
+  odd.add('v2.0.0-1', V1, { prerelease: true });
+  odd.add('v2.0.0', V2, { draft: true });
+  await assert.rejects(run({ root: d.root }, odd.ctx()), /is pinned/);
 });
 
 test('a newer release: files, pin, compile, one commit, a forced push and one pull request', async () => {
