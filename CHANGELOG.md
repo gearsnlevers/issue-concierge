@@ -1,5 +1,13 @@
 # Changelog
 
+## [v1.0.5] - 2026-10-22
+
+### What's Changed
+* fix(labels): keep every label within GitHub's limits; check it at build time by @vscheuber in https://github.com/vscheuber/repo-concierge/pull/19
+* feat(pr-gate): add the pr-worker-ready label for the coding agent by @vscheuber in https://github.com/vscheuber/repo-concierge/pull/20
+
+**Full Changelog**: https://github.com/vscheuber/repo-concierge/compare/v1.0.4...v1.0.5
+
 ## [v1.0.4] - 2026-10-22
 
 ### What's Changed
