@@ -28,5 +28,6 @@ files:
   - shared/env-agent-contract.md
   - shared/issue-completeness.md
   - shared/related-repos.md
+  - shared/scope.md
   - docs/multi-phase-design.md
   - docs/deployment.md
