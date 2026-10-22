@@ -1,5 +1,14 @@
 # Changelog
 
+## [v1.0.1] - 2026-10-22
+
+### What's Changed
+* fix(release): publish as a draft with the manifest, then undraft by @vscheuber in https://github.com/vscheuber/repo-concierge/pull/10
+* docs(updater): export a token before the manual first adoption by @vscheuber in https://github.com/vscheuber/repo-concierge/pull/11
+* fix(pr-worker): assign without issue-intent metadata by @vscheuber in https://github.com/vscheuber/repo-concierge/pull/12
+
+**Full Changelog**: https://github.com/vscheuber/repo-concierge/compare/v1.0.0...v1.0.1
+
 ## [v1.0.0] - 2026-10-22
 
 ### What's Changed
