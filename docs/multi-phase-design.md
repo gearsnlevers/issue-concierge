@@ -47,6 +47,12 @@ The plan phase is a classification prerequisite. For high complexity it adds the
 
 Maintainer interaction on the actual change happens in the PR phase.
 
+## Bot activity is not work
+
+Every issue-driven workflow carries an activation condition (`if:` in the frontmatter) so it never starts for bot-authored issues: `github.event.issue.user.type != 'Bot'`. `issue-worker` additionally requires that the triggering comment was not written by a bot and that the comment is not on a pull request. Without this, the issues gh-aw files about its own failures were analyzed, planned and closed like real work, and the harness's own comments re-triggered the worker. A manual run of `issue-worker` with an issue number is unaffected, so a maintainer can still opt a bot-authored issue in.
+
+The PR gate worker only routes to the coding agent, so it uses the small model like the triage workflows; the plan worker is the only gate that still uses the default model.
+
 ## Split-repo routing (linked issues)
 
 When a repository defines `.github/agentic-workflows/related-repos.md`:

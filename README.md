@@ -55,6 +55,8 @@ High complexity adds `plan-approval-required`. When a maintainer removes that la
 
 Valid but non-urgent issues receive `backlog` and do not enter the plan gate.
 
+The harness only processes work from people. `issue-worker`, `issue-triage`, `plan-worker`, `plan-triage`, `pr-worker`, `related-repo-closer` and `waiting-for-release` skip issues authored by a bot (for example the `[aw] ... failed` issues gh-aw files about its own failures), and `issue-worker` also skips bot comments and comments on pull requests. The check is an activation condition, so a skipped event costs no AI credits. To process a bot-authored issue on purpose, run **Issue Worker** from the Actions tab with its issue number.
+
 An issue that declares `Depends on:` an unfinished issue or pull request receives `dependency-required` and stops at the issue gate. `dependency-watch` resolves it deterministically (no LLM) and resumes the issue, within a minute of a same-repository dependency merging or closing. For split-repo projects, a library dependency counts only when it is merged, released, installable, and pinned by the consuming repository. See [shared/dependencies.md](shared/dependencies.md).
 
 ### Safety Model
