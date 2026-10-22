@@ -1,5 +1,14 @@
 # Changelog
 
+## [v1.0.4] - 2026-10-22
+
+### What's Changed
+* fix(issue-gate): dependency waits no longer become backlog; add low-hanging fruit by @vscheuber in https://github.com/vscheuber/repo-concierge/pull/16
+* feat(issue-gate): scope check from an optional scope.md by @vscheuber in https://github.com/vscheuber/repo-concierge/pull/17
+* feat(labels): label janitor keeps issues showing where they are by @vscheuber in https://github.com/vscheuber/repo-concierge/pull/18
+
+**Full Changelog**: https://github.com/vscheuber/repo-concierge/compare/v1.0.3...v1.0.4
+
 ## [v1.0.3] - 2026-10-22
 
 ### What's Changed
