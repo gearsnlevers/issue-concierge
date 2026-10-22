@@ -301,6 +301,17 @@ When a maintainer removes `plan-approval-required` from a high-complexity issue,
 | `workflows/plan-approval-resume.yml` | `.github/workflows/plan-approval-resume.yml` |
 | `scripts/plan-approval-resume.mjs` | `.github/scripts/plan-approval-resume.mjs` |
 
+### Label janitor
+
+A plain Actions workflow (no LLM) keeps issues and pull requests showing where they are: it removes an earlier gate label once the next signal exists, and the labels that describe open work when an issue closes. Install it with the other plain workflows; it needs no secret.
+
+| From this repository | To the consuming repository |
+|----------------------|-----------------------------|
+| `workflows/label-janitor.yml` | `.github/workflows/label-janitor.yml` |
+| `scripts/label-janitor.mjs` | `.github/scripts/label-janitor.mjs` |
+
+`plan-approval-resume.mjs` imports `label-janitor.mjs`, so install both together. To tidy issues that closed before the janitor existed, run the workflow once with `include_closed` (use `dry_run` first). The rules are in [multi-phase-design.md](multi-phase-design.md#label-lifecycle).
+
 Requirements: `SIGNAL_TOKEN` with Issues: Read and write (it applies `plan-triage-handoff` so the PR gate starts), and the existing `plan-triage-handoff` label. It acts only on an open issue that has `complexity/high`, has no `plan-triage-handoff`, and is not labeled `dependency-required`. To resume an issue whose label was removed before the workflow was installed, run it from the Actions tab with the issue number.
 
 Requirements:
@@ -471,7 +482,7 @@ Low/low pull requests that carry `pr-triage-handoff` and pass required checks ca
 
 - Open a test issue (or dispatch `issue-worker` with an issue number).
 - Confirm only `issue-worker` starts. Other gates stay idle until their signal label is applied.
-- Confirm the issue receives `issue-worker-ready`, then `issue-triage-handoff` (or `backlog` / `needs-info`). A small, low-risk issue that is not urgent gets `low-hanging-fruit` together with `issue-triage-handoff`.
+- Confirm the issue receives `issue-worker-ready`, then `issue-triage-handoff` (or `backlog` / `needs-info`), and that each gate label disappears when the next one appears, so only one shows at a time. A small, low-risk issue that is not urgent gets `low-hanging-fruit` together with `issue-triage-handoff`.
 - To promote a `backlog` issue by hand, remove `backlog` and add `issue-triage-handoff`; that is the same signal triage would have sent.
 - If the repository has a `scope.md`, open a request that is clearly excluded and confirm it is declined and closed as not planned (`out-of-scope`), and one near the boundary and confirm it gets `scope-review` and stays open.
 - For an actionable issue, confirm a plan comment appears with the `<!-- gh-aw-workflow-id: plan-worker -->` marker and that complexity/risk labels are applied.
@@ -527,6 +538,7 @@ git push
 - [ ] Dependency watcher installed (`dependency-watch.yml` and `dependency-watch.mjs`)
 - [ ] Deployment check installed (`check-deployment.yml` and `check-deployment.mjs`) and passing; for each related repository the secret exists and its token has Issues: Read and write on that repository
 - [ ] Plan approval resume installed (`plan-approval-resume.yml` and `plan-approval-resume.mjs`)
+- [ ] Label janitor installed (`label-janitor.yml` and `label-janitor.mjs`)
 - [ ] Branch protection / ruleset configured (require PR, status checks, no force-push)
 - [ ] Auto-merge enabled (if low/low unattended merge is desired)
 - [ ] Test issue processed end-to-end
