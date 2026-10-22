@@ -140,6 +140,14 @@ The PR worker never reads the issue: its activation condition (an `if:` on the l
 
 The assignment is sent without issue-intent metadata (`issue-intent: false`). With it, gh-aw sends the agent's `confidence` and `rationale` along with the assignee, and GitHub's Agent suggestions preview holds anything below `HIGH` as a pending suggestion that a person must accept on the issue page (frodo-lib#760, confidence `MEDIUM`: the call reported success and nothing was assigned until someone clicked Accept). The gate here is the `plan-triage-handoff` label, which a person or plan triage already decided on, so the assignment is a mechanical step and must not depend on how the model rates its own confidence.
 
+**Ready signal** → the PR gate's triage starts when the pull request carries `pr-worker-ready`. The coding agent is told to add that label but cannot: its GitHub tools do not write labels (observed on frodo-cli#870 and frodo-lib#764: the instructions arrived, the label did not). The `pr-ready-signal` workflow (plain Actions, no LLM) adds it, with `SIGNAL_TOKEN` so the label event starts triage. It has three automatic triggers that are redundant on purpose while it is learned which ones reliably fire, and a manual one:
+- `review_requested`: the coding agent asks for review when it finishes (the job starts only when the coding agent made the request)
+- `agent_run`: a `workflow_run` on the agent's own run, `Running Copilot cloud agent`, when it completes successfully. **Unverified:** the agent's runs are `dynamic` workflows and GitHub may not deliver `workflow_run` for them. If it never fires, remove it.
+- `ready_for_review`: a maintainer took the draft out of draft
+- `manual`: `workflow_dispatch` with a pull request number (and `dry_run`)
+
+Only open pull requests opened by the coding agent are touched, and the label is added once: adding a label that is already there starts nothing, so several triggers firing cannot start triage twice. Each run logs which trigger it was, so the first few agent pull requests show which ones matter. The label janitor removes `pr-worker-ready` once triage adds `pr-triage-handoff`; a later review request after feedback adds it again and triage runs again on the new state.
+
 **Triage** → re-evaluates against the diff, emits `pr-triage-handoff`.
 
 ### Environment agent

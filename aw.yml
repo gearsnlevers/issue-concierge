@@ -23,6 +23,8 @@ files:
   - scripts/label-janitor.mjs
   - workflows/concierge-updater.yml
   - scripts/concierge-updater.mjs
+  - workflows/pr-ready-signal.yml
+  - scripts/pr-ready-signal.mjs
   - shared/dependencies.md
   - shared/safety-policy.md
   - shared/complexity.md
