@@ -65,7 +65,7 @@ node .github/scripts/concierge-updater.mjs --target v1.2.0  a specific release; 
 node .github/scripts/concierge-updater.mjs --local          write the working tree and compile; no branch, push or pull request
 ```
 
-In Actions, `workflow_dispatch` takes `target` and `dry-run`.
+In Actions the workflow is **Concierge 4e ▸ Updater**; `workflow_dispatch` takes `target` and `dry-run`.
 
 ## What it trusts
 
