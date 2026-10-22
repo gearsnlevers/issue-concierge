@@ -1,5 +1,13 @@
 # Changelog
 
+## [v1.0.3] - 2026-10-22
+
+### What's Changed
+* docs(updater): treat the pin and gh-aw lock cache as non-code in the deployment's CI by @vscheuber in https://github.com/vscheuber/repo-concierge/pull/14
+* fix(updater): fail when a pinned deployment finds no usable release by @vscheuber in https://github.com/vscheuber/repo-concierge/pull/15
+
+**Full Changelog**: https://github.com/vscheuber/repo-concierge/compare/v1.0.2...v1.0.3
+
 ## [v1.0.2] - 2026-10-22
 
 ### What's Changed
