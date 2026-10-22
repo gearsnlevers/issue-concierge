@@ -1,0 +1,13 @@
+{
+  "name": "repo-concierge",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Agentic issue-to-release harness for GitHub",
+  "scripts": {
+    "test": "node --test scripts/ tools/",
+    "manifest": "node tools/build-release-manifest.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

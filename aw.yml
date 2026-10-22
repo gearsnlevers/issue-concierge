@@ -1,6 +1,6 @@
 manifest-version: "1"
-name: Agentic Workflows Harness
-description: Centralized multi-gate issue triage and tiered fixing.
+name: Repo Concierge
+description: Agentic issue-to-release harness for GitHub: gated triage, planning and tiered fixing, dependency gating and release tracking.
 emoji: "🤖"
 min-version: v0.40.0
 files:
@@ -11,6 +11,8 @@ files:
   - workflows/pr-worker.md
   - workflows/pr-triage.md
   - workflows/related-repo-closer.md
+  - workflows/release-closer.md
+  - workflows/waiting-for-release.md
   - workflows/dependency-watch.yml
   - scripts/dependency-watch.mjs
   - workflows/check-deployment.yml

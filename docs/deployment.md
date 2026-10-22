@@ -1,6 +1,6 @@
-# Deploying the Harness
+# Deploying Repo Concierge
 
-Step-by-step instructions for installing the agentic-workflows harness in a consuming repository.
+Step-by-step instructions for installing Repo Concierge in a consuming repository.
 
 ## Prerequisites
 
@@ -18,13 +18,13 @@ Step-by-step instructions for installing the agentic-workflows harness in a cons
 From a clone of the target repository:
 
 ```bash
-gh aw add vscheuber/agentic-workflows/issue-worker@main \
-         vscheuber/agentic-workflows/issue-triage@main \
-         vscheuber/agentic-workflows/plan-worker@main \
-         vscheuber/agentic-workflows/plan-triage@main \
-         vscheuber/agentic-workflows/pr-worker@main \
-         vscheuber/agentic-workflows/pr-triage@main \
-         vscheuber/agentic-workflows/related-repo-closer@main
+gh aw add vscheuber/repo-concierge/issue-worker@main \
+         vscheuber/repo-concierge/issue-triage@main \
+         vscheuber/repo-concierge/plan-worker@main \
+         vscheuber/repo-concierge/plan-triage@main \
+         vscheuber/repo-concierge/pr-worker@main \
+         vscheuber/repo-concierge/pr-triage@main \
+         vscheuber/repo-concierge/related-repo-closer@main
 ```
 
 Alternatively, copy the seven `.md` files from `workflows/` in this repository into `.github/workflows/` of the target.
@@ -479,7 +479,7 @@ Overwrite the workflow files on the PR branch and push:
 ```bash
 git checkout add-agentic-workflows   # or whatever branch the PR uses
 for wf in issue-worker issue-triage plan-worker plan-triage pr-worker pr-triage related-repo-closer; do
-  curl -fsSL "https://raw.githubusercontent.com/vscheuber/agentic-workflows/main/workflows/${wf}.md" \
+  curl -fsSL "https://raw.githubusercontent.com/vscheuber/repo-concierge/main/workflows/${wf}.md" \
     -o ".github/workflows/${wf}.md"
 done
 git add .github/workflows/*.md

@@ -1,0 +1,194 @@
+name: Release
+
+# Cuts a Repo Concierge release: tests, next version, preflight, changelog,
+# manifest, tag and GitHub release. Modeled on the release workflows of the
+# vscheuber action repositories. See docs/releases.md.
+#
+# First run: choose release-type "major" with dry-run enabled, read the summary,
+# then run it again without dry-run.
+
+on:
+  workflow_dispatch:
+    inputs:
+      release-type:
+        description: 'Release kind: prerelease | premajor | patch | minor | major'
+        type: choice
+        options:
+          - prerelease
+          - premajor
+          - patch
+          - minor
+          - major
+        default: 'prerelease'
+        required: true
+      dry-run:
+        description: 'Compute everything and upload the manifest and notes as an artifact, but do not commit, tag or publish'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      GH_TOKEN: ${{ github.token }}
+      # The AI changelog needs an LLM key; without one the notes come from
+      # GitHub's generated release notes.
+      HAS_LLM_KEY: ${{ secrets.LLM_API_KEY != '' }}
+      DRY_RUN: ${{ inputs.dry-run }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Compile every workflow definition with gh-aw
+        run: bash tools/ci-compile-smoke.sh
+
+      - name: Compute next version
+        id: version
+        uses: vscheuber/version-bump-action@v1
+        with:
+          release-type: ${{ inputs.release-type }}
+
+      - name: Release preflight checks
+        uses: vscheuber/release-preflight-action@v1
+        with:
+          candidate-version: ${{ steps.version.outputs.newVersion }}
+          candidate-tag: ${{ steps.version.outputs.newTag }}
+          package-name: 'repo-concierge'
+          current-version: ${{ steps.version.outputs.base }}
+          check-remote-tag: true
+          check-npm-version: false
+          check-version-drift: true
+
+      - name: Update package.json
+        uses: vscheuber/manifest-version-update-action@v1
+        with:
+          version: ${{ steps.version.outputs.newVersion }}
+          update-package-lock: false
+
+      - name: Release notes and changelog (AI)
+        if: env.HAS_LLM_KEY == 'true'
+        uses: vscheuber/ai-changelog-action@v1
+        with:
+          github-token: ${{ github.token }}
+          llm-api-key: ${{ secrets.LLM_API_KEY }}
+          target-user-type: developer
+          release-type: ${{ steps.version.outputs.action_release_type }}
+          version: ${{ steps.version.outputs.newVersion }}
+          promote-release: true
+          release-tag: ${{ steps.version.outputs.newTag }}
+          release-notes-path: RELEASE_NOTES.md
+          commit: false
+
+      - name: Release notes and changelog (GitHub generated)
+        if: env.HAS_LLM_KEY != 'true'
+        env:
+          TAG: ${{ steps.version.outputs.newTag }}
+          PREVIOUS: ${{ steps.version.outputs.base_ref }}
+        run: |
+          set -euo pipefail
+          args=(-f "tag_name=${TAG}" -f "target_commitish=${GITHUB_SHA}")
+          if [ -n "${PREVIOUS}" ]; then args+=(-f "previous_tag_name=${PREVIOUS}"); fi
+          gh api "repos/${GITHUB_REPOSITORY}/releases/generate-notes" "${args[@]}" --jq .body > RELEASE_NOTES.md
+          node tools/update-changelog.mjs --tag "${TAG}" --notes RELEASE_NOTES.md
+
+      - name: Commit changelog and version
+        if: env.DRY_RUN != 'true'
+        env:
+          TAG: ${{ steps.version.outputs.newTag }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add CHANGELOG.md package.json
+          if git diff --cached --quiet; then
+            echo "No changelog or version changes to commit"
+          else
+            git commit -m "chore: release ${TAG}"
+            git push origin "HEAD:${GITHUB_REF_NAME}"
+          fi
+
+      - name: Build and verify the release manifest
+        env:
+          VERSION: ${{ steps.version.outputs.newVersion }}
+          TAG: ${{ steps.version.outputs.newTag }}
+        run: |
+          set -euo pipefail
+          node tools/build-release-manifest.mjs --version "${VERSION}" --tag "${TAG}" --commit "$(git rev-parse HEAD)" --out release-manifest.json
+          node tools/build-release-manifest.mjs --verify release-manifest.json
+
+      - name: Create and push tag
+        if: env.DRY_RUN != 'true'
+        env:
+          TAG: ${{ steps.version.outputs.newTag }}
+        run: |
+          set -euo pipefail
+          git fetch --tags
+          if git rev-parse -q --verify "refs/tags/${TAG}" >/dev/null; then
+            existing="$(git rev-list -n 1 "${TAG}")"
+            current="$(git rev-parse HEAD)"
+            if [ "${existing}" = "${current}" ]; then
+              echo "Tag ${TAG} already exists on the current commit; skipping"
+              exit 0
+            fi
+            echo "::error::Tag ${TAG} already exists on a different commit"
+            exit 1
+          fi
+          git tag -a "${TAG}" -m "Release ${TAG}"
+          git push origin "${TAG}"
+
+      - name: Publish GitHub release
+        if: env.DRY_RUN != 'true'
+        env:
+          TAG: ${{ steps.version.outputs.newTag }}
+          IS_PRERELEASE: ${{ steps.version.outputs.preRelease }}
+        run: |
+          set -euo pipefail
+          args=(release create "${TAG}" release-manifest.json --title "Repo Concierge ${TAG}" --notes-file RELEASE_NOTES.md)
+          if [ "${IS_PRERELEASE}" = "true" ]; then args+=(--prerelease); fi
+          gh "${args[@]}"
+
+      - name: Upload dry-run artifacts
+        if: env.DRY_RUN == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-dry-run
+          path: |
+            release-manifest.json
+            RELEASE_NOTES.md
+            CHANGELOG.md
+
+      - name: Summary
+        if: always()
+        env:
+          VERSION: ${{ steps.version.outputs.newVersion }}
+          TAG: ${{ steps.version.outputs.newTag }}
+          PRERELEASE: ${{ steps.version.outputs.preRelease }}
+          BASE: ${{ steps.version.outputs.base }}
+        run: |
+          {
+            echo "## Repo Concierge release"
+            echo
+            echo "| | |"
+            echo "|---|---|"
+            echo "| Release type | ${{ inputs.release-type }} |"
+            echo "| Base version | ${BASE:-n/a} |"
+            echo "| New version | ${VERSION:-n/a} |"
+            echo "| Tag | ${TAG:-n/a} |"
+            echo "| Prerelease | ${PRERELEASE:-n/a} |"
+            echo "| Notes | $([ "${HAS_LLM_KEY}" = "true" ] && echo "AI changelog" || echo "GitHub generated") |"
+            echo "| Dry run | ${DRY_RUN} |"
+          } >> "$GITHUB_STEP_SUMMARY"

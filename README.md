@@ -1,6 +1,6 @@
-# Agentic Workflows Harness
+# Repo Concierge
 
-Centralized, portable GitHub Agentic Workflows (`gh-aw`) setup for AI-assisted issue triage and tiered fixing.
+Repo Concierge is an agentic issue-to-release harness for GitHub: a centralized, portable GitHub Agentic Workflows (`gh-aw`) setup for AI-assisted issue triage, planning and tiered fixing, with dependency gating and release tracking. Deployments pin a released version; see [docs/releases.md](docs/releases.md).
 
 Two independent axes control autonomy and blast radius:
 
@@ -13,19 +13,23 @@ Each stage is a gate.
 - Triage agents signal the next gate with `<triage-name>-handoff`.
 - Blocking conditions use `<thing>-required`. Removing the label resumes processing. `dependency-required` is removed automatically by the dependency watcher when the work the issue depends on is finished.
 
+## Releases
+
+Deployments pin a released version, not `main`. Each release carries notes and a `release-manifest.json` with a digest for every deployable file. Versioning rules, the release procedure and what a release contains: [docs/releases.md](docs/releases.md).
+
 ## Quick Start (Consuming Repo)
 
 ```bash
 # One-time
 gh extension install github/gh-aw
 
-# Install core workflows (pin to a tag in production)
-gh aw add vscheuber/agentic-workflows/issue-worker@main
-gh aw add vscheuber/agentic-workflows/issue-triage@main
-gh aw add vscheuber/agentic-workflows/plan-worker@main
-gh aw add vscheuber/agentic-workflows/plan-triage@main
-gh aw add vscheuber/agentic-workflows/pr-worker@main
-gh aw add vscheuber/agentic-workflows/pr-triage@main
+# Install core workflows (pin to a released tag in production, for example @v1.0.0)
+gh aw add vscheuber/repo-concierge/issue-worker@main
+gh aw add vscheuber/repo-concierge/issue-triage@main
+gh aw add vscheuber/repo-concierge/plan-worker@main
+gh aw add vscheuber/repo-concierge/plan-triage@main
+gh aw add vscheuber/repo-concierge/pr-worker@main
+gh aw add vscheuber/repo-concierge/pr-triage@main
 
 # Compile and commit the generated lock files
 gh aw compile
