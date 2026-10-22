@@ -4,7 +4,7 @@
   "private": true,
   "description": "Agentic issue-to-release harness for GitHub",
   "scripts": {
-    "test": "node --test scripts/ tools/",
+    "test": "node --test scripts/*.test.mjs tools/*.test.mjs",
     "manifest": "node tools/build-release-manifest.mjs"
   },
   "engines": {
