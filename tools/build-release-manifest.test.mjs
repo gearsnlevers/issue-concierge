@@ -9,6 +9,7 @@ import {
   findUnlisted,
   buildManifest,
   verifyManifest,
+  classify,
 } from './build-release-manifest.mjs';
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -23,7 +24,7 @@ function fixture(files, awFiles) {
   write('aw.yml', `name: x\nfiles:\n${awFiles.map((f) => `  - ${f}`).join('\n')}\n`);
   write(
     'requirements.json',
-    JSON.stringify({ ghAw: { version: 'v0.92.0' }, labels: [{ name: 'a', color: '000000', description: 'd' }], secrets: [] })
+    JSON.stringify({ ghAw: { version: 'v0.92.0' }, install: [{ from: 'workflows/', to: '.github/workflows/' }, { from: 'scripts/', to: '.github/scripts/' }], labels: [{ name: 'a', color: '000000', description: 'd' }], secrets: [] })
   );
   return dir;
 }
@@ -95,4 +96,28 @@ test('this repository: the manifest builds and verifies', () => {
   const m = buildManifest({ root: REPO, version: '0.0.0-test' });
   assert.ok(m.files.length > 20);
   assert.deepEqual(verifyManifest(m, REPO), []);
+});
+
+test('every file is classified with its destination in a deployment', () => {
+  const install = [
+    { from: 'workflows/', to: '.github/workflows/' },
+    { from: 'scripts/', to: '.github/scripts/' },
+  ];
+  assert.deepEqual(classify('workflows/issue-worker.md', install), { kind: 'definition', dest: '.github/workflows/issue-worker.md' });
+  assert.deepEqual(classify('workflows/dependency-watch.yml', install), { kind: 'workflow', dest: '.github/workflows/dependency-watch.yml' });
+  assert.deepEqual(classify('scripts/check-deployment.mjs', install), { kind: 'script', dest: '.github/scripts/check-deployment.mjs' });
+  assert.deepEqual(classify('shared/risk.md', install), { kind: 'reference', dest: null });
+  assert.deepEqual(classify('docs/deployment.md', install), { kind: 'reference', dest: null });
+});
+
+test('this repository: definitions, workflows and scripts have a destination, references do not', () => {
+  const m = buildManifest({ root: REPO, version: '0.0.0-test' });
+  for (const f of m.files) {
+    if (f.kind === 'reference') assert.equal(f.dest, null, f.path);
+    else assert.ok(f.dest && f.dest.startsWith('.github/'), f.path);
+  }
+  assert.ok(m.files.some((f) => f.kind === 'definition'));
+  assert.ok(m.files.some((f) => f.kind === 'workflow'));
+  assert.ok(m.files.some((f) => f.kind === 'script'));
+  assert.ok(m.files.some((f) => f.kind === 'reference'));
 });

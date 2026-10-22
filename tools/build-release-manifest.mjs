@@ -52,6 +52,19 @@ export function findUnlisted(root, listed) {
 
 const sha256 = (buf) => createHash('sha256').update(buf).digest('hex');
 
+/**
+ * Where a file goes in a deployment and what it is:
+ * `definition` (gh-aw markdown, must be compiled), `workflow` (plain Actions
+ * YAML), `script`, or `reference` (shared templates and docs, not installed).
+ */
+export function classify(file, install) {
+  const rule = (install || []).find((r) => file.startsWith(r.from));
+  if (!rule) return { kind: 'reference', dest: null };
+  const dest = rule.to + file.slice(rule.from.length);
+  if (file.startsWith('workflows/')) return { kind: file.endsWith('.md') ? 'definition' : 'workflow', dest };
+  return { kind: 'script', dest };
+}
+
 export function buildManifest({ root, version, tag, commit }) {
   const listed = parseManifestFiles(fs.readFileSync(path.join(root, 'aw.yml'), 'utf8'));
   const unlisted = findUnlisted(root, listed);
@@ -61,7 +74,7 @@ export function buildManifest({ root, version, tag, commit }) {
   const req = JSON.parse(fs.readFileSync(path.join(root, 'requirements.json'), 'utf8'));
   const files = [...new Set(listed)].sort().map((p) => {
     const buf = fs.readFileSync(path.join(root, p));
-    return { path: p, sha256: sha256(buf), bytes: buf.length };
+    return { path: p, ...classify(p, req.install), sha256: sha256(buf), bytes: buf.length };
   });
   return {
     schema: 1,
@@ -70,6 +83,7 @@ export function buildManifest({ root, version, tag, commit }) {
     tag: tag || `v${version}`,
     commit: commit || null,
     ghAw: req.ghAw,
+    install: req.install,
     files,
     requires: { labels: req.labels, secrets: req.secrets, perRelatedRepository: req.perRelatedRepository },
   };

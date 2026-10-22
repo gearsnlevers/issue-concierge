@@ -137,5 +137,15 @@
       "purpose": "Assigns the Copilot coding agent (pr-worker)"
     }
   ],
-  "perRelatedRepository": "For every related repository in .github/agentic-workflows/related-repos.md that names a secret: that secret, with Issues: Read and write on the other repository (used by issue-worker create-issue and the related-repo closer)"
+  "perRelatedRepository": "For every related repository in .github/agentic-workflows/related-repos.md that names a secret: that secret, with Issues: Read and write on the other repository (used by issue-worker create-issue and the related-repo closer)",
+  "install": [
+    {
+      "from": "workflows/",
+      "to": ".github/workflows/"
+    },
+    {
+      "from": "scripts/",
+      "to": ".github/scripts/"
+    }
+  ]
 }
