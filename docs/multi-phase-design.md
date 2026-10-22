@@ -86,6 +86,7 @@ Plan triage never resumes a high-complexity issue itself. Removing `plan-approva
 
 ### 3. PR gate
 **Worker** → assigns coding agent (triggered by `plan-triage-handoff`)  
+The PR worker never reads the issue: its activation condition (an `if:` on the label event) already excludes bot-authored issues and issues labeled `dependency-required`, and the instructions it passes to the coding agent are static. Reading untrusted issue content is blocked by gh-aw's integrity policy unless a workflow opts out with `min-integrity: none`, which made the worker refuse to assign the agent (frodo-lib#760); this design needs no such opt-out.  
 **Triage** → re-evaluates against the diff, emits `pr-triage-handoff`.
 
 ### Environment agent
