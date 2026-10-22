@@ -40,6 +40,7 @@ The files under `shared/` in the harness repository are templates. They are **no
 | `complexity.md` | No | Override the default complexity axis definitions used by plan triage |
 | `risk.md` | No | Override the default risk axis definitions used by plan triage |
 | `issue-completeness.md` | No | Override completeness criteria (issue template is preferred by default) |
+| `scope.md` | No | The project's purpose and explicit exclusions; turns on the scope check (see [multi-phase-design.md](multi-phase-design.md#scope-check)) |
 | `related-repos.md` | No | Enable linked-issue routing for split-repo projects |
 | `env-agent-contract.md` | No | Contract for an optional injectable environment agent |
 | `safety-policy.md` | No | Reference only; not read by workflows |
@@ -417,6 +418,8 @@ The workflows apply and react to specific labels. Create them once per repositor
 | `needs-info` | `d4c5f9` | Missing reproduction steps or details |
 | `backlog` | `c5def5` | Valid but not urgent; do not plan or implement now |
 | `low-hanging-fruit` | `bfdadc` | Valid but not urgent, small and low risk; handed to the plan gate anyway |
+| `out-of-scope` | `e4e669` | Matches an explicit exclusion in the project's scope; closed as not planned |
+| `scope-review` | `fbca04` | May not fit the project's scope; a maintainer decides (remove the label and add `issue-triage-handoff` to accept) |
 | `dependency-required` | `b60205` | Waiting for a dependency; the watcher removes it when the dependency is finished |
 | `dependency-satisfied` | `0e8a16` | Dependencies finished or cleared by a maintainer; issue triage lets the issue through |
 | `related-repo` | `fbca04` | Non-canonical issue; tracked in a related repository |
@@ -470,6 +473,7 @@ Low/low pull requests that carry `pr-triage-handoff` and pass required checks ca
 - Confirm only `issue-worker` starts. Other gates stay idle until their signal label is applied.
 - Confirm the issue receives `issue-worker-ready`, then `issue-triage-handoff` (or `backlog` / `needs-info`). A small, low-risk issue that is not urgent gets `low-hanging-fruit` together with `issue-triage-handoff`.
 - To promote a `backlog` issue by hand, remove `backlog` and add `issue-triage-handoff`; that is the same signal triage would have sent.
+- If the repository has a `scope.md`, open a request that is clearly excluded and confirm it is declined and closed as not planned (`out-of-scope`), and one near the boundary and confirm it gets `scope-review` and stays open.
 - For an actionable issue, confirm a plan comment appears with the `<!-- gh-aw-workflow-id: plan-worker -->` marker and that complexity/risk labels are applied.
 - For a low/low item, confirm a pull request is opened and can auto-merge after checks.
 - For a split-repo case, confirm a canonical issue is created, the original receives `related-repo`, and the original is closed when the canonical issue closes.

@@ -99,12 +99,23 @@ If a link already exists (comment already points at a canonical issue, or `relat
 
 If the issue belongs in this repository, continue with the normal analysis below.
 
+## Scope
+Read `.github/agentic-workflows/scope.md` if it exists. If it does not exist, skip this section: every request counts as in scope.
+
+Judge the request against the file as written. Do not invent boundaries. Decide one of three things:
+- **In scope**: continue as usual.
+- **Out of scope**: the request matches an item under "Out of scope", or a plain statement that the project does not do this. Say so in the analysis comment: that this is not something the project will take on, a short reason in the file's own terms, and where to go instead if the file names a place. Say nothing about work being planned.
+- **Unclear**: the request is not on the exclusion list, but it matches an item under "Needs a maintainer", or you doubt that it fits the Purpose. Say that a maintainer will take a look. Do not decline it.
+
+When you hesitate between out of scope and unclear, choose unclear. Never call a request out of scope because it is large, hard, risky or unusual; only because the file excludes it. A bug in something the project already does is always in scope.
+
 ## Analysis comment (reporter-facing)
 Read the issue body **and every comment**.
 Post a short, plain-language comment. Do not mention labels, gates, workflows, or any internal harness terms.
 
 Cover, in ordinary language:
 - Whether the report is clear enough to act on
+- Whether the request fits the project's scope, only when a scope file exists and the answer is not simply yes
 - Apparent duplicates
 - Whether the reported behavior is already fixed, or cannot be found in the current code
 
