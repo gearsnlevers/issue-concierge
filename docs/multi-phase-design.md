@@ -178,7 +178,16 @@ It learns that the agent has finished from the pull request's timeline, where ea
 
 Why a sweep and not an event (measured on frodo-lib#771): the agent's own `review_requested` starts a run that waits for a maintainer's approval like any run the agent causes (the repository's "Require approval for workflow runs" policy), and `workflow_run` is never delivered for the agent's `dynamic` runs. Two more triggers remain: `ready_for_review` (a maintainer took the draft out of draft) and `workflow_dispatch` (with a pull request number for that one, or without one for a sweep; `dry_run` reports only). Only open pull requests opened by the coding agent are touched.
 
-PR triage itself runs as a `pull_request` run on a pull request the coding agent opened, so it too waits for "Approve and run workflows". That click is the intended human step and covers CI as well.
+PR triage runs as a `pull_request_target` run, so it does not wait for "Approve and run workflows". As a `pull_request` run it did: GitHub holds every run on a pull request the coding agent opened. gh-aw accepts `names:` only under `pull_request`, so triage listened for every `labeled` event and filtered by name inside the job, which meant each label event on the pull request, including triage's own three labels, queued another held run, and a held run stays on the head it was queued for after the agent pushes again (seen on frodo-lib#771 and frodo-cli#871).
+
+This removes a human step, so the trade-off is stated here. The CI runs on the agent's pushes still wait for "Approve and run workflows", and branch protection still needs those checks, so that click remains the human gate before anything merges. What protects the unattended triage run:
+
+- It runs the workflow from the default branch, and gh-aw refuses `pull_request_target` unless the checkout is off. `checkout: false` means no pull request code is checked out or run; the agent reads the diff through the API.
+- The `if:` starts it only for the `pr-worker-ready` label and only for a pull request from this repository. The same-repository guard is one gh-aw adds for `pull_request` and not for `pull_request_target`, so it is written out.
+- The label must be added by someone with write access, as for every gate.
+- It can write only the fixed list of complexity, risk and handoff labels and one comment, and threat detection stays on.
+
+What it gives up: nobody looks at the pull request before a model reads it, and the labels it writes feed the merge rules. Do not let auto-merge act on `pr-triage-handoff` without required CI checks, as `deployment.md` already says. To get the approval click back, revert this change (`on: pull_request` with `names: [pr-worker-ready]`) and accept the held runs; the updater rewrites deployed files from each release, so a local edit in one deployment would not last.
 
 **Triage** → re-evaluates against the diff, reports the state of the checks (failing, running, passing, or "CI state not checked" when it cannot read them) and emits `pr-triage-handoff`. It classifies size and risk, so a red check does not hold the handoff back; it changes the recommended next action.
 

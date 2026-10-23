@@ -141,7 +141,7 @@ Workflows must declare read-only GitHub permissions (`contents: read`, `issues: 
 
 ### Label filters
 
-Each gate workflow listens only for its own signal label via `names:` under the trigger. Other label events are skipped and do not start the agent.
+Each gate workflow listens only for its own signal label via `names:` under the trigger. Other label events are skipped and do not start the agent. The exception is `pr-triage`: it is a `pull_request_target` workflow, gh-aw accepts `names:` only under `pull_request`, so it filters with an `if:` on the label name instead (see "Ready signal" in `multi-phase-design.md`).
 
 | Workflow | Runs when labeled |
 |----------|-------------------|
