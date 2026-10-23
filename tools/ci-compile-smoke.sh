@@ -47,4 +47,18 @@ for lock in "$tmp"/.github/workflows/*.lock.yml; do
     fi
   fi
 done
+# Who may start when (docs/multi-phase-design.md): a closed issue starts no gate. Read the compiled locks:
+# the condition must survive into the ACTIVATION job's `if:` (the guard step's own `if:` does not count),
+# and the PR worker's activation must read its guard step's outcome.
+activation_if() { awk '/^  activation:/{f=1} f{print} f&&/^    runs-on:/{exit}' "$1"; }
+for name in issue-worker issue-triage plan-worker plan-triage pr-worker; do
+  if ! activation_if "$tmp/.github/workflows/$name.lock.yml" | grep -q "github.event.issue.state == 'open'"; then
+    echo "::error::$name does not require an open issue in its compiled activation condition"
+    exit 1
+  fi
+done
+if ! activation_if "$tmp/.github/workflows/pr-worker.lock.yml" | grep -q "needs.pre_activation.outputs.existing_fix_result != 'failure'"; then
+  echo "::error::pr-worker does not read the existing_fix outcome in its compiled activation condition"
+  exit 1
+fi
 echo "compiled $count workflow definitions with gh-aw $version"
