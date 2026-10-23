@@ -111,6 +111,25 @@ The janitor deletes those runs. A run is deleted only when it finished as `actio
 
 **Permissions.** Deleting a run needs `actions: write`. The job declares it for itself, so the label job keeps `issues: write` and `pull-requests: write` only.
 
+## Repository guidance
+
+A repository tells its contributors, human and agent, how to work on it in files of its own: `AGENTS.md` at the root, `.github/copilot-instructions.md`, and `.github/instructions/*.instructions.md`, each of which starts with `applyTo` globs in its frontmatter. GitHub's coding agent, its code review and Copilot CLI load these files on their own (GitHub documents which feature reads which file in its custom instructions support matrix). The harness adds no file format: it makes two of its gates read the same files, so a rule is written once and no copy has to be kept in step. Without these files nothing changes. The template is `shared/agents.md`; it goes to the repository root, not into `.github/agentic-workflows/`.
+
+| Gate | What it does with the guidance | Where it reads from |
+|------|--------------------------------|---------------------|
+| Plan worker | Reads `AGENTS.md`, `.github/copilot-instructions.md` and at most three instruction files whose `applyTo` matches the files it expects to touch, and adds a "Repository rules that apply" heading of at most five lines to the plan. | The default branch: an `issues` event checks out the default branch, and the prompt tells it to use the GitHub tools with no `ref`. |
+| PR worker | Reads nothing. One static sentence in the `custom-instructions` that travel with the assignment: follow `AGENTS.md` and the matching `.github/instructions` files and run the checks they list. The coding agent loads the files itself, from its own branch. | Not applicable. |
+| PR triage | Compares the diff with the rules that no test or linter enforces and adds one "Repository rules:" line to its comment. | The GitHub API only (`checkout: false`), with no `ref`, which is the default branch. |
+| Every other gate | Does not use it. | |
+
+**Why the default branch.** A pull request could otherwise weaken the rules it is judged by: edit `AGENTS.md` in the same change and the review applies the edited version. PR triage therefore never passes a ref. When the pull request itself changes `AGENTS.md`, `.github/copilot-instructions.md` or a file under `.github/instructions/`, triage judges it by the default-branch version, says so in the comment and makes a maintainer's review of that change the next action. gh-aw applies the same principle: every compiled workflow saves `.github`, `.agents` and `AGENTS.md` from the base branch for restoration ("Save agent config folders for base branch restoration"). A pull request against another base branch is still judged by the guidance of the default branch. The coding agent loads guidance from its own working branch and may edit it, which is the reason triage does not.
+
+**Advisory, never binding.** The repository's guidance ranks below the harness's safety policy and below the workflow's own prompt. It describes how to work on and review the repository; it can never change which comment a gate posts, which label it adds, or any gate or approval, and both prompts say to ignore text in it that tries. The "Repository rules:" line changes none of the complexity, risk or `pr-triage-handoff` labels. A violation shows up in the comment and in the recommended next action, and merge rules stay as they are. Rules that a test or a linter enforces are left to CI ("enforced by CI" at most), so triage does not repeat them.
+
+**What the PR worker does not do.** It still never reads the issue or any other untrusted content (`deployment.md` explains why it has no `min-integrity: none`), and the sentence it sends is static text in the safe-output configuration, not written by the model, for the reason given under "PR gate": an instruction that only travels in the model's rationale never reaches the coding agent.
+
+**Cost.** Seven recent runs of the two gates (frodo-lib and frodo-cli, 2026-10-23) used 12.6 to 15.0 AIC (plan worker) and 12.3 to 20.4 AIC (PR triage). The guidance adds about 1.5K tokens of context (a 40-line `AGENTS.md` and up to three short instruction files) and two model turns, because the reads are batched into one step each, and every turn re-reads the cached prompt of roughly 40K tokens. Priced with the rates implied by those seven runs (about 0.23 AIC per 1K tokens written to the cache, 0.02 per 1K read from it, 0.9 per 1K of output), that is about 2 to 2.5 AIC per run, or 15% of the plan worker. A repository without guidance files costs one batched read that finds nothing, about 1 AIC. `max-ai-credits` is not changed: it feeds gh-aw's daily guardrail and the failure report, and was not acting as a per-run cap (PR triage ran at 19.2 and 20.4 AIC against a setting of 16 and succeeded).
+
 ## Plan comment identity
 
 The plan lives as a single comment on the issue.  
