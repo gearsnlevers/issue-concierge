@@ -144,7 +144,7 @@
     {
       "name": "SIGNAL_TOKEN",
       "required": true,
-      "purpose": "Issues: Read and write. Applies and removes labels so the next gate starts"
+      "purpose": "Issues and Pull requests: Read and write. Applies and removes labels on issues and on pull requests so the next gate starts"
     },
     {
       "name": "GH_AW_AGENT_TOKEN",
