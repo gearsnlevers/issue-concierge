@@ -99,6 +99,18 @@ Example: an issue that went through the whole pipeline ends with its type, `comp
 
 **Reopening** an issue puts it back at the issue gate: the worker re-adds `issue-worker-ready` and triage runs again. Because closing removed `dependency-satisfied`, triage gates the issue again if it still declares a dependency, and the watcher clears it again within the hour.
 
+## Held runs
+
+GitHub holds every workflow run that the coding agent causes at `action_required` until a maintainer approves it. For the pipeline that is a check worth keeping: the agent's push runs the pipeline definition on its own branch, with the repository's secrets reachable, and the approval is the moment a person reads the diff before that happens. Keep it on.
+
+The hold is decided before any job condition is evaluated, so it also catches runs that a condition would skip. Every comment the agent posts on its own pull request starts an `Issue Worker` run, and that run waits for approval although its `if:` (`comment.user.type != 'Bot'` and `issue.pull_request == null`) skips it. Approving it starts nothing; it only turns a held run into a skipped one.
+
+The janitor deletes those runs. A run is deleted only when it finished as `action_required`, its actor is the coding agent, and its workflow and event are listed in `DISPOSABLE_HELD_RUNS` in `scripts/janitor.mjs` (today: the Issue Worker's lock file, event `issue_comment`). Every other held run is left alone: a held `pipeline.yml` run of an agent push is the approval that matters, and a contributor's pull request from a fork waits for a decision. Never list a workflow that does real work. A test pins the Issue Worker's guard, so weakening it fails the build instead of making the sweep unsafe.
+
+**When it runs.** The sweep is a second job of the janitor workflow, `held-runs`, which follows the label job and starts for the same events except issue events: gate labels on pull requests, a pull request closing, the hourly schedule and a manual run (`dry_run` lists what it would delete). A held run is therefore deleted at the next janitor run, not when the agent comments: the comment cannot start the janitor itself, because GitHub would hold that run too. Expect one to stay in the approval list for up to an hour, less when a label event or a merge comes first.
+
+**Permissions.** Deleting a run needs `actions: write`. The job declares it for itself, so the label job keeps `issues: write` and `pull-requests: write` only.
+
 ## Plan comment identity
 
 The plan lives as a single comment on the issue.  
