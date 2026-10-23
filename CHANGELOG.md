@@ -1,5 +1,12 @@
 # Changelog
 
+## [v1.0.11] - 2026-10-23
+
+### What's Changed
+* fix(release-closer): check the triggering release and closed issues by @vscheuber in https://github.com/vscheuber/repo-concierge/pull/27
+
+**Full Changelog**: https://github.com/vscheuber/repo-concierge/compare/v1.0.10...v1.0.11
+
 ## [v1.0.10] - 2026-10-23
 
 ### What's Changed
