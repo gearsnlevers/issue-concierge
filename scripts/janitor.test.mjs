@@ -1,7 +1,22 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { staleLabels, isCodingAgent, run, TRIGGER_LABELS, GATE, TRIAGE_OUTCOMES, OPEN_WORK_STATE } from './janitor.mjs';
+import os from 'node:os';
+import path from 'node:path';
+import { execFileSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
+import {
+  staleLabels,
+  isCodingAgent,
+  isDisposableHeldRun,
+  sweepHeldRuns,
+  DISPOSABLE_HELD_RUNS,
+  run,
+  TRIGGER_LABELS,
+  GATE,
+  TRIAGE_OUTCOMES,
+  OPEN_WORK_STATE,
+} from './janitor.mjs';
 
 const issue = (labels, extra = {}) => ({ labels, state: 'open', assignees: [], ...extra });
 const stale = (labels, extra) => staleLabels(issue(labels, extra)).sort();
@@ -217,4 +232,167 @@ test('the workflow needs no secret and only the permissions it uses', () => {
   assert.equal(/secrets\./.test(yml.replace(/^#.*$/gm, '')), false);
   assert.match(yml, /issues: write/);
   assert.match(yml, /pull-requests: write/);
+});
+
+// ---------------------------------------------------------------- held runs
+
+const held = (extra = {}) => ({
+  id: 1,
+  name: 'Concierge 1a ▸ Issue Worker',
+  path: '.github/workflows/issue-worker.lock.yml',
+  event: 'issue_comment',
+  status: 'completed',
+  conclusion: 'action_required',
+  actor: { login: 'Copilot' },
+  display_title: 'Add a thing',
+  ...extra,
+});
+
+function fakeRuns(runs) {
+  const deleted = [];
+  const logs = [];
+  const failOn = new Set();
+  return {
+    deleted,
+    logs,
+    failOn,
+    ctx: {
+      listHeldRuns: async () => runs,
+      deleteRun: async (id) => {
+        if (failOn.has(id)) throw new Error('boom');
+        deleted.push(id);
+      },
+      log: (line) => logs.push(line),
+    },
+  };
+}
+
+test('a held Issue Worker run caused by the coding agent is disposable', () => {
+  assert.equal(isDisposableHeldRun(held()), true);
+  assert.equal(isDisposableHeldRun(held({ actor: { login: 'copilot-swe-agent[bot]' } })), true);
+});
+
+test('no other run is: not the approvals that matter, not other people, not other outcomes', () => {
+  const kept = {
+    'the pipeline run of a coding agent push (the approval that matters)': {
+      name: 'Frodo Library Release Pipeline',
+      path: '.github/workflows/pipeline.yml',
+      event: 'pull_request',
+    },
+    "a contributor's pipeline run on a fork pull request": {
+      path: '.github/workflows/pipeline.yml',
+      event: 'pull_request',
+      actor: { login: 'TJShowerHandel' },
+    },
+    'an Issue Worker run held for someone other than the agent': { actor: { login: 'TJShowerHandel' } },
+    'another gate workflow caused by the agent': { path: '.github/workflows/pr-worker.lock.yml' },
+    'the Issue Worker on another event': { event: 'issues' },
+    'a run that already skipped': { conclusion: 'skipped' },
+    'a run that is not finished': { status: 'in_progress' },
+    'a run without an actor': { actor: null },
+  };
+  for (const [what, extra] of Object.entries(kept)) assert.equal(isDisposableHeldRun(held(extra)), false, what);
+});
+
+test('the sweep deletes the disposable held runs and leaves every other run alone', async () => {
+  const pipeline = held({ id: 2, name: 'Frodo CLI Release Pipeline', path: '.github/workflows/pipeline.yml', event: 'pull_request' });
+  const fork = held({ id: 3, actor: { login: 'TJShowerHandel' } });
+  const f = fakeRuns([held({ id: 1 }), pipeline, held({ id: 4 }), fork]);
+  assert.deepEqual(await sweepHeldRuns({}, f.ctx), [1, 4]);
+  assert.deepEqual(f.deleted, [1, 4]);
+  assert.equal(f.logs.length, 2);
+  assert.match(f.logs[0], /run 1 \(Concierge 1a ▸ Issue Worker, issue_comment by Copilot, "Add a thing"\): deleted/);
+});
+
+test('a dry run deletes nothing and says what it would delete', async () => {
+  const f = fakeRuns([held({ id: 1 })]);
+  assert.deepEqual(await sweepHeldRuns({ dryRun: true }, f.ctx), [1]);
+  assert.deepEqual(f.deleted, []);
+  assert.match(f.logs[0], /would delete/);
+});
+
+test('with nothing held the sweep says so', async () => {
+  const f = fakeRuns([held({ id: 2, path: '.github/workflows/pipeline.yml', event: 'pull_request' })]);
+  assert.deepEqual(await sweepHeldRuns({}, f.ctx), []);
+  assert.deepEqual(f.logs, ['No held runs to delete.']);
+});
+
+test('one failed deletion does not stop the others, and the sweep still fails', async () => {
+  const f = fakeRuns([held({ id: 1 }), held({ id: 2 })]);
+  f.failOn.add(1);
+  await assert.rejects(sweepHeldRuns({}, f.ctx), /could not delete: run 1: boom/);
+  assert.deepEqual(f.deleted, [2]);
+  assert.equal(f.logs.length, 1, 'the log must not claim a deletion that failed');
+  assert.match(f.logs[0], /^run 2 /);
+});
+
+test('deleting is safe only while the Issue Worker skips comments by bots and comments on pull requests', () => {
+  const md = fs.readFileSync(new URL('../workflows/issue-worker.md', import.meta.url), 'utf8');
+  const guard = md.match(/^if: (.+)$/m)?.[1];
+  assert.ok(guard, 'the Issue Worker has no job condition; approving a held run would start real work');
+  assert.match(guard, /github\.event\.comment\.user\.type != 'Bot'/);
+  assert.match(guard, /github\.event\.issue\.pull_request == null/);
+});
+
+test('the disposable workflow is the Issue Worker lock file that gh-aw generates', () => {
+  assert.deepEqual(DISPOSABLE_HELD_RUNS, [{ path: '.github/workflows/issue-worker.lock.yml', event: 'issue_comment' }]);
+  assert.equal(fs.existsSync(new URL('../workflows/issue-worker.md', import.meta.url)), true);
+});
+
+test('the sweep is its own job: only it has actions: write, and it follows the label job', () => {
+  const yml = fs.readFileSync(new URL('../workflows/janitor.yml', import.meta.url), 'utf8');
+  const code = yml.replace(/^\s*#.*$/gm, '');
+  const clean = code.indexOf('\n  clean:');
+  const sweep = code.indexOf('\n  held-runs:');
+  assert.ok(clean > 0 && sweep > clean, 'the held-runs job must follow the clean job');
+  assert.equal(/actions:/.test(code.slice(0, clean)), false, 'workflow-level permissions must not include actions');
+  assert.equal(/actions: write/.test(code.slice(clean, sweep)), false, 'the label job must not get actions: write');
+  const job = code.slice(sweep);
+  assert.match(job, /needs: clean/);
+  assert.match(job, /permissions:\n\s+contents: read\n\s+actions: write/);
+  assert.match(job, /node \.github\/scripts\/janitor\.mjs --held-runs/);
+});
+
+test('the sweep starts when the label job did, except for issue events', () => {
+  const yml = fs.readFileSync(new URL('../workflows/janitor.yml', import.meta.url), 'utf8');
+  const job = yml.slice(yml.indexOf('\n  held-runs:')).replace(/^\s*#.*$/gm, '');
+  assert.match(job, /!cancelled\(\)/);
+  assert.match(job, /needs\.clean\.result != 'skipped'/);
+  assert.match(job, /github\.event_name != 'issues'/);
+});
+
+test('--held-runs lists held runs from the API and deletes only the disposable ones (gh stubbed)', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'janitor-gh-'));
+  const log = path.join(dir, 'calls.log');
+  const runs = [
+    held({ id: 11 }),
+    held({ id: 12, name: 'Frodo CLI Release Pipeline', path: '.github/workflows/pipeline.yml', event: 'pull_request' }),
+    held({ id: 13 }),
+  ];
+  fs.writeFileSync(path.join(dir, 'runs.jsonl'), runs.map((r) => JSON.stringify(r)).join('\n') + '\n');
+  fs.writeFileSync(
+    path.join(dir, 'gh'),
+    [
+      '#!/bin/sh',
+      `echo "$*" >> '${log}'`,
+      'case "$*" in',
+      `  *"actions/runs?status=action_required&per_page=100"*) cat '${path.join(dir, 'runs.jsonl')}' ;;`,
+      '  *"--method DELETE"*"actions/runs/13") echo "gh: Not Found (HTTP 404)" >&2; exit 1 ;;',
+      '  *"--method DELETE"*"actions/runs/"*) ;;',
+      '  *) echo "unexpected gh call: $*" >&2; exit 1 ;;',
+      'esac',
+      '',
+    ].join('\n'),
+    { mode: 0o755 }
+  );
+  const script = fileURLToPath(new URL('./janitor.mjs', import.meta.url));
+  const out = execFileSync('node', [script, '--held-runs'], {
+    env: { PATH: `${dir}:${process.env.PATH}`, GITHUB_REPOSITORY: 'o/r', GH_TOKEN: 't' },
+    encoding: 'utf8',
+  });
+  const calls = fs.readFileSync(log, 'utf8').trim().split('\n');
+  const deletes = calls.filter((c) => c.includes('--method DELETE')).map((c) => c.match(/actions\/runs\/(\d+)/)[1]);
+  assert.deepEqual(deletes, ['11', '13'], 'run 12 (the pipeline) must not be deleted; run 13 answers 404, which counts as gone');
+  assert.equal(calls.some((c) => /labels|issues\//.test(c)), false, '--held-runs must not run the label task');
+  assert.match(out, /run 11 \(.*\): deleted/);
 });
