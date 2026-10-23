@@ -251,7 +251,7 @@ Copilot cloud agent must also be enabled for those repositories: `https://github
 Threat detection is a second model call before safe outputs are applied. It is on for the two workflows that read untrusted content and then write:
 
 - `issue-worker` reads the raw report and can comment, label, and create an issue.
-- `pr-triage` reads a pull request.
+- `pr-triage` reads a pull request, including its check results (`checks: read`, `statuses: read`).
 
 It is off on the other gates. Those classify our own comments or apply a fixed label list, and they do not write code.
 

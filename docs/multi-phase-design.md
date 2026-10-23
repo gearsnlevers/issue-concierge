@@ -72,6 +72,8 @@ Gate labels are signals, not history. A label event starts the next workflow, so
 
 An earlier label is removed only when the evidence that replaces it is already there (the next label, or the assignee), so an item never loses its position. Removing a label starts nothing: the workflows listen for `labeled`, and `plan-approval-resume` ignores everything but `plan-approval-required`, which the janitor removes only from closed issues.
 
+Every label event runs in its own concurrency group (the item number plus the label name). GitHub keeps one pending run per group and cancels an older pending run when a newer one arrives, and a run for a label that changes nothing still takes the slot before its job is skipped. Triage adds three labels in the same second, so with one group per item the run for `pr-triage-handoff` could be cancelled by the runs for `complexity/*` and `risk/*` (seen on frodo-lib#771, which kept `pr-worker-ready`). Runs may now overlap, which is safe: the script reads the item's current labels and every removal is idempotent. The hourly sweep is the backstop for anything that still slips through.
+
 **Everything else**
 
 | Label | Added by | Removed | After the issue closes |
@@ -178,7 +180,7 @@ Why a sweep and not an event (measured on frodo-lib#771): the agent's own `revie
 
 PR triage itself runs as a `pull_request` run on a pull request the coding agent opened, so it too waits for "Approve and run workflows". That click is the intended human step and covers CI as well.
 
-**Triage** → re-evaluates against the diff, emits `pr-triage-handoff`.
+**Triage** → re-evaluates against the diff, reports the state of the checks (failing, running, passing, or "CI state not checked" when it cannot read them) and emits `pr-triage-handoff`. It classifies size and risk, so a red check does not hold the handoff back; it changes the recommended next action.
 
 ### Environment agent
 Optional. Any worker may invoke it if the consuming repository defines it.
