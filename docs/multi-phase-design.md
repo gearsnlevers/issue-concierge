@@ -189,6 +189,8 @@ This removes a human step, so the trade-off is stated here. The CI runs on the a
 - The label must be added by someone with write access, as for every gate.
 - It can write only the fixed list of complexity, risk and handoff labels and one comment, and threat detection stays on.
 
+Its concurrency group includes the label name. gh-aw's default for pull-request triggers is one group per pull request with `cancel-in-progress`. Now that these runs are no longer held, triage's own three labels each start a run (skipped by the `if:`) that enters the group and cancels the triage still finishing. Seen on frodo-lib#775: the `safe_outputs` job was cancelled seconds after the labels and the comment had landed, so any output still waiting would have been lost. With the label name in the key, only another `pr-worker-ready` event for the same pull request cancels a running triage.
+
 What it gives up: nobody looks at the pull request before a model reads it, and the labels it writes feed the merge rules. Do not let auto-merge act on `pr-triage-handoff` without required CI checks, as `deployment.md` already says. To get the approval click back, revert this change (`on: pull_request` with `names: [pr-worker-ready]`) and accept the held runs; the updater rewrites deployed files from each release, so a local edit in one deployment would not last.
 
 **Triage** → re-evaluates against the diff, reports the state of the checks (failing, running, passing, or "CI state not checked" when it cannot read them) and emits `pr-triage-handoff`. It classifies size and risk, so a red check does not hold the handoff back; it changes the recommended next action.

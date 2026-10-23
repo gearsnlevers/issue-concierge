@@ -37,3 +37,10 @@ test('PR triage keeps threat detection on and writes only a fixed label list and
     'risk/high', 'risk/low', 'risk/medium',
   ]);
 });
+
+test('PR triage has a concurrency group per label, so its own labels cannot cancel it', () => {
+  const conc = frontmatter.match(/^concurrency:\n((?:[ \t]+.*\n?)+)/m)?.[1] ?? '';
+  assert.ok(conc, 'concurrency block not found in the PR triage frontmatter');
+  assert.match(conc, /group: .*github\.event\.pull_request\.number.*github\.event\.label\.name/);
+  assert.match(conc, /cancel-in-progress: true/);
+});
