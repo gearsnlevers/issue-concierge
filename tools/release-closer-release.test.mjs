@@ -41,3 +41,28 @@ test('the section comes before the instructions that use "this release"', () => 
   const owns = body.indexOf('## This repository owns the fix');
   assert.ok(which >= 0 && owns > which, '"Which release" must come before the fix instructions');
 });
+
+// Second defect, found on frodo-cli 5.0.0-12: the closer listed issues with `state: OPEN` only, so cli#857 and
+// cli#863 (closed when their pull requests merged, then labelled waiting-for-release) were never candidates.
+const issues = (() => {
+  const s = body.indexOf('## Which issues to check');
+  return s >= 0 ? body.slice(s, body.indexOf('\n## ', s + 5)) : '';
+})();
+
+test('the closer is told to check closed issues as well as open ones', () => {
+  assert.ok(issues, 'the "Which issues to check" section is missing from workflows/release-closer.md');
+  assert.match(issues, /`state: CLOSED`/);
+  assert.match(issues, /`state: OPEN`/);
+  assert.match(issues, /usually \*\*closed\*\*/);
+});
+
+test('it may not search open issues only or skip an issue because it is closed', () => {
+  assert.match(issues, /Never search only open issues/);
+  assert.match(issues, /never skip an issue because it is closed/);
+});
+
+test('"Which issues to check" comes before the instructions that find included issues', () => {
+  const which = body.indexOf('## Which issues to check');
+  const owns = body.indexOf('## This repository owns the fix');
+  assert.ok(which >= 0 && owns > which);
+});

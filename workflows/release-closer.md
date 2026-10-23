@@ -53,6 +53,12 @@ This run was started by the release tagged `${{ github.event.release.tag_name }}
 - Never use `get_latest_release`. It skips prereleases and returns the newest stable release, which is not the release that started this run.
 - A prerelease is a release. Check it the same way.
 
+## Which issues to check
+
+Issues that wait for a release are usually **closed**: the pipeline closes an issue when its pull request merges and then adds `waiting-for-release`. Open issues with the label are the ones that wait on a related repository.
+
+List issues with `waiting-for-release` in both states. Call `list_issues` with `state: CLOSED` and again with `state: OPEN`, and check every issue from both lists. Never search only open issues, and never skip an issue because it is closed.
+
 ## This repository owns the fix
 
 Find issues with `waiting-for-release` that this release includes.
