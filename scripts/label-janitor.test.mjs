@@ -203,6 +203,15 @@ test('the workflow starts for exactly the label events the script cares about', 
   assert.deepEqual(JSON.parse(m[1]).sort(), [...TRIGGER_LABELS].sort());
 });
 
+test('every label event has its own concurrency group, so a skipped run cannot cancel the one that works', () => {
+  const yml = fs.readFileSync(new URL('../workflows/label-janitor.yml', import.meta.url), 'utf8');
+  const m = yml.match(/^concurrency:\n\s+group: (.+)\n\s+cancel-in-progress: (\w+)$/m);
+  assert.ok(m, 'concurrency block not found in workflows/label-janitor.yml');
+  assert.match(m[1], /github\.event\.label\.name/);
+  assert.match(m[1], /github\.event\.issue\.number \|\| github\.event\.pull_request\.number/);
+  assert.equal(m[2], 'false');
+});
+
 test('the workflow needs no secret and only the permissions it uses', () => {
   const yml = fs.readFileSync(new URL('../workflows/label-janitor.yml', import.meta.url), 'utf8');
   assert.equal(/secrets\./.test(yml.replace(/^#.*$/gm, '')), false);
