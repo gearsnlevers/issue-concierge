@@ -148,7 +148,7 @@ Reporter interaction stays in the issue phase and is conducted entirely through 
 When information is missing the issue worker posts an explicit, plain-language request. Issue triage applies the internal `needs-info` label and does not hand off.  
 A later comment from the reporter re-triggers the issue worker. Issue triage then re-evaluates and can clear `needs-info` and emit `issue-triage-handoff` once the issue is complete.
 
-The plan phase is a classification prerequisite. For high complexity it adds the internal label `plan-approval-required` and stops. A maintainer removes that label to resume: the `plan-approval-resume` workflow (plain Actions, no LLM) sees the removal and applies `plan-triage-handoff`, which starts the PR gate. It acts only on an open issue that carries `complexity/high`, has no `plan-triage-handoff` yet, and is not waiting on a dependency (`dependency-required`). It can also be run by hand with an issue number for an issue whose label was already removed.
+The plan phase is a classification prerequisite. For high complexity or high risk it adds the internal label `plan-approval-required` and stops. A maintainer removes that label to resume: the `plan-approval-resume` workflow (plain Actions, no LLM) sees the removal and applies `plan-triage-handoff`, which starts the PR gate. It acts only on an open issue that carries `complexity/high` or `risk/high`, has no `plan-triage-handoff` yet, and is not waiting on a dependency (`dependency-required`). A removal made by a bot account never counts, because approval is a human decision. It can also be run by hand with an issue number for an issue whose label was already removed.
 
 Maintainer interaction on the actual change happens in the PR phase.
 
@@ -191,7 +191,7 @@ Triage turns that into labels. Out of scope: `out-of-scope`, a short plain-langu
 
 #### Not urgent, and low-hanging fruit
 
-The worker judges urgency as if every dependency were already finished: waiting for a dependency, a release or another change is never a reason to call an issue not urgent. A valid issue that is not urgent gets `backlog` and stays out of the plan gate, with one exception. When the worker also says the change is small and low in risk (low complexity and low risk, using `complexity.md` and `risk.md` when the repository defines them), triage treats it as low-hanging fruit: it applies `low-hanging-fruit` and emits `issue-triage-handoff`. Only that combination qualifies; a medium change is not low-hanging fruit even when it is low risk. Plan triage still makes the authoritative complexity and risk call afterwards and stops at `plan-approval-required` for high complexity, so a rough estimate at this gate cannot skip a gate. Why the worker's wording matters: triage reads the latest analysis comment, and an analysis written while a dependency was pending can say "not urgent" because of it. Triage disregards that part once the issue carries `dependency-satisfied`. A maintainer can move a `backlog` issue forward by removing `backlog` and adding `issue-triage-handoff`.
+The worker judges urgency as if every dependency were already finished: waiting for a dependency, a release or another change is never a reason to call an issue not urgent. A valid issue that is not urgent gets `backlog` and stays out of the plan gate, with one exception. When the worker also says the change is small and low in risk (low complexity and low risk, using `complexity.md` and `risk.md` when the repository defines them), triage treats it as low-hanging fruit: it applies `low-hanging-fruit` and emits `issue-triage-handoff`. Only that combination qualifies; a medium change is not low-hanging fruit even when it is low risk. Plan triage still makes the authoritative complexity and risk call afterwards and stops at `plan-approval-required` for high complexity or high risk, so a rough estimate at this gate cannot skip a gate. Why the worker's wording matters: triage reads the latest analysis comment, and an analysis written while a dependency was pending can say "not urgent" because of it. Triage disregards that part once the issue carries `dependency-satisfied`. A maintainer can move a `backlog` issue forward by removing `backlog` and adding `issue-triage-handoff`.
 
 #### Dependency gate
 
@@ -202,10 +202,14 @@ The `dependency-watch` workflow (plain Actions, no LLM) resolves dependencies ho
 Full rules: `shared/dependencies.md`.
 
 ### 2. Plan gate
-**Worker** → rough plan + `plan-worker-ready`  
+**Worker** → rough plan + `plan-worker-ready`. For a report that contains an error message or a stack trace the plan says how the likely cause was checked (the file and line it read, or "not verified") and labels an unchecked cause "Hypothesis (unverified)", so whoever approves the plan can see what is established and what is a guess.  
 **Triage** → complexity and risk labels.  
-If complexity is high, add `plan-approval-required` and do not emit `plan-triage-handoff`. Otherwise emit `plan-triage-handoff`.  
-Plan triage never resumes a high-complexity issue itself. Removing `plan-approval-required` is the signal; `plan-approval-resume` applies the handoff.
+If complexity is high or risk is high, add `plan-approval-required` and do not emit `plan-triage-handoff`; the comment says which ("High complexity.", "High risk." or "High complexity and high risk.") and how to resume. Otherwise emit `plan-triage-handoff`.  
+Plan triage never resumes a high-complexity or high-risk issue itself. Removing `plan-approval-required` is the signal; `plan-approval-resume` applies the handoff.
+
+Why risk counts, not only complexity: a change can be small and still sit in a place where a wrong fix is costly (authentication, data integrity, public API). Without the stop, such an issue went straight to the coding agent on a plan that was still a hypothesis (frodo-lib#783: complexity low, risk high, handed to the coding agent three minutes after triage, with a cause that turned out to be in the wrong layer). The stop is the human lever between "this is what we think is wrong" and code. The PR gate is unchanged: human review is still required unless both complexity and risk are low.
+
+Two consequences. An issue that is planned again (the dependency watcher re-applies `issue-worker-ready`, for one) gets the stop again and needs a new approval, as it always did for high complexity. And an issue that already passed the plan gate keeps its place: the rule applies when plan triage runs, not retroactively.
 
 ### 3. PR gate
 **Worker** → assigns coding agent (triggered by `plan-triage-handoff`)  

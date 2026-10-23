@@ -45,6 +45,10 @@ This plan exists so plan triage can assign complexity and risk. It is not a coll
 - Open questions, if any
 - Repository rules that apply, when the repository has guidance files (see "Repository guidance")
 
+## Reports with a runtime failure
+- If the report contains an error message or a stack trace, say in the plan how the likely cause was checked: the file and line you read, or "not verified".
+- Label a cause you did not check against the code "Hypothesis (unverified)".
+
 ## Repository guidance
 A repository may tell its contributors how to work on it: `AGENTS.md` at the root, `.github/copilot-instructions.md`, and files under `.github/instructions/` whose frontmatter `applyTo` globs name the paths they cover. If none of them exists, skip this section without comment.
 
