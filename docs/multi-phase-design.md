@@ -135,6 +135,8 @@ When a repository defines `.github/agentic-workflows/related-repos.md`:
 4. The original issue stays open. Issue triage ignores it for planning.
 5. When the canonical issue is closed, `related-repo-closer` closes the original issue with a short notice.
 
+**How the comment names the new issue.** The worker cannot know the canonical issue's number while it writes the comment, because safe outputs run after the agent finishes. It therefore gives the `create-issue` output the fixed temporary id `aw_canonical` and writes `#aw_canonical` in the comment, with no owner or repository in front of it. gh-aw registers the id when it creates the issue and then replaces every `#aw_canonical` with the full reference (`owner/repo#number` for another repository). Two things break this, and `tools/issue-worker-linked-issue.test.mjs` pins both: an id the model invents instead of the one it set (the placeholder stays in the comment, as on frodo-cli#694, which read `rockcarver/frodo-lib#aw_lib694`), and a repository written in front of the token (gh-aw would double the prefix).
+
 ## Gates
 
 ### 1. Issue gate
