@@ -1,5 +1,12 @@
 # Changelog
 
+## [v1.0.9] - 2026-10-23
+
+### What's Changed
+* fix(issue-worker): name the linked issue with a fixed temporary id by @vscheuber in https://github.com/vscheuber/repo-concierge/pull/25
+
+**Full Changelog**: https://github.com/vscheuber/repo-concierge/compare/v1.0.8...v1.0.9
+
 ## [v1.0.8] - 2026-10-23
 
 ### What's Changed
