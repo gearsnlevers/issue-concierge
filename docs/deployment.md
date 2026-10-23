@@ -310,18 +310,18 @@ The coding agent cannot add labels, so a plain Actions workflow (no LLM) adds `p
 | `workflows/pr-ready-signal.yml` | `.github/workflows/pr-ready-signal.yml` |
 | `scripts/pr-ready-signal.mjs` | `.github/scripts/pr-ready-signal.mjs` |
 
-It imports `label-janitor.mjs`, so install that too. The triggers and what each one means are in [multi-phase-design.md](multi-phase-design.md#3-pr-gate). To signal a pull request by hand, run the workflow with its number.
+It imports `janitor.mjs`, so install that too. The triggers and what each one means are in [multi-phase-design.md](multi-phase-design.md#3-pr-gate). To signal a pull request by hand, run the workflow with its number.
 
-### Label janitor
+### Janitor
 
 A plain Actions workflow (no LLM) keeps issues and pull requests showing where they are: it removes an earlier gate label once the next signal exists, and the labels that describe open work when an issue closes. Install it with the other plain workflows; it needs no secret.
 
 | From this repository | To the consuming repository |
 |----------------------|-----------------------------|
-| `workflows/label-janitor.yml` | `.github/workflows/label-janitor.yml` |
-| `scripts/label-janitor.mjs` | `.github/scripts/label-janitor.mjs` |
+| `workflows/janitor.yml` | `.github/workflows/janitor.yml` |
+| `scripts/janitor.mjs` | `.github/scripts/janitor.mjs` |
 
-`plan-approval-resume.mjs` imports `label-janitor.mjs`, so install both together. To tidy issues that closed before the janitor existed, run the workflow once with `include_closed` (use `dry_run` first). The rules are in [multi-phase-design.md](multi-phase-design.md#label-lifecycle).
+`plan-approval-resume.mjs` imports `janitor.mjs`, so install both together. To tidy issues that closed before the janitor existed, run the workflow once with `include_closed` (use `dry_run` first). The rules are in [multi-phase-design.md](multi-phase-design.md#label-lifecycle).
 
 Requirements: `SIGNAL_TOKEN` with Issues: Read and write (it applies `plan-triage-handoff` so the PR gate starts), and the existing `plan-triage-handoff` label. It acts only on an open issue that has `complexity/high`, has no `plan-triage-handoff`, and is not labeled `dependency-required`. To resume an issue whose label was removed before the workflow was installed, run it from the Actions tab with the issue number.
 
@@ -549,7 +549,7 @@ git push
 - [ ] Dependency watcher installed (`dependency-watch.yml` and `dependency-watch.mjs`)
 - [ ] Deployment check installed (`check-deployment.yml` and `check-deployment.mjs`) and passing; for each related repository the secret exists and its token has Issues: Read and write on that repository
 - [ ] Plan approval resume installed (`plan-approval-resume.yml` and `plan-approval-resume.mjs`)
-- [ ] Label janitor installed (`label-janitor.yml` and `label-janitor.mjs`)
+- [ ] Janitor installed (`janitor.yml` and `janitor.mjs`)
 - [ ] PR ready signal installed (`pr-ready-signal.yml` and `pr-ready-signal.mjs`; needs `SIGNAL_TOKEN`)
 - [ ] Branch protection / ruleset configured (require PR, status checks, no force-push)
 - [ ] Auto-merge enabled (if low/low unattended merge is desired)

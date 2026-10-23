@@ -19,8 +19,8 @@ files:
   - scripts/check-deployment.mjs
   - workflows/plan-approval-resume.yml
   - scripts/plan-approval-resume.mjs
-  - workflows/label-janitor.yml
-  - scripts/label-janitor.mjs
+  - workflows/janitor.yml
+  - scripts/janitor.mjs
   - workflows/concierge-updater.yml
   - scripts/concierge-updater.mjs
   - workflows/pr-ready-signal.yml

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { staleLabels, isCodingAgent, run, TRIGGER_LABELS, GATE, TRIAGE_OUTCOMES, OPEN_WORK_STATE } from './label-janitor.mjs';
+import { staleLabels, isCodingAgent, run, TRIGGER_LABELS, GATE, TRIAGE_OUTCOMES, OPEN_WORK_STATE } from './janitor.mjs';
 
 const issue = (labels, extra = {}) => ({ labels, state: 'open', assignees: [], ...extra });
 const stale = (labels, extra) => staleLabels(issue(labels, extra)).sort();
@@ -197,23 +197,23 @@ test('one failed removal does not stop the others, and the run still fails', asy
 // -------------------------------------------------------- the workflow file
 
 test('the workflow starts for exactly the label events the script cares about', () => {
-  const yml = fs.readFileSync(new URL('../workflows/label-janitor.yml', import.meta.url), 'utf8');
+  const yml = fs.readFileSync(new URL('../workflows/janitor.yml', import.meta.url), 'utf8');
   const m = yml.match(/fromJSON\('(\[.*?\])'\)/);
-  assert.ok(m, 'label list not found in workflows/label-janitor.yml');
+  assert.ok(m, 'label list not found in workflows/janitor.yml');
   assert.deepEqual(JSON.parse(m[1]).sort(), [...TRIGGER_LABELS].sort());
 });
 
 test('every label event has its own concurrency group, so a skipped run cannot cancel the one that works', () => {
-  const yml = fs.readFileSync(new URL('../workflows/label-janitor.yml', import.meta.url), 'utf8');
+  const yml = fs.readFileSync(new URL('../workflows/janitor.yml', import.meta.url), 'utf8');
   const m = yml.match(/^concurrency:\n\s+group: (.+)\n\s+cancel-in-progress: (\w+)$/m);
-  assert.ok(m, 'concurrency block not found in workflows/label-janitor.yml');
+  assert.ok(m, 'concurrency block not found in workflows/janitor.yml');
   assert.match(m[1], /github\.event\.label\.name/);
   assert.match(m[1], /github\.event\.issue\.number \|\| github\.event\.pull_request\.number/);
   assert.equal(m[2], 'false');
 });
 
 test('the workflow needs no secret and only the permissions it uses', () => {
-  const yml = fs.readFileSync(new URL('../workflows/label-janitor.yml', import.meta.url), 'utf8');
+  const yml = fs.readFileSync(new URL('../workflows/janitor.yml', import.meta.url), 'utf8');
   assert.equal(/secrets\./.test(yml.replace(/^#.*$/gm, '')), false);
   assert.match(yml, /issues: write/);
   assert.match(yml, /pull-requests: write/);

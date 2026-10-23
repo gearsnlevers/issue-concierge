@@ -1,4 +1,4 @@
-// Label janitor for Repo Concierge.
+// Janitor for Repo Concierge.
 //
 // Deterministic: no LLM. Keeps an issue or pull request showing where it is, not
 // where it has been. A gate label is a signal: once the next signal exists, the
