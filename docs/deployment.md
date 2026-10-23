@@ -42,11 +42,16 @@ The files under `shared/` in the harness repository are templates. They are **no
 | `issue-completeness.md` | No | Override completeness criteria (issue template is preferred by default) |
 | `scope.md` | No | The project's purpose and explicit exclusions; turns on the scope check (see [multi-phase-design.md](multi-phase-design.md#scope-check)) |
 | `related-repos.md` | No | Enable linked-issue routing for split-repo projects |
+| `agents.md` | No | Template for `AGENTS.md` at the **repository root**, not for this folder: how coding agents and the plan and PR gates should work on the project (see [multi-phase-design.md](multi-phase-design.md#repository-guidance)) |
 | `env-agent-contract.md` | No | Contract for an optional injectable environment agent |
 | `safety-policy.md` | No | Reference only; not read by workflows |
 
 If `complexity.md` or `risk.md` are absent, plan triage uses built-in defaults.  
 If `related-repos.md` is absent, no linked-issue routing occurs.
+
+### Repository guidance (`AGENTS.md`)
+
+Optional, and read from the repository's own files rather than from `.github/agentic-workflows/`: `AGENTS.md` at the root (start from `shared/agents.md`), `.github/copilot-instructions.md`, and `.github/instructions/*.instructions.md` with `applyTo` globs. The Copilot coding agent loads them itself, the plan worker lists the rules that apply in its plan, and PR triage adds a "Repository rules:" line to its comment. Both gates read the default branch only, so a pull request cannot loosen the rules it is judged by. Keep `AGENTS.md` at 60 lines or fewer: it is loaded into every agent run. `check-deployment` prints a notice, and never fails, when neither `AGENTS.md` nor `.github/copilot-instructions.md` exists.
 
 ### related-repos.md schema
 
@@ -341,7 +346,7 @@ Run it on demand from the Actions tab, optionally with an issue number.
 - `issue-worker` has `create-issue` enabled with `allowed-repos` containing the repository and `github-token` set to that secret;
 - `related-repo-closer` has `add-comment`, `add-labels` and `close-issue` enabled with the same `allowed-repos` and `github-token`.
 
-It reports a warning for a related repository without a secret, or for an allowed repository that `related-repos.md` does not list. It runs on pull requests that touch the workflows or `related-repos.md`, and on demand. Install it in every deployment, even those without related repositories (it then passes immediately). Copy three files:
+It reports a warning for a related repository without a secret, or for an allowed repository that `related-repos.md` does not list. It also prints a notice, never a failure, when the repository has neither `AGENTS.md` nor `.github/copilot-instructions.md` (see "Repository guidance" above). It runs on pull requests that touch the workflows or `related-repos.md`, and on demand. Install it in every deployment, even those without related repositories (it then passes immediately). Copy three files:
 
 | From this repository | To the consuming repository |
 |----------------------|-----------------------------|
@@ -495,6 +500,7 @@ Low/low pull requests that carry `pr-triage-handoff` and pass required checks ca
 - Confirm only `issue-worker` starts. Other gates stay idle until their signal label is applied.
 - Confirm the issue receives `issue-worker-ready`, then `issue-triage-handoff` (or `backlog` / `needs-info`), and that each gate label disappears when the next one appears, so only one shows at a time. A small, low-risk issue that is not urgent gets `low-hanging-fruit` together with `issue-triage-handoff`.
 - To promote a `backlog` issue by hand, remove `backlog` and add `issue-triage-handoff`; that is the same signal triage would have sent.
+- If the repository has an `AGENTS.md` or instruction files, confirm that the plan for an issue in an area an instruction file covers has a "Repository rules that apply" heading of at most five lines naming that file, that a pull request from the coding agent gets a "Repository rules:" line in the triage comment, and that a pull request which edits `AGENTS.md` is flagged for a maintainer instead of being judged by its own edit.
 - If the repository has a `scope.md`, open a request that is clearly excluded and confirm it is declined and closed as not planned (`out-of-scope`), and one near the boundary and confirm it gets `scope-review` and stays open.
 - For an actionable issue, confirm a plan comment appears with the `<!-- gh-aw-workflow-id: plan-worker -->` marker and that complexity/risk labels are applied.
 - For a low/low item, confirm a pull request is opened and can auto-merge after checks.
