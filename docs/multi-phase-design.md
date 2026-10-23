@@ -91,6 +91,8 @@ Every label event runs in its own concurrency group (the item number plus the la
 
 Example: an issue that went through the whole pipeline ends with its type, `complexity/*`, `risk/*` and `released`.
 
+**Which release the closer checks.** The release closer is told the tag of the release that started its run (`github.event.release.tag_name`) and must read exactly that release with `get_release_by_tag`. It must not use `get_latest_release`: that tool skips prereleases and returns the newest stable release. On frodo-lib 5.0.0-12 the closer called it three times, checked v4.12.0, concluded that nothing it was waiting for was included, and changed no labels, so lib#761 stayed `waiting-for-release` after the release that contained it. On 5.0.0-11 the model had happened to recover through `list_releases`. `tools/release-closer-release.test.mjs` pins the prompt.
+
 **When it runs.** On the label events that can change the answer (the gate labels, the triage outcomes and `plan-approval-required`), on assignment and on close, for issues and pull requests; hourly as a sweep for anything missed; and on demand. A manual run can clean one item, or with `include_closed` tidy old closed items once; `dry_run` reports without removing. It is idempotent and treats an already-absent label as success.
 
 **Do not read a gate label as proof that a phase happened.** Those labels are gone by the time the next phase is under way. Code and prompts that need to know "has this issue already been handed on" test for later evidence instead: `issue-triage-handoff`, `plan-worker-ready`, `plan-triage-handoff`, a `complexity/*` or `risk/*` label, or the coding agent as an assignee. `plan-approval-resume` and the scope rule in issue triage do exactly that.
