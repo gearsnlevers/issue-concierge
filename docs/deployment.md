@@ -219,7 +219,7 @@ Early gates use a light model and tight turn limits. Later gates keep the defaul
 
 | Workflow | Model | max-turns | Extra |
 |----------|-------|-----------|-------|
-| issue-worker | small | 10 | skip if related-repo/duplicate/spam; rate-limit comments |
+| issue-worker | small | 10 | skip if related-repo/duplicate/spam; rate-limit issues and comments |
 | issue-triage | small | 8 | skip if related-repo/duplicate/spam |
 | plan-triage | small | 8 | |
 | related-repo-closer | small | 6 | |
@@ -227,7 +227,7 @@ Early gates use a light model and tight turn limits. Later gates keep the defaul
 | pr-worker | default | — | |
 | pr-triage | default | — | |
 
-`issue-worker` also rate-limits `issue_comment` to 3 runs per user per 30 minutes so a chatty reporter does not restart the agent on every reply.
+`issue-worker` also rate-limits `issues` and `issue_comment` events to 5 runs per user per 30 minutes, so a chatty reporter, or one who edits an issue over and over, does not restart the agent every time. People with write access are exempt.
 
 
 
@@ -259,6 +259,15 @@ Threat detection is a second model call before safe outputs are applied. It is o
 - `pr-triage` reads a pull request, including its check results (`checks: read`, `statuses: read`).
 
 It is off on the other gates. Those classify our own comments or apply a fixed label list, and they do not write code.
+
+## Who can start a gate
+
+gh-aw only lets users with the `admin`, `maintainer` or `write` role start a workflow. The check runs in the `pre_activation` job, and a user without one of those roles is skipped without a comment, a label or an error: the run is green and the `agent` job never starts. Being a member of the organization does not count, because the check reads the repository permission, and on a public repository every account has `read`.
+
+- **`issue-worker` is open to everyone** (`roles: all` under `on:`). Reporters are its audience and most have no write access, so with the default check a reporter's issue, and each of their replies, would be ignored. The agent treats the report as untrusted input: no shell, `min-integrity: none` on the GitHub tool, threat detection before any output is applied, and outputs limited to two comments, the labels `issue-worker-ready` and `related-repo`, and one linked issue. The rate limit above bounds the cost: about 1.2 AIC per run.
+- **Every other gate keeps the default.** They start from a label, and the label is added by a token with write access (`SIGNAL_TOKEN`, or a maintainer by hand), so the check passes.
+- **Symptom of the gate:** a gate run that is green with every job after `pre_activation` skipped, and the `pre_activation` log saying `User permission 'read' does not meet requirements`. For an issue that is already open, dispatch `issue-worker` with its number: the dispatch runs with your permissions.
+- **To tighten `issue-worker`** replace `roles: all` with `roles: [admin, maintainer, write]` (the default) or add `triage` and grant that role to the people who should be heard. `read` cannot be used to mean "members": everyone has it.
 
 ## Signal token
 
@@ -496,7 +505,7 @@ Low/low pull requests that carry `pr-triage-handoff` and pass required checks ca
 
 ## 7. Verify
 
-- Open a test issue (or dispatch `issue-worker` with an issue number).
+- Open a test issue (or dispatch `issue-worker` with an issue number). Do it once from an account without write access as well: the agent job must run, and the `pre_activation` log must not say `does not meet requirements`.
 - Confirm only `issue-worker` starts. Other gates stay idle until their signal label is applied.
 - Confirm the issue receives `issue-worker-ready`, then `issue-triage-handoff` (or `backlog` / `needs-info`), and that each gate label disappears when the next one appears, so only one shows at a time. A small, low-risk issue that is not urgent gets `low-hanging-fruit` together with `issue-triage-handoff`.
 - To promote a `backlog` issue by hand, remove `backlog` and add `issue-triage-handoff`; that is the same signal triage would have sent.

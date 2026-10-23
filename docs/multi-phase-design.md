@@ -152,6 +152,12 @@ The plan phase is a classification prerequisite. For high complexity it adds the
 
 Maintainer interaction on the actual change happens in the PR phase.
 
+## Who can start a gate
+
+Every gh-aw workflow checks, in its `pre_activation` job, that the user who caused the event has the `admin`, `maintainer` or `write` role, and skips the run silently when they do not. The gates are label-driven: the first gate is the only one that starts from a reporter's own event, so it is the only one that opts out (`roles: all` on `issue-worker`, for `issues` and `issue_comment` alike, since a reporter answers its questions in comments). The later gates start from a label added by `SIGNAL_TOKEN` or by a maintainer, and keep the default check.
+
+Opening the first gate to everyone is safe because of what it can do, not because of who calls it: it has no shell, reads the report as untrusted text, runs threat detection before any output is applied, and its outputs are two comments, two fixed labels and one linked issue. The cost is bounded by `user-rate-limit` (5 runs per user per 30 minutes over `issues` and `issue_comment`; writers are exempt). Residual risk: a crafted report could try to steer the agent into spending its outputs on another issue (`target: "*"`, needed for `workflow_dispatch`), which threat detection and the output caps limit.
+
 ## Bot activity is not work
 
 Every issue-driven workflow carries an activation condition (`if:` in the frontmatter) so it never starts for bot-authored issues: `github.event.issue.user.type != 'Bot'`. `issue-worker` additionally requires that the triggering comment was not written by a bot and that the comment is not on a pull request. Without this, the issues gh-aw files about its own failures were analyzed, planned and closed like real work, and the harness's own comments re-triggered the worker. A manual run of `issue-worker` with an issue number is unaffected, so a maintainer can still opt a bot-authored issue in.
