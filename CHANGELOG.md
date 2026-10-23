@@ -1,5 +1,13 @@
 # Changelog
 
+## [v1.0.12] - 2026-10-23
+
+### What's Changed
+* refactor: rename the label janitor to janitor by @vscheuber in https://github.com/vscheuber/repo-concierge/pull/28
+* feat(janitor): delete held Issue Worker runs left by the coding agent's comments by @vscheuber in https://github.com/vscheuber/repo-concierge/pull/29
+
+**Full Changelog**: https://github.com/vscheuber/repo-concierge/compare/v1.0.11...v1.0.12
+
 ## [v1.0.11] - 2026-10-23
 
 ### What's Changed
