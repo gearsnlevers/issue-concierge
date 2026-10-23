@@ -328,14 +328,14 @@ It imports `janitor.mjs`, so install that too. The triggers and what each one me
 
 ### Janitor
 
-A plain Actions workflow (no LLM) keeps issues and pull requests showing where they are: it removes an earlier gate label once the next signal exists, and the labels that describe open work when an issue closes. It also deletes the runs GitHub holds for approval that approving could only turn into a skipped run: the `Issue Worker` run that each comment by the coding agent on its own pull request leaves behind. It never deletes any other held run, such as a held pipeline run. Install it with the other plain workflows; it needs no secret. The deletion is a second job that declares `actions: write` for itself; the label job keeps its smaller token.
+A plain Actions workflow (no LLM) keeps issues and pull requests showing where they are: it removes an earlier gate label once the next signal exists, and the labels that describe open work when an issue closes. It also deletes the runs GitHub holds for approval that approving could only turn into a skipped run or into CI for a commit that is no longer the head: the `Issue Worker` run that each comment by the coding agent on its own pull request leaves behind, the `Dependabot Auto-Merge` run of each of its pushes (only while the repository's workflow still conditions every job on the Dependabot actor), and the runs of pushes its pull request has moved past or of a pull request that is closed. It never deletes the held run for a pull request's current head, which is the approval that matters, and none caused by anyone but the coding agent. Install it with the other plain workflows; it needs no secret. The deletion is a second job that declares `actions: write` and `pull-requests: read` for itself; the label job keeps its smaller token.
 
 | From this repository | To the consuming repository |
 |----------------------|-----------------------------|
 | `workflows/janitor.yml` | `.github/workflows/janitor.yml` |
 | `scripts/janitor.mjs` | `.github/scripts/janitor.mjs` |
 
-`plan-approval-resume.mjs` imports `janitor.mjs`, so install both together. To tidy issues that closed before the janitor existed, run the workflow once with `include_closed` (use `dry_run` first; it also lists the held runs it would delete). The rules are in [multi-phase-design.md](multi-phase-design.md#label-lifecycle) and [multi-phase-design.md](multi-phase-design.md#held-runs).
+`plan-approval-resume.mjs` imports `janitor.mjs`, so install both together. To tidy issues that closed before the janitor existed, run the workflow once with `include_closed` (use `dry_run` first; it also lists the held runs it would delete and why). The rules are in [multi-phase-design.md](multi-phase-design.md#label-lifecycle) and [multi-phase-design.md](multi-phase-design.md#held-runs).
 
 Requirements: `SIGNAL_TOKEN` with Issues: Read and write (it applies `plan-triage-handoff` so the PR gate starts), and the existing `plan-triage-handoff` label. It acts only on an open issue that has `complexity/high` or `risk/high`, has no `plan-triage-handoff`, and is not labeled `dependency-required`, and it ignores a removal made by a bot account (approval is a human decision). To resume an issue whose label was removed before the workflow was installed, run it from the Actions tab with the issue number.
 
