@@ -1,5 +1,14 @@
 # Changelog
 
+## [v1.0.15] - 2026-10-23
+
+### What's Changed
+* Plan gate: high risk requires plan approval like high complexity by @vscheuber in https://github.com/vscheuber/repo-concierge/pull/33
+* Janitor: leave one held run to approve per agent pull request by @vscheuber in https://github.com/vscheuber/repo-concierge/pull/34
+* A closed issue starts no gate; an open fix pull request stops the hand-off by @vscheuber in https://github.com/vscheuber/repo-concierge/pull/35
+
+**Full Changelog**: https://github.com/vscheuber/repo-concierge/compare/v1.0.14...v1.0.15
+
 ## [v1.0.14] - 2026-10-23
 
 ### What's Changed
