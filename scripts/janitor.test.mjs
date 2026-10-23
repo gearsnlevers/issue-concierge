@@ -9,6 +9,9 @@ import {
   staleLabels,
   isCodingAgent,
   isDisposableHeldRun,
+  isHeldByAgent,
+  everyJobGuardedByDependabot,
+  staleRunReason,
   sweepHeldRuns,
   DISPOSABLE_HELD_RUNS,
   run,
@@ -248,16 +251,30 @@ const held = (extra = {}) => ({
   ...extra,
 });
 
-function fakeRuns(runs) {
+function fakeRuns(runs, { prs = {}, workflows = {} } = {}) {
   const deleted = [];
   const logs = [];
   const failOn = new Set();
+  const reads = { prs: [], workflows: [] };
   return {
     deleted,
     logs,
     failOn,
+    reads,
     ctx: {
       listHeldRuns: async () => runs,
+      getPullRequest: async (number) => {
+        reads.prs.push(number);
+        const pr = prs[number];
+        if (!pr || pr instanceof Error) throw pr || new Error('HTTP 404');
+        return pr;
+      },
+      readWorkflow: async (file) => {
+        reads.workflows.push(file);
+        const text = workflows[file];
+        if (text === undefined || text instanceof Error) throw text || new Error('HTTP 404');
+        return text;
+      },
       deleteRun: async (id) => {
         if (failOn.has(id)) throw new Error('boom');
         deleted.push(id);
@@ -266,6 +283,46 @@ function fakeRuns(runs) {
     },
   };
 }
+
+// The repository's own workflow, as frodo-cli and frodo-lib have it: one job, guarded on the actor.
+const DEPENDABOT_WORKFLOW = `name: 'Dependabot Auto-Merge'
+
+on: pull_request
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  dependabot:
+    runs-on: ubuntu-latest
+    # Guard on the actor: skips immediately for every non-Dependabot PR,
+    # including all human PRs.
+    if: github.actor == 'dependabot[bot]'
+    steps:
+      - name: Fetch Dependabot metadata
+        uses: dependabot/fetch-metadata@v3
+      - name: Enable auto-merge for minor and patch updates
+        if: contains(fromJSON('["version-update:semver-patch"]'), steps.metadata.outputs.update-type)
+        run: gh pr merge --auto --squash "$PR_URL"
+`;
+const DEPENDABOT_PATH = '.github/workflows/dependabot-auto-merge.yml';
+
+/** A held pipeline run of a push to a pull request by the coding agent. */
+const pushRun = (extra = {}) =>
+  held({
+    id: 100,
+    name: 'Frodo CLI Release Pipeline',
+    path: '.github/workflows/pipeline.yml',
+    event: 'pull_request',
+    head_sha: 'newest0000000000000000000000000000000000',
+    pull_requests: [{ number: 895 }],
+    ...extra,
+  });
+/** The held Dependabot Auto-Merge run of the same push. */
+const dependabotRun = (extra = {}) =>
+  pushRun({ id: 101, name: 'Dependabot Auto-Merge', path: DEPENDABOT_PATH, ...extra });
+const OPEN_AT_NEWEST = { 895: { state: 'open', headSha: 'newest0000000000000000000000000000000000' } };
 
 test('a held Issue Worker run caused by the coding agent is disposable', () => {
   assert.equal(isDisposableHeldRun(held()), true);
@@ -334,8 +391,14 @@ test('deleting is safe only while the Issue Worker skips comments by bots and co
   assert.match(guard, /github\.event\.issue\.pull_request == null/);
 });
 
-test('the disposable workflow is the Issue Worker lock file that gh-aw generates', () => {
-  assert.deepEqual(DISPOSABLE_HELD_RUNS, [{ path: '.github/workflows/issue-worker.lock.yml', event: 'issue_comment' }]);
+test('the disposable workflows are the Issue Worker lock file gh-aw generates and the repository\'s Dependabot auto-merge', () => {
+  assert.deepEqual(
+    DISPOSABLE_HELD_RUNS.map(({ path: p, event, guard }) => ({ path: p, event, guard })),
+    [
+      { path: '.github/workflows/issue-worker.lock.yml', event: 'issue_comment', guard: undefined },
+      { path: DEPENDABOT_PATH, event: 'pull_request', guard: 'dependabot-actor' },
+    ]
+  );
   assert.equal(fs.existsSync(new URL('../workflows/issue-worker.md', import.meta.url)), true);
 });
 
@@ -349,7 +412,10 @@ test('the sweep is its own job: only it has actions: write, and it follows the l
   assert.equal(/actions: write/.test(code.slice(clean, sweep)), false, 'the label job must not get actions: write');
   const job = code.slice(sweep);
   assert.match(job, /needs: clean/);
-  assert.match(job, /permissions:\n\s+contents: read\n\s+actions: write/);
+  const perms = job.match(/permissions:\n((?:\s{6}[\w-]+: \w+\n)+)/);
+  assert.ok(perms, 'the held-runs job must declare its permissions');
+  assert.deepEqual(perms[1].trim().split('\n').map((l) => l.trim()).sort(), ['actions: write', 'contents: read', 'pull-requests: read']);
+  assert.equal(/pull-requests: (read|write)/.test(code.slice(clean, sweep)), false, 'the label job inherits the workflow-level token and declares no job permissions');
   assert.match(job, /node \.github\/scripts\/janitor\.mjs --held-runs/);
 });
 
@@ -395,4 +461,185 @@ test('--held-runs lists held runs from the API and deletes only the disposable o
   assert.deepEqual(deletes, ['11', '13'], 'run 12 (the pipeline) must not be deleted; run 13 answers 404, which counts as gone');
   assert.equal(calls.some((c) => /labels|issues\//.test(c)), false, '--held-runs must not run the label task');
   assert.match(out, /run 11 \(.*\): deleted/);
+});
+
+// ------------------------------------------- stale runs and the Dependabot guard
+
+test('a Dependabot workflow is safe to skip only when every job is guarded on the actor', () => {
+  assert.equal(everyJobGuardedByDependabot(DEPENDABOT_WORKFLOW), true, 'the workflow frodo-cli and frodo-lib have');
+  assert.equal(everyJobGuardedByDependabot(DEPENDABOT_WORKFLOW.replace("if: github.actor == 'dependabot[bot]'", "if: ${{ github.actor == 'dependabot[bot]' }}")), true, 'wrapped in an expression');
+  const cases = {
+    'no jobs': 'name: x\non: pull_request\n',
+    'an empty jobs block': 'name: x\non: pull_request\njobs:\nother: 1\n',
+    'a job without a guard': DEPENDABOT_WORKFLOW.replace("    if: github.actor == 'dependabot[bot]'\n", ''),
+    'a guard that also lets anyone through': DEPENDABOT_WORKFLOW.replace("github.actor == 'dependabot[bot]'", "github.actor == 'dependabot[bot]' || true"),
+    'a guard on another actor': DEPENDABOT_WORKFLOW.replace("dependabot[bot]", 'renovate[bot]'),
+    'a guard on a step, not on the job': DEPENDABOT_WORKFLOW.replace("    if: github.actor == 'dependabot[bot]'\n", '').replace('        uses: dependabot/fetch-metadata@v3\n', "        if: github.actor == 'dependabot[bot]'\n        uses: dependabot/fetch-metadata@v3\n"),
+    'a second job that is not guarded': DEPENDABOT_WORKFLOW + '  other:\n    runs-on: ubuntu-latest\n    steps:\n      - run: echo real work\n',
+  };
+  for (const [what, text] of Object.entries(cases)) assert.equal(everyJobGuardedByDependabot(text), false, what);
+  assert.equal(everyJobGuardedByDependabot(DEPENDABOT_WORKFLOW + '  second:\n    if: github.actor == \'dependabot[bot]\'\n    steps: []\n'), true, 'two jobs, both guarded');
+  assert.equal(everyJobGuardedByDependabot(undefined), false);
+});
+
+test('a pull request run is stale when its pull request is closed or has moved past it', () => {
+  const run = pushRun({ head_sha: 'old' });
+  assert.match(staleRunReason(run, { state: 'open', headSha: 'newest1234567' }), /pull request #895 moved on to newest1/);
+  assert.match(staleRunReason(pushRun(), { state: 'closed', headSha: 'newest0000000000000000000000000000000000' }), /pull request #895 is closed/);
+  assert.equal(staleRunReason(pushRun(), OPEN_AT_NEWEST[895]), null, 'the current head is never stale');
+  assert.equal(staleRunReason(pushRun({ event: 'issue_comment' }), { state: 'closed' }), null, 'only pull_request runs');
+  assert.equal(staleRunReason(pushRun({ pull_requests: [] }), { state: 'closed' }), null, 'no pull request, nothing to compare');
+  assert.equal(staleRunReason(pushRun(), null), null);
+  assert.equal(staleRunReason(pushRun({ head_sha: 'old' }), { state: 'open' }), null, 'no head to compare with: keep');
+  assert.equal(staleRunReason(pushRun({ head_sha: undefined }), { state: 'open', headSha: 'x' }), null, 'no commit on the run: keep');
+});
+
+test('the sweep keeps the pipeline run of the head and every run it cannot judge', async () => {
+  const keep = {
+    'the pipeline run for the current head': pushRun({ id: 1 }),
+    'an unrelated workflow of the agent on the current head': pushRun({ id: 2, name: 'Concierge 3c PR Triage', path: '.github/workflows/pr-triage.lock.yml' }),
+    "a contributor's run on a fork pull request (no pull request in the run)": pushRun({ id: 3, actor: { login: 'TJShowerHandel' }, pull_requests: [], head_sha: 'old' }),
+    'a stale run caused by a human': pushRun({ id: 4, actor: { login: 'vscheuber' }, head_sha: 'old' }),
+    'a run of the agent without a pull request': pushRun({ id: 5, pull_requests: [], head_sha: 'old' }),
+    'a run of the agent on another event': pushRun({ id: 6, event: 'push', head_sha: 'old' }),
+    'a Dependabot run caused by Dependabot itself': dependabotRun({ id: 7, actor: { login: 'dependabot[bot]' } }),
+    'a run that already skipped': pushRun({ id: 8, conclusion: 'skipped', head_sha: 'old' }),
+  };
+  const f = fakeRuns(Object.values(keep), { prs: OPEN_AT_NEWEST, workflows: { [DEPENDABOT_PATH]: DEPENDABOT_WORKFLOW } });
+  assert.deepEqual(await sweepHeldRuns({}, f.ctx), []);
+  assert.deepEqual(f.deleted, []);
+  assert.deepEqual(f.logs, ['No held runs to delete.']);
+});
+
+test('the sweep deletes a pipeline run of an older push and of a closed pull request', async () => {
+  const f = fakeRuns([pushRun({ id: 1, head_sha: 'older' }), pushRun({ id: 2 }), pushRun({ id: 3, pull_requests: [{ number: 7 }] })], {
+    prs: { ...OPEN_AT_NEWEST, 7: { state: 'closed', headSha: 'newest0000000000000000000000000000000000' } },
+  });
+  assert.deepEqual(await sweepHeldRuns({}, f.ctx), [1, 3]);
+  assert.match(f.logs[0], /run 1 \(Frodo CLI Release Pipeline, pull_request by Copilot, "Add a thing"\): deleted \(pull request #895 moved on to newest0\)/);
+  assert.match(f.logs[1], /run 3 .*deleted \(pull request #7 is closed\)/);
+});
+
+test('a Dependabot Auto-Merge run of the agent is deleted, even for the current head', async () => {
+  const f = fakeRuns([dependabotRun(), dependabotRun({ id: 102, head_sha: 'older' })], {
+    prs: OPEN_AT_NEWEST,
+    workflows: { [DEPENDABOT_PATH]: DEPENDABOT_WORKFLOW },
+  });
+  assert.deepEqual(await sweepHeldRuns({}, f.ctx), [101, 102]);
+  assert.match(f.logs[0], /deleted \(its job runs only for Dependabot\)/);
+  assert.deepEqual(f.reads.workflows, [DEPENDABOT_PATH], 'the workflow file is read once per sweep');
+});
+
+test('a Dependabot Auto-Merge run is kept when the repository\'s workflow lost its guard or cannot be read', async () => {
+  const unguarded = DEPENDABOT_WORKFLOW.replace("    if: github.actor == 'dependabot[bot]'\n", '');
+  for (const [what, workflows] of Object.entries({
+    'the guard is gone': { [DEPENDABOT_PATH]: unguarded },
+    'the file cannot be read': { [DEPENDABOT_PATH]: new Error('HTTP 404') },
+  })) {
+    const f = fakeRuns([dependabotRun()], { prs: OPEN_AT_NEWEST, workflows });
+    assert.deepEqual(await sweepHeldRuns({}, f.ctx), [], what);
+    assert.deepEqual(f.deleted, [], what);
+    assert.ok(f.logs.some((l) => /kept/.test(l)), `${what}: the sweep says why it kept the run`);
+  }
+});
+
+test('a stale Dependabot run is still deleted when its workflow lost the guard: staleness does not depend on what it does', async () => {
+  const unguarded = DEPENDABOT_WORKFLOW.replace("    if: github.actor == 'dependabot[bot]'\n", '');
+  const f = fakeRuns([dependabotRun({ id: 5, head_sha: 'older' }), dependabotRun({ id: 6 })], { prs: OPEN_AT_NEWEST, workflows: { [DEPENDABOT_PATH]: unguarded } });
+  assert.deepEqual(await sweepHeldRuns({}, f.ctx), [5], 'the run of the current head stays: it is the unguarded workflow that would really run');
+});
+
+test('doubt keeps the run: a pull request that cannot be read is reported, never deleted', async () => {
+  const f = fakeRuns([pushRun({ id: 1, head_sha: 'older' }), pushRun({ id: 2, head_sha: 'older2' })], { prs: { 895: new Error('HTTP 403') } });
+  assert.deepEqual(await sweepHeldRuns({}, f.ctx), []);
+  assert.deepEqual(f.deleted, []);
+  assert.deepEqual(f.reads.prs, [895], 'a failed lookup is remembered for the sweep');
+  assert.match(f.logs[0], /^::warning::run 1 \(Frodo CLI Release Pipeline\): kept, pull request #895 could not be read: HTTP 403$/);
+  assert.match(f.logs[1], /^::warning::run 2 /);
+});
+
+test('four pushes by the agent leave one run to approve: the pipeline run of the newest commit', async () => {
+  const shas = ['sha1', 'sha2', 'sha3', 'newest0000000000000000000000000000000000'];
+  const runs = shas.flatMap((sha, i) => [
+    pushRun({ id: 10 + i * 2, head_sha: sha }),
+    dependabotRun({ id: 11 + i * 2, head_sha: sha }),
+  ]);
+  const f = fakeRuns(runs, { prs: OPEN_AT_NEWEST, workflows: { [DEPENDABOT_PATH]: DEPENDABOT_WORKFLOW } });
+  const deleted = await sweepHeldRuns({}, f.ctx);
+  assert.deepEqual(deleted.sort((a, b) => a - b), [10, 11, 12, 13, 14, 15, 17]);
+  assert.equal(deleted.includes(16), false, 'the pipeline run of the newest commit must survive');
+  assert.deepEqual(f.reads.prs, [895], 'the pull request is read once for all eight runs');
+});
+
+test('a dry run says what it would delete for the new rules too, and deletes nothing', async () => {
+  const f = fakeRuns([pushRun({ id: 1, head_sha: 'older' }), dependabotRun()], { prs: OPEN_AT_NEWEST, workflows: { [DEPENDABOT_PATH]: DEPENDABOT_WORKFLOW } });
+  assert.deepEqual(await sweepHeldRuns({ dryRun: true }, f.ctx), [1, 101]);
+  assert.deepEqual(f.deleted, []);
+  assert.ok(f.logs.every((l) => /would delete/.test(l)));
+});
+
+test('a failed deletion of a stale run does not stop the others, and the sweep still fails', async () => {
+  const f = fakeRuns([pushRun({ id: 1, head_sha: 'older' }), pushRun({ id: 2, head_sha: 'older2' })], { prs: OPEN_AT_NEWEST });
+  f.failOn.add(1);
+  await assert.rejects(sweepHeldRuns({}, f.ctx), /could not delete: run 1: boom/);
+  assert.deepEqual(f.deleted, [2]);
+});
+
+test('only held runs of the coding agent are ever candidates', () => {
+  assert.equal(isHeldByAgent(pushRun()), true);
+  for (const extra of [{ actor: { login: 'vscheuber' } }, { actor: { login: 'dependabot[bot]' } }, { actor: null }, { status: 'in_progress' }, { conclusion: 'success' }]) {
+    assert.equal(isHeldByAgent(pushRun(extra)), false, JSON.stringify(extra));
+  }
+});
+
+test('--held-runs reads the pull request and the workflow once and deletes the stale runs (gh stubbed)', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'janitor-gh-'));
+  const log = path.join(dir, 'calls.log');
+  const runs = [
+    pushRun({ id: 21, head_sha: 'older' }),
+    pushRun({ id: 22 }),
+    dependabotRun({ id: 23 }),
+    dependabotRun({ id: 24, head_sha: 'older' }),
+    held({ id: 25 }),
+  ];
+  fs.writeFileSync(path.join(dir, 'runs.jsonl'), runs.map((r) => JSON.stringify(r)).join('\n') + '\n');
+  fs.writeFileSync(path.join(dir, 'pr.json'), JSON.stringify({ state: 'open', head: { sha: 'newest0000000000000000000000000000000000' } }));
+  fs.writeFileSync(path.join(dir, 'wf.b64'), Buffer.from(DEPENDABOT_WORKFLOW).toString('base64').replace(/(.{60})/g, '$1\n') + '\n');
+  fs.writeFileSync(
+    path.join(dir, 'gh'),
+    [
+      '#!/bin/sh',
+      `echo "$*" >> '${log}'`,
+      'case "$*" in',
+      `  *"actions/runs?status=action_required&per_page=100"*) cat '${path.join(dir, 'runs.jsonl')}' ;;`,
+      `  *"repos/o/r/pulls/895"*) cat '${path.join(dir, 'pr.json')}' ;;`,
+      `  *"repos/o/r/contents/.github/workflows/dependabot-auto-merge.yml"*) cat '${path.join(dir, 'wf.b64')}' ;;`,
+      '  *"--method DELETE"*"actions/runs/"*) ;;',
+      '  *) echo "unexpected gh call: $*" >&2; exit 1 ;;',
+      'esac',
+      '',
+    ].join('\n'),
+    { mode: 0o755 }
+  );
+  const script = fileURLToPath(new URL('./janitor.mjs', import.meta.url));
+  const out = execFileSync('node', [script, '--held-runs'], {
+    env: { PATH: `${dir}:${process.env.PATH}`, GITHUB_REPOSITORY: 'o/r', GH_TOKEN: 't' },
+    encoding: 'utf8',
+  });
+  const calls = fs.readFileSync(log, 'utf8').trim().split('\n');
+  const deletes = calls.filter((c) => c.includes('--method DELETE')).map((c) => c.match(/actions\/runs\/(\d+)/)[1]);
+  assert.deepEqual(deletes.sort(), ['21', '23', '24', '25']);
+  assert.equal(deletes.includes('22'), false, 'run 22, the pipeline run of the head, must stay');
+  assert.equal(calls.filter((c) => /pulls\/895/.test(c)).length, 1, 'the pull request is read once');
+  assert.equal(calls.filter((c) => /contents\//.test(c)).length, 1, 'the workflow file is read once');
+  assert.match(out, /run 23 \(Dependabot Auto-Merge, pull_request by Copilot, .*\): deleted \(its job runs only for Dependabot\)/);
+});
+
+test('the docs state the rules the sweep depends on', () => {
+  const doc = fs.readFileSync(new URL('../docs/multi-phase-design.md', import.meta.url), 'utf8');
+  const held = doc.slice(doc.indexOf('## Held runs'), doc.indexOf('## Repository guidance')).replace(/\s+/g, ' ');
+  assert.match(held, /the held run for the \*\*current head of an open pull request\*\* is never deleted, whatever the workflow/);
+  assert.match(held, /Doubt never deletes/);
+  assert.match(held, /only while the default branch's copy of that workflow still has a job-level `if: github\.actor == 'dependabot\[bot\]'` on every job/);
+  assert.match(held, /`pull-requests: read`/);
 });
