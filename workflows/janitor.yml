@@ -1,4 +1,4 @@
-# Label janitor. Plain GitHub Actions, no LLM. See docs/multi-phase-design.md, "Label lifecycle".
+# Janitor. Plain GitHub Actions, no LLM. See docs/multi-phase-design.md, "Label lifecycle".
 #
 # Keeps an issue or pull request showing where it is, not where it has been: when the
 # next gate label exists, the earlier one is removed, and when an issue closes the
@@ -6,10 +6,10 @@
 # outcome labels. It runs on the label events that can change the answer, on
 # assignment and close, hourly as a sweep for anything missed, and on demand.
 #
-# Install: copy this file to .github/workflows/label-janitor.yml and
-# scripts/label-janitor.mjs to .github/scripts/label-janitor.mjs. No secret is needed:
+# Install: copy this file to .github/workflows/janitor.yml and
+# scripts/janitor.mjs to .github/scripts/janitor.mjs. No secret is needed:
 # removing a label starts nothing, so the default token is enough.
-name: "Concierge 4a ▸ Label Janitor"
+name: "Concierge 4a ▸ Janitor"
 
 on:
   issues:
@@ -47,13 +47,13 @@ permissions:
 # frodo-lib#771). The label name in the key gives every label event its own group. The script
 # reads the item's current labels and every removal is idempotent, so runs may overlap.
 concurrency:
-  group: label-janitor-${{ github.event.issue.number || github.event.pull_request.number || inputs.issue_number || 'sweep' }}-${{ github.event.label.name }}
+  group: janitor-${{ github.event.issue.number || github.event.pull_request.number || inputs.issue_number || 'sweep' }}-${{ github.event.label.name }}
   cancel-in-progress: false
 
 jobs:
   clean:
     # A label event starts the job only for the labels that can change the answer.
-    # Keep this list identical to TRIGGER_LABELS in scripts/label-janitor.mjs (a test checks it).
+    # Keep this list identical to TRIGGER_LABELS in scripts/janitor.mjs (a test checks it).
     if: >-
       github.event.action != 'labeled'
       || contains(fromJSON('["issue-worker-ready","issue-triage-handoff","plan-worker-ready","plan-triage-handoff","pr-worker-ready","pr-triage-handoff","backlog","needs-info","dependency-required","scope-review","out-of-scope","duplicate","invalid","already-fixed","spam","plan-approval-required"]'), github.event.label.name)
@@ -67,4 +67,4 @@ jobs:
           ITEM_NUMBER: ${{ github.event.issue.number || github.event.pull_request.number || inputs.issue_number }}
           INCLUDE_CLOSED: ${{ inputs.include_closed }}
           DRY_RUN: ${{ inputs.dry_run }}
-        run: node .github/scripts/label-janitor.mjs
+        run: node .github/scripts/janitor.mjs

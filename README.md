@@ -57,7 +57,7 @@ See `docs/multi-phase-design.md` for the full model.
 
 The workflows are named `Concierge <code> [▸ ]<Name>` so they sort in the order they run and show which ones can be started by hand (`▸`); see [docs/multi-phase-design.md](docs/multi-phase-design.md#workflow-names).
 
-Gate labels are signals, not history: when the next signal exists the earlier gate label is removed, so an issue shows where it is now, and when an issue closes the labels that describe open work go too (the label janitor, plain Actions, no LLM). See [docs/multi-phase-design.md](docs/multi-phase-design.md#label-lifecycle) for the full table.
+Gate labels are signals, not history: when the next signal exists the earlier gate label is removed, so an issue shows where it is now, and when an issue closes the labels that describe open work go too (the janitor, plain Actions, no LLM). See [docs/multi-phase-design.md](docs/multi-phase-design.md#label-lifecycle) for the full table.
 
 High complexity adds `plan-approval-required`. When a maintainer removes that label, `plan-approval-resume` (plain Actions, no LLM) applies `plan-triage-handoff` and the PR gate starts. See [docs/multi-phase-design.md](docs/multi-phase-design.md).
 
@@ -160,13 +160,13 @@ Local edits are preserved by the 3-way merge performed by `gh aw update`.
 │   ├── pr-triage.md
 │   ├── dependency-watch.yml
 │   ├── plan-approval-resume.yml
-│   ├── label-janitor.yml
+│   ├── janitor.yml
 │   ├── pr-ready-signal.yml
 │   └── check-deployment.yml
 ├── scripts/
 │   ├── dependency-watch.mjs
 │   ├── plan-approval-resume.mjs
-│   ├── label-janitor.mjs
+│   ├── janitor.mjs
 │   ├── pr-ready-signal.mjs
 │   └── check-deployment.mjs
 └── shared/

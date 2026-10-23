@@ -44,7 +44,7 @@ The Actions sidebar sorts workflows by display name, so the names carry the orde
 | `Concierge 3a PR Worker` | `plan-triage-handoff` |
 | `Concierge 3b ▸ PR Ready Signal` | the coding agent finishes (and by hand for one pull request) |
 | `Concierge 3c PR Triage` | `pr-worker-ready` |
-| `Concierge 4a ▸ Label Janitor` | after gate labels change, on assignment and on close, hourly, and on demand |
+| `Concierge 4a ▸ Janitor` | after gate labels change, on assignment and on close, hourly, and on demand |
 | `Concierge 4b Related Repo Closer` | a linked issue in a related repository closes |
 | `Concierge 4c Waiting for Release` | an issue closes because a pull request merged |
 | `Concierge 4d Release Closer` | a release is published |
@@ -53,11 +53,11 @@ The Actions sidebar sorts workflows by display name, so the names carry the orde
 
 The ordering holds whether the sidebar counts punctuation or ignores it, because the code is unique and sits before the marker. Names stay within about 40 characters (the longest is 35); longer ones truncate in the sidebar.
 
-To add a workflow, give it the next free step letter in its phase (or a new phase digit), add `▸` only if it has `workflow_dispatch`, and set the name in the frontmatter (`name:`) of a gh-aw definition or at the top of a plain workflow. `tools/workflow-names.test.mjs` checks the format, that codes are unique, that the markers match what each workflow actually allows, and that sorting the names sorts the pipeline. File names are separate: they keep their stems (`issue-worker`, `label-janitor`) so reordering the display names never means renaming files.
+To add a workflow, give it the next free step letter in its phase (or a new phase digit), add `▸` only if it has `workflow_dispatch`, and set the name in the frontmatter (`name:`) of a gh-aw definition or at the top of a plain workflow. `tools/workflow-names.test.mjs` checks the format, that codes are unique, that the markers match what each workflow actually allows, and that sorting the names sorts the pipeline. File names are separate: they keep their stems (`issue-worker`, `janitor`) so reordering the display names never means renaming files.
 
 ## Label lifecycle
 
-Gate labels are signals, not history. A label event starts the next workflow, so only the moment a gate label is added matters; once the next signal exists the earlier label has done its job and goes. At any moment an issue shows at most one gate label, which is where it is now. The history is in the timeline and in the plan comment. A plain Actions workflow, the **label janitor** (`label-janitor.yml` with `label-janitor.mjs`, no LLM, no secret), does the removing.
+Gate labels are signals, not history. A label event starts the next workflow, so only the moment a gate label is added matters; once the next signal exists the earlier label has done its job and goes. At any moment an issue shows at most one gate label, which is where it is now. The history is in the timeline and in the plan comment. A plain Actions workflow, the **janitor** (`janitor.yml` with `janitor.mjs`, no LLM, no secret), does the removing.
 
 **Gate labels**
 
