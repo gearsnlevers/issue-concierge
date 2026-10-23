@@ -1,6 +1,6 @@
 {
   "name": "repo-concierge",
-  "version": "1.0.12",
+  "version": "1.0.13",
   "private": true,
   "description": "Agentic issue-to-release harness for GitHub",
   "scripts": {

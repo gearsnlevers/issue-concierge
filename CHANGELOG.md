@@ -1,5 +1,12 @@
 # Changelog
 
+## [v1.0.13] - 2026-10-23
+
+### What's Changed
+* Plan and PR gates read the repository's own guidance (AGENTS.md, .github/instructions) by @vscheuber in https://github.com/vscheuber/repo-concierge/pull/30
+
+**Full Changelog**: https://github.com/vscheuber/repo-concierge/compare/v1.0.12...v1.0.13
+
 ## [v1.0.12] - 2026-10-23
 
 ### What's Changed
