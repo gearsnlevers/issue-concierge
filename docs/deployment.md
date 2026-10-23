@@ -308,7 +308,7 @@ It runs hourly, on demand, when `dependency-required` is added, and on the event
 
 ### Plan approval resume
 
-When a maintainer removes `plan-approval-required` from a high-complexity issue, a second plain Actions workflow (no LLM) hands the issue to the PR gate. Without it, removing the label does nothing. Install it in every deployment. Copy two files:
+When a maintainer removes `plan-approval-required` from a high-complexity or high-risk issue, a second plain Actions workflow (no LLM) hands the issue to the PR gate. Without it, removing the label does nothing. Install it in every deployment. Copy two files:
 
 | From this repository | To the consuming repository |
 |----------------------|-----------------------------|
@@ -337,7 +337,7 @@ A plain Actions workflow (no LLM) keeps issues and pull requests showing where t
 
 `plan-approval-resume.mjs` imports `janitor.mjs`, so install both together. To tidy issues that closed before the janitor existed, run the workflow once with `include_closed` (use `dry_run` first; it also lists the held runs it would delete). The rules are in [multi-phase-design.md](multi-phase-design.md#label-lifecycle) and [multi-phase-design.md](multi-phase-design.md#held-runs).
 
-Requirements: `SIGNAL_TOKEN` with Issues: Read and write (it applies `plan-triage-handoff` so the PR gate starts), and the existing `plan-triage-handoff` label. It acts only on an open issue that has `complexity/high`, has no `plan-triage-handoff`, and is not labeled `dependency-required`. To resume an issue whose label was removed before the workflow was installed, run it from the Actions tab with the issue number.
+Requirements: `SIGNAL_TOKEN` with Issues: Read and write (it applies `plan-triage-handoff` so the PR gate starts), and the existing `plan-triage-handoff` label. It acts only on an open issue that has `complexity/high` or `risk/high`, has no `plan-triage-handoff`, and is not labeled `dependency-required`, and it ignores a removal made by a bot account (approval is a human decision). To resume an issue whose label was removed before the workflow was installed, run it from the Actions tab with the issue number.
 
 Requirements:
 
@@ -450,7 +450,7 @@ The workflows apply and react to specific labels. Create them once per repositor
 | `risk/low` | `0e8a16` | Limited blast radius |
 | `risk/medium` | `fbca04` | Normal code changes |
 | `risk/high` | `d93f0b` | Security, auth, data integrity, availability, or public API impact |
-| `plan-approval-required` | `b60205` | High complexity: remove to resume (`plan-approval-resume` hands the issue to the PR gate) |
+| `plan-approval-required` | `b60205` | High complexity or high risk: remove to resume (`plan-approval-resume` starts the PR gate) |
 | `needs-info` | `d4c5f9` | Missing reproduction steps or details |
 | `backlog` | `c5def5` | Valid but not urgent; do not plan or implement now |
 | `low-hanging-fruit` | `bfdadc` | Valid but not urgent, small and low risk; handed to the plan gate anyway |
@@ -512,6 +512,7 @@ Low/low pull requests that carry `pr-triage-handoff` and pass required checks ca
 - If the repository has an `AGENTS.md` or instruction files, confirm that the plan for an issue in an area an instruction file covers has a "Repository rules that apply" heading of at most five lines naming that file, that a pull request from the coding agent gets a "Repository rules:" line in the triage comment, and that a pull request which edits `AGENTS.md` is flagged for a maintainer instead of being judged by its own edit.
 - If the repository has a `scope.md`, open a request that is clearly excluded and confirm it is declined and closed as not planned (`out-of-scope`), and one near the boundary and confirm it gets `scope-review` and stays open.
 - For an actionable issue, confirm a plan comment appears with the `<!-- gh-aw-workflow-id: plan-worker -->` marker and that complexity/risk labels are applied.
+- For an issue that plan triage rates high risk (a change to authentication, say) even though its complexity is low, confirm it gets `plan-approval-required` and the comment "High risk. Remove the plan-approval-required label to resume.", and no `plan-triage-handoff`; then remove the label yourself and confirm `plan-approval-resume` hands the issue to the PR gate. For a bug report that contains an error or stack trace, confirm the plan says how the cause was checked, or marks it "Hypothesis (unverified)".
 - For a low/low item, confirm a pull request is opened and can auto-merge after checks.
 - For a split-repo case, confirm a canonical issue is created, the original receives `related-repo`, and the original is closed when the canonical issue closes.
 

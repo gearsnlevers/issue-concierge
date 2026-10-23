@@ -5,7 +5,8 @@ import fs from 'node:fs';
 // max-ai-credits is not a per-run cap, but it feeds gh-aw's daily guardrail and the failure report,
 // so it has to match what runs really use (docs/multi-phase-design.md, "Repository guidance", Cost).
 // Measured on 2026-10-23: plan worker 12.6 to 15.0 AIC, PR triage 12.3 to 20.4 AIC, plus about
-// 2.5 AIC for reading the repository guidance.
+// 2.5 AIC for reading the repository guidance, and up to about 2 AIC more when the plan worker reads a
+// file to check a bug's cause (worst case about 19.5 AIC).
 
 const REPO = new URL('..', import.meta.url);
 const credits = (workflow) => {
@@ -20,6 +21,6 @@ test('pr-triage budget covers the largest measured run plus the guidance overhea
   assert.ok(credits('pr-triage') >= 24, `pr-triage max-ai-credits is ${credits('pr-triage')}`);
 });
 
-test('plan-worker budget covers its largest measured run plus the guidance overhead', () => {
-  assert.ok(credits('plan-worker') >= 20, `plan-worker max-ai-credits is ${credits('plan-worker')}`);
+test('plan-worker budget covers its largest measured run plus the guidance overhead and a cause check', () => {
+  assert.ok(credits('plan-worker') >= 24, `plan-worker max-ai-credits is ${credits('plan-worker')}`);
 });

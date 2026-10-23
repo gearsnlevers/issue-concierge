@@ -37,7 +37,7 @@
     {
       "name": "plan-approval-required",
       "color": "b60205",
-      "description": "High complexity: remove to resume (`plan-approval-resume` hands the issue to the PR gate)"
+      "description": "High complexity or high risk: remove to resume (`plan-approval-resume` starts the PR gate)"
     },
     {
       "name": "needs-info",
