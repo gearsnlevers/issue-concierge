@@ -1,5 +1,13 @@
 # Changelog
 
+## [v1.0.14] - 2026-10-23
+
+### What's Changed
+* Open the issue worker to reporters without write access by @vscheuber in https://github.com/vscheuber/repo-concierge/pull/31
+* Raise PR Triage max-ai-credits from 16 to 24 by @vscheuber in https://github.com/vscheuber/repo-concierge/pull/32
+
+**Full Changelog**: https://github.com/vscheuber/repo-concierge/compare/v1.0.13...v1.0.14
+
 ## [v1.0.13] - 2026-10-23
 
 ### What's Changed
