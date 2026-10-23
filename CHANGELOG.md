@@ -1,5 +1,13 @@
 # Changelog
 
+## [v1.0.8] - 2026-10-23
+
+### What's Changed
+* fix(pr-gate): give each label event its own janitor group, and have PR triage report CI by @vscheuber in https://github.com/vscheuber/repo-concierge/pull/23
+* fix(pr-triage): run on pull_request_target so label events do not queue runs held for approval by @vscheuber in https://github.com/vscheuber/repo-concierge/pull/24
+
+**Full Changelog**: https://github.com/vscheuber/repo-concierge/compare/v1.0.7...v1.0.8
+
 ## [v1.0.7] - 2026-10-23
 
 ### What's Changed
