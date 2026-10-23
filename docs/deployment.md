@@ -261,17 +261,17 @@ Gate handoffs are labels. The next workflow starts on the `labeled` event.
 
 GitHub does not start a workflow from an event created by the default `GITHUB_TOKEN`. Safe-outputs apply labels as `github-actions[bot]`, so the next gate never runs unless the label is applied with a different token.
 
-Every deployment needs a secret named `SIGNAL_TOKEN` (rename it in the workflow frontmatter if you prefer another name). It is used as `github-token` on every `add-labels` safe-output. The dependency watcher and plan approval resume (below) also use it, outside gh-aw, to change labels so the next gate starts. Issues: Read and write covers both.
+Every deployment needs a secret named `SIGNAL_TOKEN` (rename it in the workflow frontmatter if you prefer another name). It is used as `github-token` on every `add-labels` safe-output. The dependency watcher and plan approval resume (below) also use it, outside gh-aw, to change labels so the next gate starts. Issues and Pull requests: Read and write cover all of it. The pull requests permission is needed because the PR gate labels a pull request (`pr-worker-ready`, `pr-triage-handoff`, complexity and risk), and GitHub answers a label change on a pull request with `403 Resource not accessible by personal access token` when the token has only Issues. Observed on frodo-lib#771.
 
 Create a fine-grained token:
 
 - Resource owner: the organization or user that owns the repository
 - Repository access: only the repositories that run the harness
-- Permissions: Issues: Read and write
+- Permissions: Issues: Read and write, and Pull requests: Read and write
 
 Pre-filled form for the frodo repositories (select only `rockcarver/frodo-lib` and `rockcarver/frodo-cli`):
 
-[Create SIGNAL_TOKEN](https://github.com/settings/personal-access-tokens/new?name=SIGNAL_TOKEN&description=Apply+and+remove+harness+labels+so+the+next+gate+starts&target_name=rockcarver&expires_in=90&issues=write)
+[Create SIGNAL_TOKEN](https://github.com/settings/personal-access-tokens/new?name=SIGNAL_TOKEN&description=Apply+and+remove+harness+labels+so+the+next+gate+starts&target_name=rockcarver&expires_in=90&issues=write&pull_requests=write)
 
 Store it as an organization secret named `SIGNAL_TOKEN`, visible to the repositories that run the harness. Or store a repository secret of that name in each repository.
 
@@ -303,7 +303,7 @@ When a maintainer removes `plan-approval-required` from a high-complexity issue,
 
 ### PR ready signal
 
-The coding agent cannot add labels, so a plain Actions workflow (no LLM) adds `pr-worker-ready` to its pull request when it finishes, which starts PR triage. Install it with the other plain workflows. It needs `SIGNAL_TOKEN` (Issues: Read and write) so the label event starts triage.
+The coding agent cannot add labels, so a plain Actions workflow (no LLM) adds `pr-worker-ready` to its pull request when it finishes, which starts PR triage. Install it with the other plain workflows. It needs `SIGNAL_TOKEN` (Issues and Pull requests: Read and write) so the label event starts triage. It sweeps every 15 minutes, so triage starts up to 15 minutes after the agent finishes. Triage itself (a `pull_request` run on a pull request the coding agent opened) then waits for a maintainer's "Approve and run workflows" like CI does, because of the repository's "Require approval for workflow runs" policy; that is the intended human step, and one click covers both.
 
 | From this repository | To the consuming repository |
 |----------------------|-----------------------------|
