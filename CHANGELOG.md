@@ -1,5 +1,12 @@
 # Changelog
 
+## [v1.0.10] - 2026-10-23
+
+### What's Changed
+* fix(pr-triage): give each label event its own concurrency group by @vscheuber in https://github.com/vscheuber/repo-concierge/pull/26
+
+**Full Changelog**: https://github.com/vscheuber/repo-concierge/compare/v1.0.9...v1.0.10
+
 ## [v1.0.9] - 2026-10-23
 
 ### What's Changed
