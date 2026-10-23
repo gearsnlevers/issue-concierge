@@ -1,5 +1,12 @@
 # Changelog
 
+## [v1.0.7] - 2026-10-23
+
+### What's Changed
+* fix(pr-gate): signal from the agent's timeline, and document the token it needs by @vscheuber in https://github.com/vscheuber/repo-concierge/pull/22
+
+**Full Changelog**: https://github.com/vscheuber/repo-concierge/compare/v1.0.6...v1.0.7
+
 ## [v1.0.6] - 2026-10-22
 
 ### What's Changed
