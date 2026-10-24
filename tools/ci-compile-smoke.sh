@@ -61,6 +61,17 @@ if ! activation_if "$tmp/.github/workflows/pr-worker.lock.yml" | grep -q "needs.
   echo "::error::pr-worker does not read the existing_fix outcome in its compiled activation condition"
   exit 1
 fi
+# Nothing waits for a release when nobody closed the issue with a pull request or a commit (frodo-cli#923,
+# docs/multi-phase-design.md, "Which closes count"): the waiting-for-release gate must read its guard step's
+# outcome in the compiled ACTIVATION condition, and the step must survive compilation as a non-failing step.
+if ! activation_if "$tmp/.github/workflows/waiting-for-release.lock.yml" | tr '\n' ' ' | tr -s ' ' | grep -qF "needs.pre_activation.outputs.closed_by_merge_result != 'failure'"; then
+  echo "::error::waiting-for-release does not read the closed_by_merge outcome in its compiled activation condition"
+  exit 1
+fi
+if ! grep -q "id: closed_by_merge" "$tmp/.github/workflows/waiting-for-release.lock.yml"; then
+  echo "::error::waiting-for-release lost its closed_by_merge step in the compiled lock"
+  exit 1
+fi
 # A blocking label stops the hand-off (docs/multi-phase-design.md, "Who may start when"): the PR worker is the
 # one gate that causes code, so a person's hold (`plan-approval-required`, also when it was added by hand) and
 # an unfinished dependency must be in its compiled ACTIVATION condition, not only in a prompt. Flatten the

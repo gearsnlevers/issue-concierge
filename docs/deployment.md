@@ -131,6 +131,7 @@ release:
 GitHub's close-on-merge stays in place. `Fixes #N` may close the issue. Release state is tracked with labels.
 
 - When an issue is closed by a merged pull request, `waiting-for-release` adds that label and a comment.
+- An issue a maintainer closes by hand (already fixed, no closing pull request or commit), as not planned or as a duplicate gets neither the label nor a comment: a step before the agent reads the close event and skips the run without a model call.
 - When a release includes it, `release-closer` replaces `waiting-for-release` with `released` and comments.
 - A delegated CLI issue stays open. When the library issue closes, it gets `waiting-for-release`. It is closed only when a CLI release pins the library version that contains the fix, and then it gets `released`.
 
@@ -230,6 +231,7 @@ Early gates use a light model and tight turn limits. Later gates keep the defaul
 | issue-triage | small | 8 | skip if related-repo/duplicate/spam |
 | plan-triage | small | 8 | |
 | related-repo-closer | small | 6 | |
+| waiting-for-release | small | 8 | 8 credits, 5 minutes; skipped before the model for closes by hand, not planned, duplicate; each lookup once |
 | plan-worker | default | — | |
 | pr-worker | default | — | |
 | pr-triage | default | — | |
