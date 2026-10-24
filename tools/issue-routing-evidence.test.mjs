@@ -13,16 +13,19 @@ import { applyCrossRepo } from '../scripts/concierge-updater.mjs';
 // worker then planned a wrong-layer fix and the coding agent started one (frodo-lib#785).
 //
 // These tests pin the prompt contract that answers it (docs/multi-phase-design.md, "Split-repo routing"):
-// decide from the text first and keep by default, use evidence only to CONFIRM a route (this repository first,
-// then the related one, never the outer wrapper message), say only what a tool call showed, start the routed
-// issue held, and let the plan gate say "Wrong layer" and stop. A prompt is the first layer: the hold label is
-// also pinned where it takes effect (the compiled lock, tools/ci-compile-smoke.sh).
+// decide from the report text and keep by default, route only when the report itself names the failing component
+// in the related repository (and quote it), never search to decide, say only what a tool call showed, start the
+// routed issue held, and let the plan gate say "Wrong layer" and stop. A prompt is the first layer: the hold
+// label is also pinned where it takes effect (the compiled lock, tools/ci-compile-smoke.sh).
 //
-// Why the evidence is not a search of both repositories for the error: a replay of 33 historical issues
-// (48 cells, one pass) showed that giving the model code-search hits on the outer error text or the command did
-// not help and, on the small model, hurt (A 78.8% to 72.7%, B 90.9% to 81.8%): hits in the library for wrapper
-// strings such as "Error authenticating user" pull it toward routing. The corrected rule text alone gave 90.9%
-// on both models. So evidence may only confirm a route the text already points to.
+// Why no search decides the routing: a replay of 33 historical issues (one pass per cell, the small and the
+// default model) showed that code-search hits did not help in any form. Handing the model hits for the outer
+// error text or the command hurt the small model (A 78.8% to AE 72.7%, B 90.9% to BE 81.8%); a confirm step
+// ("keep when the other repository also matches, route only when this one finds nothing") was worse still (C:
+// 75.8% on the small model, 81.8% on the default one; it routed 1 of 9 and 3 of 9 true library issues) because a
+// CLI command that wraps a library function matches in both repositories. The corrected rule text alone gave
+// 90.9% on both models. Under-routing is the cheap error (the plan gate reads the code and holds a wrong layer),
+// so the text decides and a keep needs no tool call.
 
 const REPO = new URL('..', import.meta.url);
 const read = (p) => fs.readFileSync(new URL(p, REPO), 'utf8');
@@ -46,11 +49,11 @@ const section = (text, heading) => {
 const worker = read('workflows/issue-worker.md');
 const workerPrompt = rendered(worker);
 const routing = section(workerPrompt, '## Related repositories (linked-issue flow)');
-const decide = section(routing, '### Decide from the text, confirm before you route');
+const decide = section(routing, '### Decide from the text');
 const create = section(routing, '### Create the linked issue');
 
 test('issue worker: the routing section decides before it creates anything', () => {
-  assert.ok(routing.indexOf('### Decide from the text, confirm before you route') < routing.indexOf('### Create the linked issue'));
+  assert.ok(routing.indexOf('### Decide from the text') < routing.indexOf('### Create the linked issue'));
   assert.match(routing, /Do this before you create anything\./);
 });
 
@@ -66,13 +69,13 @@ test('issue worker: it takes the innermost cause, not the wrapper another layer 
   assert.match(decide, /"Error getting tokens" around "EAGAIN: resource temporarily unavailable, read"/);
 });
 
-test('issue worker: it decides from the text first, keeps by default, and a keep needs no search', () => {
-  assert.match(decide, /Decide from the text first\./);
+test('issue worker: it decides from the text, keeps by default, and a keep needs no tool call', () => {
+  assert.match(decide, /Apply the layering the repository states\./);
   assert.match(decide, /a keyword in them, in the title or in a wrapper message \("authentication", "import", "config"\) decides nothing/);
   assert.match(decide, /The default is to keep the issue here/);
   assert.match(decide, /or you cannot tell, go on with the normal analysis below and skip the rest of this section/);
-  assert.match(decide, /A keep decision needs no search\./);
-  assert.ok(decide.indexOf('Decide from the text first.') < decide.indexOf('confirm before you route.'), 'the text decides before any search');
+  assert.match(decide, /A keep needs no tool call\./);
+  assert.match(decide, /Deciding where an issue belongs needs no search/);
 });
 
 test('issue worker: the layering a repository states outranks the `when` text and any keyword', () => {
@@ -81,55 +84,57 @@ test('issue worker: the layering a repository states outranks the `when` text an
   assert.match(decide, /do not open other files to find the layering/);
 });
 
-test('issue worker: a search only confirms a route the text already points to, one search per repository, together in one step', () => {
-  assert.match(decide, /Only when the text points to the related repository, confirm before you route\./);
-  assert.match(decide, /Make these two `search_code` calls together in one step and read the results in this order:/);
+test('issue worker: no search decides the routing: no mandatory search, no both-repositories rule, no order of searches', () => {
+  assert.doesNotMatch(decide, /`search_code`/, 'the routing section names no search tool');
+  assert.doesNotMatch(decide, /confirm before you route/);
+  assert.doesNotMatch(decide, /Make these two/);
+  assert.doesNotMatch(decide, /\(a\) in THIS repository|\(b\) in the related repository/, 'the old order of two searches is gone');
+  assert.doesNotMatch(decide, /If \(a\) finds|Route only when \(b\) finds/);
+  assert.doesNotMatch(decide, /When both searches find something/, 'the both-repositories-match rule almost never lets a worker route');
+  assert.doesNotMatch(decide, /at most two/);
+  assert.doesNotMatch(routing, /Look in both repositories\./, 'the first version searched both repositories for every issue');
+  assert.doesNotMatch(routing, /Use `search_code` in this repository and in the related one for that cause/);
+  assert.match(decide, /Do not search the code to decide this: a command here that wraps a library function matches in both repositories, so a search finds both and settles nothing\./);
+  assert.match(decide, /Never search to decide where an issue belongs\./);
   assert.match(decide, /Read the issue and its comments once\./);
   assert.match(decide, /Do not call `search_repositories`/);
-  assert.doesNotMatch(routing, /Look in both repositories\./, 'the old step searched both repositories for every issue');
-  assert.doesNotMatch(routing, /Use `search_code` in this repository and in the related one for that cause/);
-  assert.equal((decide.match(/`search_code`/g) ?? []).length, 2, 'the only searches in this section are the two of the confirm step');
 });
 
-test('issue worker: the verification looks in THIS repository first, then the related one, and never searches the outer wrapper', () => {
-  const a = decide.indexOf('(a) in THIS repository');
-  const b = decide.indexOf('(b) in the related repository');
-  assert.ok(a > 0 && b > a, '(a) this repository comes before (b) the related repository');
-  assert.match(decide, /\(a\) in THIS repository, for the innermost cause or the code path the report names: the system call, the identifier, the command file or the setting behind the error/);
-  assert.match(decide, /Never search for the outer wrapper message, and never for the error text the user saw on its own\./);
-  assert.match(decide, /\(b\) in the related repository, for the same cause or code path\./);
+test('issue worker: it routes only when the report itself names the failing component in the related repository', () => {
+  assert.match(decide, /Route only when the report itself names the failing component in the related repository: a stack-trace path or a package of that repository, that repository's own command or API as the call that failed, or an error that only that repository can produce, in the innermost position\./);
+  assert.match(decide, /A keyword from the `when` text, a wrapper message, or the name of a command that exists in both repositories is not enough\./);
 });
 
-test('issue worker: it routes only when the related repository holds the failing code and this one holds nothing', () => {
-  assert.match(decide, /If \(a\) finds the cause or a caller of it here, keep the issue here and ignore \(b\)\./);
-  assert.match(decide, /Route only when \(b\) finds the code that fails and \(a\) finds nothing\./);
-  assert.match(decide, /Hits only on a wrapper message, a generic word, a test or a document are not evidence\./);
-  assert.match(decide, /When both searches find something, or neither does, keep the issue here\./);
+test('issue worker: the rationale quotes the words that name the failing component, and HIGH needs the quote', () => {
+  assert.match(decide, /The `rationale` you give when you add `related-repo` quotes the words in the report that name the failing component in the related repository\./);
+  assert.match(decide, /A decision that rests on the `when` text, the title or a keyword has no such words and is a keep\./);
+  assert.match(decide, /Give `confidence: HIGH` only when the rationale quotes those words\./);
+  assert.match(decide, /Without a quote the confidence is MEDIUM or LOW, and the issue stays here\./);
 });
 
-test('issue worker: the rationale cites the path found in the related repository and what this one held, and HIGH needs both', () => {
-  assert.match(decide, /The `rationale` you give when you add `related-repo` names the file path found by \(b\) and says what \(a\) found/);
-  assert.match(decide, /has no evidence/);
-  assert.match(decide, /Give `confidence: HIGH` only when the rationale cites that file path and \(a\) found nothing here\./);
-  assert.match(decide, /Without such a path the confidence is never HIGH\./);
+test('issue worker: keeping is the safe side because the plan gate catches a wrong layer; the one allowed tool call is for a statement in the comment', () => {
+  assert.match(decide, /Keeping is the safe side\. The plan gate reads the code, and when its layer check finds that the fix belongs in the other repository it says so and holds the issue for a maintainer\./);
+  assert.match(decide, /An issue that stays here by mistake costs a comment; an issue routed by mistake costs a canonical issue and a plan in the wrong repository\./);
+  assert.match(decide, /make the one tool call that statement needs \(see "Say only what you checked" below\)/);
 });
 
-test('issue worker: missing or mixed evidence keeps the issue here and says which part might be elsewhere', () => {
-  assert.match(routing, /If you keep an issue after step 3 because the evidence is missing or mixed, skip the linked-issue steps below/);
+test('issue worker: an issue kept because the report names nothing in the related repository says which part might be elsewhere', () => {
+  assert.match(routing, /If you keep an issue because the report does not name a component of the related repository, skip the linked-issue steps below/);
   assert.match(routing, /say plainly in your comment which part might belong in the other repository and why/);
   assert.match(routing, /When in doubt, keep it here\./);
 });
 
-test('issue worker: the prompt states the turn budget, and it is the one in the frontmatter', () => {
-  const stated = decide.match(/You have (\d+) turns in all\./);
+test('issue worker: the prompt states the turn budget, it is the one in the frontmatter, and nothing in the section needs a search', () => {
+  const stated = decide.match(/you have (\d+) turns in all\./);
   assert.ok(stated, 'the turn budget is stated in the prompt');
   assert.equal(Number(stated[1]), Number(parts(worker).frontmatter.match(/^max-turns: (\d+)$/m)[1]), 'the prompt and the frontmatter agree');
-  assert.match(decide, /A routing decision needs at most two `search_code` calls, made together in one step/);
-  assert.match(decide, /If you are at turn 8 without the evidence below, keep the issue here\./);
+  assert.match(decide, /a keep and a route both fit the turns you already had/);
+  assert.doesNotMatch(decide, /turn 8/, 'no fallback for searches that are no longer made');
 });
 
-test('issue worker: the link steps only apply once the evidence shows the issue belongs elsewhere', () => {
-  assert.match(create, /When the evidence shows that the current issue belongs in a related repository:/);
+test('issue worker: the link steps only apply once the report names a failing component in the related repository', () => {
+  assert.match(create, /When the report names a failing component in the related repository, so the current issue belongs there:/);
+  assert.doesNotMatch(create, /When the evidence shows/);
   assert.match(create, /Set `temporary_id` to exactly `aw_canonical`/, 'the linked-issue contract moved with the steps');
 });
 
@@ -168,10 +173,10 @@ test('the updater keeps the hold when it generates the cross-repository settings
   assert.doesNotMatch(without, /github-token|allowed-repos/);
 });
 
-test('the budget of the issue worker is unchanged: the added searches fit the turns it already had', () => {
+test('the budget of the issue worker is unchanged: the routing decision adds no search and no turns', () => {
   const fm = parts(worker).frontmatter;
-  // Measured on cli#887: 7 of 10 turns, 1.03 AIC. A keep decision adds no search; a routing decision adds two
-  // searches made together in one step, after a single read of the issue.
+  // Measured on cli#887: 7 of 10 turns, 1.03 AIC. Neither a keep nor a route adds a search: the decision is made
+  // from the report text after a single read of the issue.
   assert.match(fm, /^max-turns: 10$/m);
   assert.match(fm, /^max-ai-credits: 16$/m);
   assert.match(fm, /^ {2}model: small$/m);
