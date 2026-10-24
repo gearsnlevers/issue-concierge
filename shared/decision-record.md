@@ -1,7 +1,9 @@
 <!--
 Template and guide for decision records in the CONSUMING repository, under `docs/decisions/` (not under
 .github/agentic-workflows/). One file per decision: `docs/decisions/NNNN-short-title.md`, numbered in order, plus an
-index `docs/decisions/README.md`. Delete this comment before you commit a record.
+index `docs/decisions/README.md`. If the repository's `docs/` is generated output that gets rewritten, use `decisions/`
+at the repository root instead (same file names, index `decisions/README.md`). The gates use the first of the two
+folders that has a `README.md` and never both. Delete this comment before you commit a record.
 
 The Concierge's plan and PR gates read the records from the default branch: the plan worker lists the ones that apply
 to a request (and says when the request conflicts with one), PR triage flags a change that does the opposite of an
@@ -62,6 +64,6 @@ No secrets: records are public wherever the repository is. No credentials, token
 details, or security findings that have not been disclosed. Keep those out of the record and refer to them as "a
 private note" if the decision depends on them.
 
-The index `docs/decisions/README.md` is a table with the number, the title (linked), the status and `applies-to`, one row
+The index `docs/decisions/README.md` (or `decisions/README.md` at the repository root when `docs/` is generated) is a table with the number, the title (linked), the status and `applies-to`, one row
 per record, newest last, kept in step by the pull request that adds the record.
 -->

@@ -51,10 +51,11 @@ Run the lint and test commands before you finish. <Say which step must come firs
 
 ## Decisions
 
-Design decisions live in `docs/decisions/` as records `NNNN-short-title.md`, listed in `docs/decisions/README.md`. An
-accepted record binds until a newer record supersedes it. Read the matching record before you change a decided behaviour;
-a change to it needs a new or superseding record in the same pull request (template: `shared/decision-record.md` of the
-Repo Concierge). Decisions that bind several repositories are listed here with a link: <none, or the list>.
+Design decisions live in `docs/decisions/` (or `decisions/` at the repository root when `docs/` is generated) as records
+`NNNN-short-title.md`, listed in the `README.md` of that folder. An accepted record binds until a newer record
+supersedes it. Read the matching record before you change a decided behaviour; a change to it needs a new or superseding
+record in the same pull request (template: `shared/decision-record.md` of the Repo Concierge). Decisions that bind
+several repositories are listed here with a link: <none, or the list>.
 
 ## Component rules
 

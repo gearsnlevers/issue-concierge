@@ -10,7 +10,8 @@
 //
 // It also prints notices, never failures, when the repository gives coding
 // agents no guidance file (AGENTS.md or .github/copilot-instructions.md) and
-// when it keeps no decision records (docs/decisions/).
+// when it keeps no decision records (docs/decisions/, or decisions/ at the
+// repository root when docs/ is generated).
 import fs from 'node:fs';
 import { parseRelatedRepos } from './dependency-watch.mjs';
 
@@ -34,17 +35,21 @@ export function checkGuidance(exists) {
   ];
 }
 
-/** Where a repository keeps its design decisions as records (docs/multi-phase-design.md, "Decision records"). */
-export const DECISIONS_DIR = 'docs/decisions';
+/**
+ * Where a repository keeps its design decisions as records, in the order the gates look for the index:
+ * docs/decisions/ first, then decisions/ at the repository root for a repository whose docs/ is generated
+ * (docs/multi-phase-design.md, "Decision records").
+ */
+export const DECISIONS_DIRS = ['docs/decisions', 'decisions'];
 
 /**
  * Notice (never an error) when the repository keeps no decision records.
  * `isDirectory` answers whether a path, relative to the repository root, is a directory.
  */
 export function checkDecisions(isDirectory) {
-  if (isDirectory(DECISIONS_DIR)) return [];
+  if (DECISIONS_DIRS.some((d) => isDirectory(d))) return [];
   return [
-    'Design decisions are not preserved for contributors and agents: docs/decisions/ does not exist (template: shared/decision-record.md in the Repo Concierge repository; see docs/deployment.md)',
+    'Design decisions are not preserved for contributors and agents: docs/decisions/ (or decisions/ at the repository root when docs/ is generated) does not exist (template: shared/decision-record.md in the Repo Concierge repository; see docs/deployment.md)',
   ];
 }
 

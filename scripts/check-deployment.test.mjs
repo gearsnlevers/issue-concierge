@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { checkDecisions, checkDeployment, checkGuidance, DECISIONS_DIR, GUIDANCE_FILES, main, readSafeOutputsConfig } from './check-deployment.mjs';
+import { checkDecisions, checkDeployment, checkGuidance, DECISIONS_DIRS, GUIDANCE_FILES, main, readSafeOutputsConfig } from './check-deployment.mjs';
 
 const RELATED = (secret = 'FRODO_CLI_ISSUES_TOKEN') => `
 this: rockcarver/frodo-lib
@@ -166,12 +166,20 @@ test('main: the notice never changes the outcome of the real checks', () => {
 // Decision records: a notice, never a failure.
 
 test('decision records: docs/decisions/ silences the notice, its absence gives exactly one', () => {
-  assert.equal(DECISIONS_DIR, 'docs/decisions');
+  assert.deepEqual(DECISIONS_DIRS, ['docs/decisions', 'decisions']);
   assert.deepEqual(checkDecisions((d) => d === 'docs/decisions'), []);
   const notices = checkDecisions(() => false);
   assert.equal(notices.length, 1);
-  assert.match(notices[0], /docs\/decisions\/ does not exist/);
+  assert.match(notices[0], /docs\/decisions\/ \(or decisions\/ at the repository root when docs\/ is generated\) does not exist/);
   assert.match(notices[0], /shared\/decision-record\.md/);
+});
+
+test('decision records: decisions/ at the repository root silences the notice too, and so does having both', () => {
+  assert.deepEqual(checkDecisions((d) => d === 'decisions'), []);
+  assert.deepEqual(checkDecisions((d) => d === 'decisions' || d === 'docs/decisions'), []);
+  // only directories count, and only these two places
+  assert.equal(checkDecisions((d) => d === 'decisions/README.md').length, 1);
+  assert.equal(checkDecisions((d) => d === 'docs').length, 1);
 });
 
 test('main: a repository without decision records gets the notice and still exits 0', () => {
@@ -193,6 +201,19 @@ test('main: docs/decisions/ silences the decision notice; a file of that name do
   const onlyDecisions = runMain({ 'docs/decisions/0001-x.md': 'x' });
   assert.doesNotMatch(onlyDecisions.out, /Design decisions are not preserved/);
   assert.match(onlyDecisions.out, /Coding agents get no repository guidance/);
+});
+
+test('main: decisions/ at the repository root silences the decision notice; a file of that name does not', () => {
+  const ok = runMain({ 'decisions/README.md': '# Decisions', 'AGENTS.md': '# Agents' });
+  assert.equal(ok.code, 0);
+  assert.doesNotMatch(ok.out, /::notice::/);
+  assert.match(runMain({ decisions: 'x', 'AGENTS.md': '# Agents' }).out, /Design decisions are not preserved/);
+  // a repository with generated docs/: the records live at the root, the guidance notice stays independent
+  const generatedDocs = runMain({ 'docs/api/index.html': 'x', 'decisions/0001-x.md': 'x' });
+  assert.doesNotMatch(generatedDocs.out, /Design decisions are not preserved/);
+  assert.match(generatedDocs.out, /Coding agents get no repository guidance/);
+  // the notice names both places
+  assert.match(runMain({}).out, /docs\/decisions\/ \(or decisions\/ at the repository root when docs\/ is generated\) does not exist/);
 });
 
 test('main: the decision notice never changes the outcome of the real checks', () => {

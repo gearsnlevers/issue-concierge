@@ -76,7 +76,7 @@ test('pr worker: one static sentence in custom-instructions tells the coding age
   assert.ok(block, 'custom-instructions block not found in the frontmatter');
   assert.match(
     block,
-    /Follow the repository's `AGENTS\.md`, the `\.github\/instructions` files that match the files you change and the accepted decision records in `docs\/decisions` that apply to them, and run the checks they list before the pull request is ready for review\./
+    /Follow the repository's `AGENTS\.md`, the `\.github\/instructions` files that match the files you change and the accepted decision records in `docs\/decisions` or `decisions` that apply to them, and run the checks they list before the pull request is ready for review\./
   );
 });
 

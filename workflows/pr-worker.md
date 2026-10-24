@@ -112,7 +112,7 @@ safe-outputs:
       A closing keyword is fine. `Fixes #N` may close the issue on merge. That is expected.
       When the pull request is opened (or updated and ready for review), add the label `pr-worker-ready` to the pull request. That label is the signal that the PR triage gate may run.
       Do not reimplement functionality that belongs to a dependency. If a dependency is not available in the version this repository pins, stop and comment on the issue instead of writing code.
-      Follow the repository's `AGENTS.md`, the `.github/instructions` files that match the files you change and the accepted decision records in `docs/decisions` that apply to them, and run the checks they list before the pull request is ready for review.
+      Follow the repository's `AGENTS.md`, the `.github/instructions` files that match the files you change and the accepted decision records in `docs/decisions` or `decisions` that apply to them, and run the checks they list before the pull request is ready for review.
       If the repository defines an environment agent, you may request it for test generation.
       Human review is required unless both complexity and risk are low.
   threat-detection:
