@@ -32,7 +32,7 @@ const worker = split(read('workflows/plan-worker.md'));
 test('plan triage: high complexity, high risk or both adds plan-approval-required and no handoff', () => {
   const s = section(triage.body, 'Approval gate');
   assert.match(s, /^If complexity is high, or risk is high, or both: - Add the label `plan-approval-required`\. - Do \*\*not\*\* emit `plan-triage-handoff`\./);
-  assert.match(s, /Otherwise emit `plan-triage-handoff`\./);
+  assert.match(s, /Otherwise, and unless the issue already carries `plan-approval-required` \(see "A hold that is already there"\), emit `plan-triage-handoff`\./);
 });
 
 test('plan triage: the comment names the reason and says how to resume', () => {
@@ -97,19 +97,19 @@ test('plan worker: the repository guidance section and the plan contents are sti
 test('docs: the gate, the labels and the routing matrix say high risk stops too', () => {
   const design = flat(read('docs/multi-phase-design.md'));
   assert.match(design, /For high complexity or high risk it adds the internal label `plan-approval-required` and stops\./);
-  assert.match(design, /It acts only on an open issue that carries `complexity\/high` or `risk\/high`/);
+  assert.match(design, /It acts only on an open issue that plan triage has classified \(it carries `complexity\/high` or `risk\/high`, or both a `complexity\/\*` and a `risk\/\*` label with any value/);
   assert.match(design, /A removal made by a bot account never counts, because approval is a human decision\./);
   assert.match(design, /If complexity is high or risk is high, add `plan-approval-required` and do not emit `plan-triage-handoff`/);
   assert.match(design, /human review is still required unless both complexity and risk are low/);
 
   const readme = flat(read('README.md'));
-  assert.match(readme, /High complexity or high risk adds `plan-approval-required`\./);
-  assert.match(readme, /Added by plan triage for high complexity or high risk\./);
+  assert.match(readme, /High complexity or high risk adds `plan-approval-required`, and a maintainer can add it by hand to any issue to read the plan first/);
+  assert.match(readme, /Added by plan triage for high complexity or high risk, or by a maintainer by hand\./);
   assert.match(readme, /\| Low \| Agent \+ auto-merge eligible \| Agent \+ human review \| Stop until `plan-approval-required` is removed/);
   assert.match(readme, /\| Medium \| Agent \+ human review \| Agent \+ human review \| Stop until `plan-approval-required` is removed/);
 
   const deployment = flat(read('docs/deployment.md'));
-  assert.match(deployment, /removes `plan-approval-required` from a high-complexity or high-risk issue/);
-  assert.match(deployment, /High complexity or high risk: remove to resume/);
+  assert.match(deployment, /removes `plan-approval-required` from an issue plan triage has classified/);
+  assert.match(deployment, /Hold for approval \(also by hand\): nothing is assigned; remove to resume/);
   assert.match(deployment, /"High risk\. Remove the plan-approval-required label to resume\."/);
 });

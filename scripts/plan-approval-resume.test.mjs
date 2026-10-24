@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { decide, resume, isBot, MARKER } from './plan-approval-resume.mjs';
+import { decide, resume, isBot, isClassified, MARKER } from './plan-approval-resume.mjs';
 
 const issue = (labels, extra = {}) => ({ state: 'open', labels: labels.map((name) => ({ name })), ...extra });
 
@@ -26,7 +26,7 @@ test('never hands off when approval is still required (label re-added)', () => {
   assert.equal(decide(issue(['complexity/high', 'plan-approval-required']), 'plan-approval-required').handoff, false);
 });
 
-test('needs a high-complexity plan: a hand-applied approval label alone does not count', () => {
+test('needs a classified plan: a hand-applied approval label on an unclassified issue does not count', () => {
   assert.equal(decide(issue(['complexity/low']), 'plan-approval-required').handoff, false);
   assert.equal(decide(issue([]), 'plan-approval-required').handoff, false);
 });
@@ -94,11 +94,62 @@ test('high risk: never hands off when approval is still required (label re-added
   assert.equal(decide(issue(['complexity/low', 'risk/high', 'plan-approval-required']), 'plan-approval-required').handoff, false);
 });
 
-test('medium complexity and medium risk alone are not a plan to approve', () => {
-  const v = decide(issue(['complexity/medium', 'risk/medium']), 'plan-approval-required');
-  assert.equal(v.handoff, false);
-  assert.match(v.reason, /no high-complexity or high-risk plan/);
-  assert.equal(decide(issue(['complexity/low', 'risk/low']), 'plan-approval-required').handoff, false);
+// ---- a hold put on by hand: any classified plan can be approved ---------------------------------
+
+test('isClassified needs one complexity label and one risk label, whatever their values', () => {
+  assert.equal(isClassified(new Set(['complexity/low', 'risk/low'])), true);
+  assert.equal(isClassified(new Set(['complexity/high', 'risk/medium'])), true);
+  assert.equal(isClassified(new Set(['complexity/medium'])), false);
+  assert.equal(isClassified(new Set(['risk/medium'])), false);
+  assert.equal(isClassified(new Set(['bug', 'plan-approval-required'])), false);
+  assert.equal(isClassified(new Set()), false);
+});
+
+test('removing a hand-added hold hands a classified low or medium issue on (cli#885: low and medium)', () => {
+  for (const labels of [
+    ['complexity/low', 'risk/medium'],
+    ['complexity/medium', 'risk/medium'],
+    ['complexity/low', 'risk/low'],
+    ['complexity/medium', 'risk/low'],
+  ]) {
+    assert.deepEqual(decide(issue(['bug', ...labels]), 'plan-approval-required', 'maintainer'), {
+      handoff: true,
+      reason: 'approval removed',
+    }, labels.join(' '));
+  }
+});
+
+test('an issue plan triage has not classified is not resumed: that is plan triage\'s to do', () => {
+  for (const labels of [[], ['bug'], ['complexity/low'], ['complexity/medium'], ['risk/low'], ['risk/medium']]) {
+    const v = decide(issue(labels), 'plan-approval-required', 'maintainer');
+    assert.equal(v.handoff, false, labels.join(' ') || '(no labels)');
+    assert.match(v.reason, /plan triage has not classified the issue yet/);
+  }
+});
+
+test('a classified low or medium issue is still left alone for a bot remover, a dependency, a hand-off or an agent', () => {
+  const base = ['complexity/low', 'risk/medium'];
+  assert.equal(decide(issue(base), 'plan-approval-required', 'github-actions[bot]').handoff, false);
+  assert.equal(decide(issue([...base, 'dependency-required']), 'plan-approval-required', 'maintainer').handoff, false);
+  assert.equal(decide(issue([...base, 'plan-triage-handoff']), 'plan-approval-required', 'maintainer').handoff, false);
+  assert.equal(decide(issue(base, { assignees: [{ login: 'Copilot' }] }), 'plan-approval-required', 'maintainer').handoff, false);
+  assert.equal(decide(issue(base, { state: 'closed' }), 'plan-approval-required', 'maintainer').handoff, false);
+  assert.equal(decide(issue(base, { pull_request: {} }), 'plan-approval-required', 'maintainer').handoff, false);
+  // the hold re-added, or an unrelated label removed
+  assert.equal(decide(issue([...base, 'plan-approval-required']), 'plan-approval-required', 'maintainer').handoff, false);
+  assert.equal(decide(issue(base), 'backlog', 'maintainer').handoff, false);
+});
+
+test('resume applies the handoff label exactly once for a classified medium issue', () => {
+  const calls = [];
+  const ctx = { removedLabel: 'plan-approval-required', actor: 'maintainer', addLabel: (l) => calls.push(['label', l]), comment: (b) => calls.push(['comment', b]) };
+  const v = resume(issue(['complexity/medium', 'risk/medium']), ctx);
+  assert.equal(v.handoff, true);
+  assert.deepEqual(calls[0], ['label', 'plan-triage-handoff']);
+  assert.equal(calls.length, 2);
+  calls.length = 0;
+  resume(issue(['complexity/medium']), ctx);
+  assert.deepEqual(calls, [], 'a plan with only a complexity label is not classified');
 });
 
 test('high risk: waits while a dependency is unfinished', () => {

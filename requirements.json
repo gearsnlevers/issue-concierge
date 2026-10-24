@@ -37,7 +37,7 @@
     {
       "name": "plan-approval-required",
       "color": "b60205",
-      "description": "High complexity or high risk: remove to resume (`plan-approval-resume` starts the PR gate)"
+      "description": "Hold for approval (also by hand): nothing is assigned; remove to resume (`plan-approval-resume`)"
     },
     {
       "name": "needs-info",

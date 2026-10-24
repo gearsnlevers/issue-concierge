@@ -308,7 +308,7 @@ It runs hourly, on demand, when `dependency-required` is added, and on the event
 
 ### Plan approval resume
 
-When a maintainer removes `plan-approval-required` from a high-complexity or high-risk issue, a second plain Actions workflow (no LLM) hands the issue to the PR gate. Without it, removing the label does nothing. Install it in every deployment. Copy two files:
+When a maintainer removes `plan-approval-required` from an issue plan triage has classified (high complexity or high risk, which plan triage holds itself, or any classification when the maintainer added the hold by hand), a second plain Actions workflow (no LLM) hands the issue to the PR gate. Without it, removing the label does nothing. The hold itself is enforced by the PR worker, which assigns no coding agent to an issue that carries it. Install it in every deployment. Copy two files:
 
 | From this repository | To the consuming repository |
 |----------------------|-----------------------------|
@@ -450,7 +450,7 @@ The workflows apply and react to specific labels. Create them once per repositor
 | `risk/low` | `0e8a16` | Limited blast radius |
 | `risk/medium` | `fbca04` | Normal code changes |
 | `risk/high` | `d93f0b` | Security, auth, data integrity, availability, or public API impact |
-| `plan-approval-required` | `b60205` | High complexity or high risk: remove to resume (`plan-approval-resume` starts the PR gate) |
+| `plan-approval-required` | `b60205` | Hold for approval (also by hand): nothing is assigned; remove to resume (`plan-approval-resume`) |
 | `needs-info` | `d4c5f9` | Missing reproduction steps or details |
 | `backlog` | `c5def5` | Valid but not urgent; do not plan or implement now |
 | `low-hanging-fruit` | `bfdadc` | Valid but not urgent, small and low risk; handed to the plan gate anyway |
@@ -513,6 +513,7 @@ Low/low pull requests that carry `pr-triage-handoff` and pass required checks ca
 - If the repository has a `scope.md`, open a request that is clearly excluded and confirm it is declined and closed as not planned (`out-of-scope`), and one near the boundary and confirm it gets `scope-review` and stays open.
 - For an actionable issue, confirm a plan comment appears (its raw body ends with the hidden `gh-aw-workflow-call-id: owner/repo/plan-worker` comment, with the real repository), that complexity/risk labels are applied, and that the plan triage run did not end in a `noop` saying it could not identify the plan.
 - For an issue that plan triage rates high risk (a change to authentication, say) even though its complexity is low, confirm it gets `plan-approval-required` and the comment "High risk. Remove the plan-approval-required label to resume.", and no `plan-triage-handoff`; then remove the label yourself and confirm `plan-approval-resume` hands the issue to the PR gate. For a bug report that contains an error or stack trace, confirm the plan says how the cause was checked, or marks it "Hypothesis (unverified)".
+- Add `plan-approval-required` by hand to an open, low-risk issue that has a plan comment, then add `plan-worker-ready` so that plan triage classifies it: confirm it gets complexity and risk labels, no `plan-triage-handoff` and no comment. Add `plan-triage-handoff` by hand and confirm the PR worker run ends without an assignment and the label is gone again. Remove the hold and confirm `plan-approval-resume` hands the issue to the PR gate and the coding agent is assigned. A hold added to an issue that plan triage has not classified is not resumed by removing it: re-add `plan-worker-ready` first.
 - Add a gate label (for example `plan-triage-handoff`) to a closed issue and confirm no workflow runs an agent. Open an issue that an open pull request already closes (`Fixes #N` in its body), add `plan-triage-handoff`, and confirm no coding agent is assigned and the issue gets one comment naming the pull request that already closes the issue; close that pull request, add the label again and confirm the hand-off goes through.
 - For a low/low item, confirm a pull request is opened and can auto-merge after checks.
 - For a split-repo case, confirm a canonical issue is created, the original receives `related-repo`, and the original is closed when the canonical issue closes.
