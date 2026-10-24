@@ -61,6 +61,16 @@ if ! activation_if "$tmp/.github/workflows/pr-worker.lock.yml" | grep -q "needs.
   echo "::error::pr-worker does not read the existing_fix outcome in its compiled activation condition"
   exit 1
 fi
+# A blocking label stops the hand-off (docs/multi-phase-design.md, "Who may start when"): the PR worker is the
+# one gate that causes code, so a person's hold (`plan-approval-required`, also when it was added by hand) and
+# an unfinished dependency must be in its compiled ACTIVATION condition, not only in a prompt. Flatten the
+# whitespace first: gh-aw wraps the condition.
+for label in plan-approval-required dependency-required; do
+  if ! activation_if "$tmp/.github/workflows/pr-worker.lock.yml" | tr '\n' ' ' | tr -s ' ' | grep -qF "!contains(github.event.issue.labels.*.name, '$label')"; then
+    echo "::error::pr-worker does not stop at $label in its compiled activation condition"
+    exit 1
+  fi
+done
 # Prompt rendering (docs/multi-phase-design.md, "Plan comment identity"): gh-aw removes HTML comments when it
 # renders a prompt, so the text plan triage must find has to be plain text. The compiled lock does not hold the
 # prompt: it imports the .md at run time, so the prompt is the source minus its HTML comments. If a future gh-aw

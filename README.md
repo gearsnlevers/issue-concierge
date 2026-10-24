@@ -59,7 +59,7 @@ The workflows are named `Concierge <code> [▸ ]<Name>` so they sort in the orde
 
 Gate labels are signals, not history: when the next signal exists the earlier gate label is removed, so an issue shows where it is now, and when an issue closes the labels that describe open work go too (the janitor, plain Actions, no LLM). The janitor also deletes the held runs the coding agent leaves behind that approving cannot make useful (the `Issue Worker` run per comment, the `Dependabot Auto-Merge` run per push, and the runs of commits its pull request has moved past), so the one run left to approve is the pipeline run for the newest commit. See [docs/multi-phase-design.md](docs/multi-phase-design.md#label-lifecycle) for the full table.
 
-High complexity or high risk adds `plan-approval-required`. When a maintainer removes that label, `plan-approval-resume` (plain Actions, no LLM) applies `plan-triage-handoff` and the PR gate starts. See [docs/multi-phase-design.md](docs/multi-phase-design.md).
+High complexity or high risk adds `plan-approval-required`, and a maintainer can add it by hand to any issue to read the plan first: the PR worker assigns no coding agent while it is present. When a maintainer removes that label, `plan-approval-resume` (plain Actions, no LLM) applies `plan-triage-handoff` and the PR gate starts. See [docs/multi-phase-design.md](docs/multi-phase-design.md).
 
 Valid but non-urgent issues receive `backlog` and do not enter the plan gate, with one exception: a low-hanging fruit (the issue worker judges the change small and low in risk, which is low complexity and low risk) receives `low-hanging-fruit` and is handed to the plan gate anyway. Plan triage then makes the real complexity and risk call. To move a `backlog` issue forward by hand, remove `backlog` and add `issue-triage-handoff`.
 
@@ -89,7 +89,7 @@ Create these in consuming repositories (full list and colors in [docs/deployment
 | `risk/low` | Risk | Limited blast radius |
 | `risk/medium` | Risk | Normal code changes |
 | `risk/high` | Risk | Security, auth, data integrity, availability, or public API impact |
-| `plan-approval-required` | Gate | Added by plan triage for high complexity or high risk. Removing it resumes the issue (`plan-approval-resume` hands it to the PR gate) |
+| `plan-approval-required` | Gate | Added by plan triage for high complexity or high risk, or by a maintainer by hand. Nothing is assigned while it is present. Removing it resumes the issue (`plan-approval-resume` hands it to the PR gate) |
 | `needs-info` | Quality | Missing reproduction steps or details |
 | `dependency-required` | Gate | Issue declares a dependency that is not finished; the watcher removes it (see [shared/dependencies.md](shared/dependencies.md)) |
 | `dependency-satisfied` | Gate | Dependencies finished (or cleared by a maintainer); issue triage lets the issue through |

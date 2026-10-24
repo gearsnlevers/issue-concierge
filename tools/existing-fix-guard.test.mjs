@@ -106,7 +106,7 @@ const AsyncFunction = Object.getPrototypeOf(async () => {}).constructor;
 const guard = new AsyncFunction('github', 'context', 'core', scriptOf(prWorker.frontmatter));
 
 async function runGuard({ number = 887, graphql, createComment } = {}) {
-  const seen = { failed: [], warnings: [], comments: [], queries: [] };
+  const seen = { failed: [], warnings: [], comments: [], queries: [], removed: [] };
   const core = { setFailed: (m) => seen.failed.push(m), warning: (m) => seen.warnings.push(m) };
   const github = {
     graphql: async (query, vars) => {
@@ -119,6 +119,9 @@ async function runGuard({ number = 887, graphql, createComment } = {}) {
           seen.comments.push(c);
           if (createComment) return createComment(c);
         },
+        removeLabel: async (c) => {
+          seen.removed.push(c.name);
+        },
       },
     },
   };
@@ -130,8 +133,10 @@ async function runGuard({ number = 887, graphql, createComment } = {}) {
   }
   return seen;
 }
-const answer = (state, prs = []) => async () => ({
-  repository: { issue: { state, closedByPullRequestsReferences: { nodes: prs } } },
+const answer = (state, prs = [], labels = []) => async () => ({
+  repository: {
+    issue: { state, labels: { nodes: labels.map((name) => ({ name })) }, closedByPullRequestsReferences: { nodes: prs } },
+  },
 });
 
 test('guard: an open issue with no closing pull request passes silently', async () => {
@@ -154,6 +159,8 @@ test('guard: an open pull request that closes the issue blocks the hand-off and 
   assert.equal(seen.comments.length, 1);
   assert.equal(seen.comments[0].issue_number, 887);
   assert.match(seen.comments[0].body, /#896 is already open and will close this issue when it merges/);
+  // the blocked hand-off is void: its label goes, so handing the issue on again starts a fresh run
+  assert.deepEqual(seen.removed, ['plan-triage-handoff']);
   // the comment is plain language: no internal terms
   assert.doesNotMatch(seen.comments[0].body, /label|gate|handoff|worker/i);
 });
