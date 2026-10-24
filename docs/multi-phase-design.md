@@ -38,6 +38,7 @@ The Actions sidebar sorts workflows by display name, so the names carry the orde
 | `Concierge 1a ▸ Issue Worker` | an issue is opened, edited or commented (and by hand for one issue) |
 | `Concierge 1b Issue Triage` | `issue-worker-ready` |
 | `Concierge 1c ▸ Dependency Watch` | hourly, on dependency events, and on demand |
+| `Concierge 1d ▸ Reporter Notify` | `needs-info` is applied to a linked issue (and by hand for one issue) |
 | `Concierge 2a Plan Worker` | `issue-triage-handoff` |
 | `Concierge 2b Plan Triage` | `plan-worker-ready` |
 | `Concierge 2c ▸ Plan Approval Resume` | a maintainer removes `plan-approval-required` (and by hand) |
@@ -190,6 +191,19 @@ When a repository defines `.github/agentic-workflows/related-repos.md`:
 3. It applies the internal label `related-repo` to the original issue and does not emit `issue-worker-ready`.
 4. The original issue stays open. Issue triage ignores it for planning.
 5. When the canonical issue is closed, `related-repo-closer` closes the original issue with a short notice.
+6. When the canonical issue needs more information from the reporter, `reporter-notify` mentions the person who reported the original issue (see below).
+
+**Who is told.** The canonical issue is created by the harness, so its author is not the reporter, and GitHub only notifies people who take part in a thread. Without a mention, the reporter would never see a request for information on the linked issue. GitHub cannot subscribe another user to an issue; being mentioned in a comment is what subscribes a user to the thread. The mention is written by a plain Actions workflow, `reporter-notify` (no LLM), not by the issue worker: gh-aw's output step neutralizes every `@handle` in an agent's comment except the people who take part in the event, so a mention the model wrote for the original reporter would reach nobody. The issue worker's prompt therefore tells the model not to write one.
+
+`reporter-notify` runs when `needs-info` is applied to an open issue (issue triage applies it when the worker's comment asks for details). It posts one comment that starts with `@{login}`, thanks the reporter, and points at the request above. The login is the author of the original issue as GitHub returns it, never a name found in text, because issue text is written by whoever opens the issue and a crafted report could otherwise make the bot mention anyone. It acts only when all of these hold, and says why it skipped otherwise:
+
+- The issue body has a `Reported from {owner}/{repo}#{number}` line, and that repository is a related repository listed in this repository's `related-repos.md`.
+- The original issue can be read (a private or deleted original is skipped silently), is not a pull request, and still carries `related-repo`. Removing that label is how a maintainer unlinks the two issues, and it stops the notifications.
+- The original issue has a comment by `github-actions[bot]` that names this issue (`owner/repo#number`, as a whole reference). Anyone can write a `Reported from` line; only the harness writes that comment, so a link to someone else's issue fails here.
+- Exactly one linked original passes, and its author is a person (not a bot, an app or the coding agent).
+- The author has not commented on this issue yet, and this request (the latest comment of this repository's issue worker) has not been mentioned before. A reporter who answers is a participant from then on and gets GitHub's normal notifications.
+
+The comment contains exactly one mention and no internal terms. It does not trigger the issue worker, which ignores comments by bots. If the original repository is private, nothing is posted.
 
 **How the comment names the new issue.** The worker cannot know the canonical issue's number while it writes the comment, because safe outputs run after the agent finishes. It therefore gives the `create-issue` output the fixed temporary id `aw_canonical` and writes `#aw_canonical` in the comment, with no owner or repository in front of it. gh-aw registers the id when it creates the issue and then replaces every `#aw_canonical` with the full reference (`owner/repo#number` for another repository). Two things break this, and `tools/issue-worker-linked-issue.test.mjs` pins both: an id the model invents instead of the one it set (the placeholder stays in the comment, as on frodo-cli#694, which read `rockcarver/frodo-lib#aw_lib694`), and a repository written in front of the token (gh-aw would double the prefix).
 
