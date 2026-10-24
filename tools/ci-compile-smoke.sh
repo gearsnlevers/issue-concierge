@@ -61,4 +61,21 @@ if ! activation_if "$tmp/.github/workflows/pr-worker.lock.yml" | grep -q "needs.
   echo "::error::pr-worker does not read the existing_fix outcome in its compiled activation condition"
   exit 1
 fi
+# Prompt rendering (docs/multi-phase-design.md, "Plan comment identity"): gh-aw removes HTML comments when it
+# renders a prompt, so the text plan triage must find has to be plain text. The compiled lock does not hold the
+# prompt: it imports the .md at run time, so the prompt is the source minus its HTML comments. If a future gh-aw
+# inlines the prompt, look in the lock instead.
+marker='gh-aw-workflow-call-id: owner/repo/plan-worker'
+for name in plan-triage plan-worker; do
+  lock="$tmp/.github/workflows/$name.lock.yml"
+  if grep -q "{{#runtime-import .github/workflows/$name.md}}" "$lock"; then
+    prompt="$tmp/.github/workflows/$name.md"
+  else
+    prompt="$lock"
+  fi
+  if ! perl -0pe 's/<!--.*?-->//gs' "$prompt" | grep -qF "$marker"; then
+    echo "::error::the rendered $name prompt does not contain '$marker' (an HTML comment is removed by gh-aw)"
+    exit 1
+  fi
+done
 echo "compiled $count workflow definitions with gh-aw $version"
