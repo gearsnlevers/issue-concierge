@@ -324,14 +324,14 @@ When a maintainer removes `plan-approval-required` from an issue plan triage has
 
 ### Reporter notify
 
-When an issue was opened from another repository (a split-repo case, see below), a request for information on it never reaches the person who reported the original, because they do not take part in the linked issue. A plain Actions workflow (no LLM) mentions them once, with the login read from the original issue, after the original confirms the link. Install it in every repository that has a `related-repos.md` and receives linked issues.
+When an issue was opened from another repository (a split-repo case, see below), nothing written on it reaches the person who reported the original, because they do not take part in the linked issue. A plain Actions workflow (no LLM) mentions them, with the login read from the original issue, after the original confirms the link: once when the issue is linked, and once for each request for information. Install it in every repository that has a `related-repos.md` and receives linked issues.
 
 | From this repository | To the consuming repository |
 |----------------------|-----------------------------|
 | `workflows/reporter-notify.yml` | `.github/workflows/reporter-notify.yml` |
 | `scripts/reporter-notify.mjs` | `.github/scripts/reporter-notify.mjs` |
 
-It imports `janitor.mjs`, so install that too. It needs no secret: it reads the original issue with the workflow token, so it works for public related repositories only (a private original is skipped). It runs when `needs-info` is applied, or by hand for one issue (the issue must carry `needs-info`). It does not run for issues that are not linked. The rules are in [multi-phase-design.md](multi-phase-design.md#split-repo-routing-linked-issues). To stop notifications for a pair of linked issues, remove `related-repo` from the original issue.
+It imports `janitor.mjs`, so install that too. It needs no secret: it reads the original issue with the workflow token, so it works for public related repositories only (a private original is skipped). It runs when a linked issue (one with a `Reported from` line) is opened or gets `plan-approval-required`, `issue-worker-ready` or `needs-info`, or by hand for one issue. It waits a few seconds, at most four checks 15 seconds apart, for the original to confirm the link, because the issue worker labels the original just after it creates the linked issue. It does not run for issues that are not linked. The rules are in [multi-phase-design.md](multi-phase-design.md#split-repo-routing-linked-issues). To stop notifications for a pair of linked issues, remove `related-repo` from the original issue.
 
 ### PR ready signal
 
@@ -535,7 +535,7 @@ Low/low pull requests that carry `pr-triage-handoff` and pass required checks ca
 - Add `plan-approval-required` by hand to an open, low-risk issue that has a plan comment, then add `plan-worker-ready` so that plan triage classifies it: confirm it gets complexity and risk labels, no `plan-triage-handoff` and no comment. Add `plan-triage-handoff` by hand and confirm the PR worker run ends without an assignment and the label is gone again. Remove the hold and confirm `plan-approval-resume` hands the issue to the PR gate and the coding agent is assigned. A hold added to an issue that plan triage has not classified is not resumed by removing it: re-add `plan-worker-ready` first.
 - Add a gate label (for example `plan-triage-handoff`) to a closed issue and confirm no workflow runs an agent. Open an issue that an open pull request already closes (`Fixes #N` in its body), add `plan-triage-handoff`, and confirm no coding agent is assigned and the issue gets one comment naming the pull request that already closes the issue; close that pull request, add the label again and confirm the hand-off goes through.
 - For a low/low item, confirm a pull request is opened and can auto-merge after checks.
-- For a split-repo case, confirm a canonical issue is created, the original receives `related-repo`, and the original is closed when the canonical issue closes. Open the test report from an account that is not a maintainer, make the linked issue ask for more information (leave out a required detail), and confirm that one comment on the linked issue mentions the reporter and points at the request. Remove `related-repo` from the original and confirm no further comment appears.
+- For a split-repo case, confirm a canonical issue is created, the original receives `related-repo`, and the original is closed when the canonical issue closes. Open the test report from an account that is not a maintainer and confirm that the linked issue gets one comment right after it is created that starts `Original report:` and mentions the reporter. Make the linked issue ask for more information (leave out a required detail), and confirm that one comment on the linked issue mentions the reporter and points at the request. Remove `related-repo` from the original and confirm no further comment appears.
 
 ## Updating deployments
 
