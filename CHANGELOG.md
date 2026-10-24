@@ -1,5 +1,12 @@
 # Changelog
 
+## [v1.0.18] - 2026-10-24
+
+### What's Changed
+* Gates read the repository's decision records (docs/decisions) by @vscheuber in https://github.com/vscheuber/repo-concierge/pull/39
+
+**Full Changelog**: https://github.com/vscheuber/repo-concierge/compare/v1.0.17...v1.0.18
+
 ## [v1.0.17] - 2026-10-24
 
 ### What's Changed
