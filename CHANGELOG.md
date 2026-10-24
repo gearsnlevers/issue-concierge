@@ -1,5 +1,12 @@
 # Changelog
 
+## [v1.0.16] - 2026-10-24
+
+### What's Changed
+* Plan triage: describe the plan marker in text that survives prompt rendering by @vscheuber in https://github.com/vscheuber/repo-concierge/pull/36
+
+**Full Changelog**: https://github.com/vscheuber/repo-concierge/compare/v1.0.15...v1.0.16
+
 ## [v1.0.15] - 2026-10-23
 
 ### What's Changed
