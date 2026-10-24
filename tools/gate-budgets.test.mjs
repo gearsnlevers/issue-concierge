@@ -6,7 +6,8 @@ import fs from 'node:fs';
 // so it has to match what runs really use (docs/multi-phase-design.md, "Repository guidance", Cost).
 // Measured on 2026-10-23: plan worker 12.6 to 15.0 AIC, PR triage 12.3 to 20.4 AIC, plus about
 // 2.5 AIC for reading the repository guidance, and up to about 2 AIC more when the plan worker reads a
-// file to check a bug's cause (worst case about 19.5 AIC).
+// file to check a bug's cause (worst case about 19.5 AIC), and about 1 AIC more for reading decision records
+// (docs/multi-phase-design.md, "Decision records", Cost): PR triage 20.4 + 2.5 + 1 reaches about 24, so it has 28.
 
 const REPO = new URL('..', import.meta.url);
 const credits = (workflow) => {
@@ -17,8 +18,8 @@ const credits = (workflow) => {
   return Number(m[1]);
 };
 
-test('pr-triage budget covers the largest measured run plus the guidance overhead', () => {
-  assert.ok(credits('pr-triage') >= 24, `pr-triage max-ai-credits is ${credits('pr-triage')}`);
+test('pr-triage budget covers the largest measured run plus the guidance and decision-record overhead', () => {
+  assert.ok(credits('pr-triage') >= 28, `pr-triage max-ai-credits is ${credits('pr-triage')}`);
 });
 
 test('plan-worker budget covers its largest measured run plus the guidance overhead and a cause check', () => {

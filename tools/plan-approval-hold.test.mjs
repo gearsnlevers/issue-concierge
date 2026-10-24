@@ -188,7 +188,7 @@ test('plan triage: a hold that is already there is classified but never hands of
 });
 
 test('plan triage: the approval gate points at the exception and the label allow-list still holds everything it needs', () => {
-  assert.match(flat(rawSection(triage.body, 'Approval gate')), /Otherwise, and unless the issue already carries `plan-approval-required` \(see "A hold that is already there"\), emit `plan-triage-handoff`\./);
+  assert.match(flat(rawSection(triage.body, 'Approval gate')), /Otherwise, and unless the issue already carries `plan-approval-required` \(see "A hold that is already there"\) or the plan reports a conflict with a decision record \(see "A conflict with a decision record"\), emit `plan-triage-handoff`\./);
   for (const label of ['complexity/low', 'risk/high', 'plan-approval-required', 'plan-triage-handoff']) {
     assert.match(triage.frontmatter, new RegExp(`^      - ${label.replace('/', '\\/')}$`, 'm'));
   }
