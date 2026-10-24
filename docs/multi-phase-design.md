@@ -138,13 +138,15 @@ A repository tells its contributors, human and agent, how to work on it in files
 ## Plan comment identity
 
 The plan lives as a single comment on the issue.  
-gh-aw injects a non-spoofable marker:
+gh-aw appends hidden HTML comments to every comment a workflow posts. The one that identifies the plan names the repository and the workflow:
 
 ```html
-<!-- gh-aw-workflow-id: plan-worker -->
+<!-- gh-aw-workflow-call-id: owner/repo/plan-worker -->
 ```
 
-`plan-triage` classifies only the comment that contains that marker.
+`plan-triage` classifies only the comment written by `github-actions[bot]` whose body contains that text (`gh-aw-workflow-call-id: owner/repo/plan-worker`, with the real repository). The author check matters: a person can type the same text into a comment, so the text alone does not prove who wrote it.
+
+The prompt describes the marker in words and never shows it as an HTML comment. gh-aw removes HTML comments, even inside a code fence, when it renders a workflow's prompt (the agent sees an empty fence), so a prompt that relied on one gave plan triage no marker to look for: on 2026-10-23 it ended without labels on frodo-cli#886 ("the marker value is blank in my instructions") and worked on other issues only because the model guessed which comment was the plan. A test fails if a workflow prompt contains an HTML comment (`tools/prompt-hazards.test.mjs`). The marker in this paragraph is documentation for humans, not part of any prompt.
 
 ## Human interaction
 

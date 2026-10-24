@@ -184,6 +184,7 @@ Local edits are preserved by the 3-way merge performed by `gh aw update`.
 
 - Inference cost depends on the chosen engine.
 - Set `max-ai-credits` and `timeout-minutes` on every workflow. Early gates use smaller budgets.
+- Never rely on an HTML comment in a workflow prompt: gh-aw removes them, even inside a code fence, when it renders the prompt. Describe the text in words instead (`tools/prompt-hazards.test.mjs` enforces this).
 - Monitor with `gh aw logs` and `gh aw audit`.
 
 ## Next Steps
