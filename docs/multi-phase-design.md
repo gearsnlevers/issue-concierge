@@ -245,7 +245,7 @@ When a repository defines `.github/agentic-workflows/related-repos.md`:
 
 Both notices use the same proof. The login is the author of the original issue as GitHub returns it, never a name found in text, because issue text is written by whoever opens the issue and a crafted report could otherwise make the bot mention anyone. It acts only when all of these hold, and says why it skipped otherwise:
 
-- The issue body has a `Reported from {owner}/{repo}#{number}` line, and that repository is a related repository listed in this repository's `related-repos.md`.
+- The issue body has a `Reported from {owner}/{repo}#{number}` line (at the start of a line; a note may follow the number, as the worker wrote on frodo-lib#806, because the line only names a candidate that the later rules confirm), and that repository is a related repository listed in this repository's `related-repos.md`.
 - The original issue can be read (a private or deleted original is skipped silently), is not a pull request, and still carries `related-repo`. Removing that label is how a maintainer unlinks the two issues, and it stops the notifications.
 - The original issue has a comment by `github-actions[bot]` that names this issue (`owner/repo#number`, as a whole reference). Anyone can write a `Reported from` line; only the harness writes that comment, so a link to someone else's issue fails here.
 - Exactly one linked original passes, and its author is a person (not a bot, an app or the coding agent), not a maintainer of the original repository (`OWNER`, `MEMBER` or `COLLABORATOR` as GitHub reports the author's association; they already follow the work) and not the person who opened this issue (they take part already).

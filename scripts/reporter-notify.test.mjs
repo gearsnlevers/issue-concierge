@@ -555,3 +555,22 @@ test('a new request for information is still told once, after the link notice', 
   assert.equal(notify(iss, w.ctx).notified, false);
   assert.equal(w.posted.length, 3, 'one link notice and one notice per request, no more');
 });
+
+test('parseLinks: a note after the number on the same line is fine (the worker wrote one on frodo-lib#806), nothing else changes', () => {
+  const refs = (body) => parseLinks(body).map((l) => l.ref);
+  assert.deepEqual(refs('Reported from rockcarver/frodo-cli#922 (the original report, with full A/B and stress-test evidence, is there).'), ['rockcarver/frodo-cli#922']);
+  assert.deepEqual(refs('Reported from a/b#1.'), ['a/b#1']);
+  assert.deepEqual(refs('Reported from a/b#1   '), ['a/b#1']);
+  assert.deepEqual(refs('Reported from a/b#1abc'), [], 'the number must end at the number');
+  assert.deepEqual(refs('Reported from a/b#12-3'), [], 'the number must end at the number');
+  assert.deepEqual(refs('note: Reported from a/b#1'), [], 'still has to start the line');
+  assert.deepEqual(refs('Reported from a/b#1 and Reported from c/d#2'), ['a/b#1'], 'a link inside the note is not a link');
+});
+
+test('link notice: works for the body the worker really wrote on frodo-lib#806', () => {
+  const w = world();
+  const body = 'Reported from rockcarver/frodo-cli#887 (the original report, with full A/B and stress-test evidence, is there).\n\n## Summary\ntext';
+  const r = notifyLink(linked({ body }), w.ctx);
+  assert.equal(r.notified, true);
+  assert.equal(r.login, 'phalestrivir');
+});

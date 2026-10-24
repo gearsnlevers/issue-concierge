@@ -106,6 +106,7 @@ test('design: the link notice, why the reporter may be mentioned twice, and the 
   assert.match(design, /a comment written with the workflow token starts no workflow/);
   assert.match(design, /linked issue was created at 20:45:51\.96, `related-repo` was added at 20:45:53\.16 and the comment named frodo-lib#783 at 20:45:54\.97, about three seconds later/);
   assert.match(design, /at most four checks, 15 seconds apart, and only while that is the single reason for skipping/);
+  assert.match(design, /a note may follow the number, as the worker wrote on frodo-lib#806/);
   assert.match(design, /The incident behind the link notice\.\*\* On 2026-10-24 the worker opened frodo-lib#803 to #806 from frodo-cli#919 to #922\./);
 });
 

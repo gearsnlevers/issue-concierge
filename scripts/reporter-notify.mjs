@@ -25,8 +25,11 @@ const MAINTAINER_ASSOCIATIONS = new Set(['OWNER', 'MEMBER', 'COLLABORATOR']);
 const MAX_LINKS = 3;
 const MAX_PAGES = 5;
 
-// The line the issue worker writes: `Reported from owner/repo#123`, alone on its line.
-const LINK_LINE = /^[ \t]*Reported from ([A-Za-z0-9][A-Za-z0-9-]{0,38})\/([A-Za-z0-9._-]{1,100})#([1-9][0-9]{0,8})[ \t]*$/gm;
+// The line the issue worker writes: `Reported from owner/repo#123` at the start of a line. The model
+// sometimes adds a note after the number ("Reported from rockcarver/frodo-cli#922 (the original report
+// ... is there)." on frodo-lib#806), so a note may follow. That costs nothing in safety: the line only
+// names a candidate, the login comes from the original issue, and the original must confirm the link.
+const LINK_LINE = /^[ \t]*Reported from ([A-Za-z0-9][A-Za-z0-9-]{0,38})\/([A-Za-z0-9._-]{1,100})#([1-9][0-9]{0,8})[.,;:]?(?:[ \t]+\S.*)?[ \t]*$/gm;
 
 const lower = (s) => String(s || '').toLowerCase();
 const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
