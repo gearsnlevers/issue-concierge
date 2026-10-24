@@ -1,5 +1,13 @@
 # Changelog
 
+## [v1.0.17] - 2026-10-24
+
+### What's Changed
+* Plan gate: a hold added by hand stops the PR worker, and removing it resumes the issue by @vscheuber in https://github.com/vscheuber/repo-concierge/pull/37
+* Mention the original reporter when a linked issue needs information by @vscheuber in https://github.com/vscheuber/repo-concierge/pull/38
+
+**Full Changelog**: https://github.com/vscheuber/repo-concierge/compare/v1.0.16...v1.0.17
+
 ## [v1.0.16] - 2026-10-24
 
 ### What's Changed
