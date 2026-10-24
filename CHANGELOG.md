@@ -1,5 +1,13 @@
 # Changelog
 
+## [v1.0.19] - 2026-10-24
+
+### What's Changed
+* docs: agent skills for releasing and for changing a gate by @vscheuber in https://github.com/vscheuber/repo-concierge/pull/40
+* Issue routing: decide from the report text, start routed issues held, check the layer at the plan gate by @vscheuber in https://github.com/vscheuber/repo-concierge/pull/41
+
+**Full Changelog**: https://github.com/vscheuber/repo-concierge/compare/v1.0.18...v1.0.19
+
 ## [v1.0.18] - 2026-10-24
 
 ### What's Changed
