@@ -76,7 +76,7 @@ test('pr worker: one static sentence in custom-instructions tells the coding age
   assert.ok(block, 'custom-instructions block not found in the frontmatter');
   assert.match(
     block,
-    /Follow the repository's `AGENTS\.md` and the `\.github\/instructions` files that match the files you change, and run the checks they list before the pull request is ready for review\./
+    /Follow the repository's `AGENTS\.md`, the `\.github\/instructions` files that match the files you change and the accepted decision records in `docs\/decisions` that apply to them, and run the checks they list before the pull request is ready for review\./
   );
 });
 
@@ -84,7 +84,7 @@ test('pr worker: still static, still no reading of untrusted content', () => {
   assert.doesNotMatch(prWorker.frontmatter, /min-integrity/);
   assert.doesNotMatch(prWorker.frontmatter, /^tools:/m);
   assert.match(prWorker.body, /Do not read the issue, its comments or its labels/);
-  assert.match(prWorker.body, /follow the repository's own guidance and run its checks/);
+  assert.match(prWorker.body, /follow the repository's own guidance and decision records and run its checks/);
   assert.match(prWorker.body, /are configured as `custom-instructions` on the safe output and are sent with the assignment; do not write or repeat them/);
 });
 
@@ -111,7 +111,7 @@ test('pr triage: reports one "Repository rules:" line and does not repeat what C
   assert.match(s, /the violations found, each as the rule, the file it comes from and the path in the diff; "no violations found"; or "no guidance file"/);
   assert.match(s, /When there is a violation, mention it in the recommended next action/);
   assert.match(s, /Do not repeat what the rules say CI checks; at most write "enforced by CI"/);
-  assert.match(flat(triage.body), /Post a short comment stating the final labels, the "Repository rules:" line and the recommended next action/);
+  assert.match(flat(triage.body), /Post a short comment stating the final labels, the "Repository rules:" line, the "Decisions:" line and the recommended next action/);
 });
 
 test('pr triage: advisory only, and it ranks below the safety policy and the workflow rules', () => {
@@ -130,7 +130,9 @@ test('pr triage: the section sits before the handoff, which still comes last', (
 
 test('template: shared/agents.md is short and covers the six areas, the three boundary tiers and the concierge boundary', () => {
   const t = read('shared/agents.md');
-  assert.ok(t.trimEnd().split('\n').length <= 60, 'the template must stay at 60 lines or fewer');
+  // The leading comment is for the person who copies the template and is deleted; what is left becomes AGENTS.md.
+  const asAgentsMd = t.replace(/^<!--[\s\S]*?-->\n+/, '');
+  assert.ok(asAgentsMd.trimEnd().split('\n').length <= 60, 'the template without its leading comment must stay at 60 lines or fewer');
   for (const h of ['Commands', 'Testing', 'Project structure', 'Code style', 'Git and pull requests', 'Boundaries']) {
     assert.match(t, new RegExp(`^## ${h}$`, 'm'), `missing area: ${h}`);
   }

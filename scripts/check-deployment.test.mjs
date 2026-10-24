@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { checkDeployment, checkGuidance, GUIDANCE_FILES, main, readSafeOutputsConfig } from './check-deployment.mjs';
+import { checkDecisions, checkDeployment, checkGuidance, DECISIONS_DIR, GUIDANCE_FILES, main, readSafeOutputsConfig } from './check-deployment.mjs';
 
 const RELATED = (secret = 'FRODO_CLI_ISSUES_TOKEN') => `
 this: rockcarver/frodo-lib
@@ -144,13 +144,13 @@ test('main: a repository without guidance gets a notice and still exits 0, with 
 
   const other = runMain({ 'README.md': 'x' });
   assert.equal(other.code, 0);
-  assert.match(other.out, /::notice::/);
+  assert.match(other.out, /^::notice::Coding agents get no repository guidance/m);
 });
 
 test('main: AGENTS.md or copilot-instructions.md silences the notice; a directory of that name does not', () => {
-  assert.doesNotMatch(runMain({ 'AGENTS.md': '# Agents' }).out, /::notice::/);
-  assert.doesNotMatch(runMain({ '.github/copilot-instructions.md': 'x' }).out, /::notice::/);
-  assert.match(runMain({ 'AGENTS.md': null }).out, /::notice::/);
+  assert.doesNotMatch(runMain({ 'AGENTS.md': '# Agents' }).out, /Coding agents get no repository guidance/);
+  assert.doesNotMatch(runMain({ '.github/copilot-instructions.md': 'x' }).out, /Coding agents get no repository guidance/);
+  assert.match(runMain({ 'AGENTS.md': null }).out, /Coding agents get no repository guidance/);
 });
 
 test('main: the notice never changes the outcome of the real checks', () => {
@@ -161,4 +161,43 @@ test('main: the notice never changes the outcome of the real checks', () => {
   assert.match(failing.out, /::error::/);
   assert.match(failing.out, /::notice::/);
   assert.equal(runMain({ '.github/agentic-workflows/related-repos.md': related, 'AGENTS.md': 'x' }).code, 1);
+});
+
+// Decision records: a notice, never a failure.
+
+test('decision records: docs/decisions/ silences the notice, its absence gives exactly one', () => {
+  assert.equal(DECISIONS_DIR, 'docs/decisions');
+  assert.deepEqual(checkDecisions((d) => d === 'docs/decisions'), []);
+  const notices = checkDecisions(() => false);
+  assert.equal(notices.length, 1);
+  assert.match(notices[0], /docs\/decisions\/ does not exist/);
+  assert.match(notices[0], /shared\/decision-record\.md/);
+});
+
+test('main: a repository without decision records gets the notice and still exits 0', () => {
+  const bare = runMain({});
+  assert.equal(bare.code, 0);
+  assert.match(bare.out, /^::notice::Design decisions are not preserved for contributors and agents/m);
+
+  const withGuidance = runMain({ 'AGENTS.md': '# Agents' });
+  assert.equal(withGuidance.code, 0);
+  assert.match(withGuidance.out, /^::notice::Design decisions are not preserved/m);
+  assert.doesNotMatch(withGuidance.out, /Coding agents get no repository guidance/);
+});
+
+test('main: docs/decisions/ silences the decision notice; a file of that name does not; the two notices are independent', () => {
+  const ok = runMain({ 'docs/decisions/README.md': '# Decisions', 'AGENTS.md': '# Agents' });
+  assert.equal(ok.code, 0);
+  assert.doesNotMatch(ok.out, /::notice::/);
+  assert.match(runMain({ 'docs/decisions': 'x', 'AGENTS.md': '# Agents' }).out, /Design decisions are not preserved/);
+  const onlyDecisions = runMain({ 'docs/decisions/0001-x.md': 'x' });
+  assert.doesNotMatch(onlyDecisions.out, /Design decisions are not preserved/);
+  assert.match(onlyDecisions.out, /Coding agents get no repository guidance/);
+});
+
+test('main: the decision notice never changes the outcome of the real checks', () => {
+  const related = 'this: a/b\n\nrelated:\n  - role: cli\n    repo: a/c\n    secret: C_TOKEN\n    when: |\n      x\n';
+  const failing = runMain({ '.github/agentic-workflows/related-repos.md': related, 'AGENTS.md': '# Agents' });
+  assert.equal(failing.code, 1);
+  assert.match(failing.out, /Design decisions are not preserved/);
 });

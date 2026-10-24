@@ -67,6 +67,8 @@ A repository can add `.github/agentic-workflows/scope.md` (template: [shared/sco
 
 A repository can also tell coding agents how to work on it, in the files they already load: `AGENTS.md` at the root (template: [shared/agents.md](shared/agents.md)), `.github/copilot-instructions.md`, and `.github/instructions/*.instructions.md` with `applyTo` globs. The plan worker lists the rules that apply to a change in its plan, the PR worker tells the coding agent to follow them, and PR triage adds a "Repository rules:" line to its comment. Both gates read the default branch only, so a pull request cannot weaken the rules it is judged by, and the guidance stays advisory: it never changes a label, a gate or an approval. Without the files nothing changes, and `check-deployment` only prints a notice. See [docs/multi-phase-design.md](docs/multi-phase-design.md#repository-guidance).
 
+A repository can also keep its design decisions as records in `docs/decisions/` (`NNNN-short-title.md` files, an index, frontmatter with a `status:` and optional `applies-to:` globs; template: [shared/decision-record.md](shared/decision-record.md)). The plan worker lists the accepted records that apply to a request and says when the request conflicts with one, which makes plan triage hold the issue for a maintainer's decision; the PR worker tells the coding agent to follow them, and PR triage adds a "Decisions:" line to its comment. Both gates read the default branch only, and a record never changes a label, a gate or an approval. Without the folder nothing changes, and `check-deployment` only prints a notice. See [docs/multi-phase-design.md](docs/multi-phase-design.md#decision-records).
+
 The harness only processes work from people. `issue-worker`, `issue-triage`, `plan-worker`, `plan-triage`, `pr-worker`, `related-repo-closer` and `waiting-for-release` skip issues authored by a bot (for example the `[aw] ... failed` issues gh-aw files about its own failures), and `issue-worker` also skips bot comments and comments on pull requests. The check is an activation condition, so a skipped event costs no AI credits. To process a bot-authored issue on purpose, run **Issue Worker** from the Actions tab with its issue number.
 
 An issue that declares `Depends on:` an unfinished issue or pull request receives `dependency-required` and stops at the issue gate. `dependency-watch` resolves it deterministically (no LLM) and resumes the issue, within a minute of a same-repository dependency merging or closing. For split-repo projects, a library dependency counts only when it is merged, released, installable, and pinned by the consuming repository. See [shared/dependencies.md](shared/dependencies.md).
@@ -179,7 +181,8 @@ Local edits are preserved by the 3-way merge performed by `gh aw update`.
     ├── complexity.md
     ├── risk.md
     ├── env-agent-contract.md
-    └── agents.md
+    ├── agents.md
+    └── decision-record.md
 ```
 
 ## Operational Notes

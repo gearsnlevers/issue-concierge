@@ -36,5 +36,6 @@ files:
   - shared/related-repos.md
   - shared/scope.md
   - shared/agents.md
+  - shared/decision-record.md
   - docs/multi-phase-design.md
   - docs/deployment.md

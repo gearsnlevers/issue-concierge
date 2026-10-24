@@ -8,8 +8,9 @@
 // It cannot tell whether the secret exists or what the token may do; that is a
 // manual check (docs/deployment.md).
 //
-// It also prints a notice, never a failure, when the repository gives coding
-// agents no guidance file (AGENTS.md or .github/copilot-instructions.md).
+// It also prints notices, never failures, when the repository gives coding
+// agents no guidance file (AGENTS.md or .github/copilot-instructions.md) and
+// when it keeps no decision records (docs/decisions/).
 import fs from 'node:fs';
 import { parseRelatedRepos } from './dependency-watch.mjs';
 
@@ -30,6 +31,20 @@ export function checkGuidance(exists) {
   if (GUIDANCE_FILES.some((f) => exists(f))) return [];
   return [
     'Coding agents get no repository guidance: neither AGENTS.md nor .github/copilot-instructions.md exists (template: shared/agents.md in the Repo Concierge repository; see docs/deployment.md)',
+  ];
+}
+
+/** Where a repository keeps its design decisions as records (docs/multi-phase-design.md, "Decision records"). */
+export const DECISIONS_DIR = 'docs/decisions';
+
+/**
+ * Notice (never an error) when the repository keeps no decision records.
+ * `isDirectory` answers whether a path, relative to the repository root, is a directory.
+ */
+export function checkDecisions(isDirectory) {
+  if (isDirectory(DECISIONS_DIR)) return [];
+  return [
+    'Design decisions are not preserved for contributors and agents: docs/decisions/ does not exist (template: shared/decision-record.md in the Repo Concierge repository; see docs/deployment.md)',
   ];
 }
 
@@ -117,8 +132,17 @@ const isFile = (p) => {
   }
 };
 
+const isDirectory = (p) => {
+  try {
+    return fs.statSync(p).isDirectory();
+  } catch {
+    return false;
+  }
+};
+
 export function main(cwd = process.cwd()) {
   for (const notice of checkGuidance((f) => isFile(`${cwd}/${f}`))) console.log(`::notice::${notice}`);
+  for (const notice of checkDecisions((d) => isDirectory(`${cwd}/${d}`))) console.log(`::notice::${notice}`);
   const relatedPath = `${cwd}/.github/agentic-workflows/related-repos.md`;
   if (!fs.existsSync(relatedPath)) {
     console.log('No .github/agentic-workflows/related-repos.md: nothing to check.');
