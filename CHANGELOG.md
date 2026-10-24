@@ -1,5 +1,12 @@
 # Changelog
 
+## [v1.0.20] - 2026-10-24
+
+### What's Changed
+* feat(reporter-notify): tell the original reporter when a linked issue is created by @vscheuber in https://github.com/vscheuber/repo-concierge/pull/42
+
+**Full Changelog**: https://github.com/vscheuber/repo-concierge/compare/v1.0.19...v1.0.20
+
 ## [v1.0.19] - 2026-10-24
 
 ### What's Changed
