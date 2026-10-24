@@ -87,16 +87,19 @@ If `.github/agentic-workflows/related-repos.md` exists, read it.
 
 Where an issue belongs is decided by where the code that has to change lives. The `when` text and the notes in that file describe how the project is layered. They tell you where to look. They are never evidence by themselves.
 
-### Decide from evidence
-Do this before you create anything. Read the issue and its comments once. Do not call `search_repositories`: the repositories are named in the file. Run the two searches in step 2 in the same step.
+### Decide from the text, confirm before you route
+Do this before you create anything. Read the issue and its comments once. Do not call `search_repositories`: the repositories are named in the file. You have 10 turns in all. A keep decision needs no search. A routing decision needs at most two `search_code` calls, made together in one step; do not open other files to find the layering. If you are at turn 8 without the evidence below, keep the issue here.
 
 1. Take the cause, not the wrapper. From the report take the innermost error: the last message of an error chain or stack trace, a system error code, or the place a stack trace names. When there is no error, take the behavior described and the command or feature it belongs to. A message that one layer wraps around a failure from another layer (for example "Error getting tokens" around "EAGAIN: resource temporarily unavailable, read") only says where the failure was caught, not where it started.
-2. Look in both repositories. Use `search_code` in this repository and in the related one for that cause, or for the code path the report names (the command, the function or the setting). Open a file only when a result needs it.
-3. Apply the layering the repository states. If its `AGENTS.md` or an accepted decision record says which layer owns what (for example that a library has no terminal or prompt code), apply that statement to the cause you took. It outranks the `when` text.
-4. Cite what you found. The `rationale` you give when you add `related-repo` names at least one file path from step 2 and says what the code there does. A decision that rests on the `when` text, the title or a keyword such as "authentication" has no evidence.
-5. Be sure before you say HIGH. Give `confidence: HIGH` only when the rationale cites a file path from step 2 and that code is what has to change. Without such a path the confidence is never HIGH.
+2. Decide from the text first. The `when` text and the notes in the file are a guide to where to look, never evidence by themselves; a keyword in them, in the title or in a wrapper message ("authentication", "import", "config") decides nothing. Apply the layering the repository states: the ownership lists in the file, and `AGENTS.md` or an accepted decision record when the file points to them (for example that a library has no terminal or prompt code). That statement outranks the `when` text and any keyword. The default is to keep the issue here: if the cause as you took it in step 1 is something this repository owns, or you cannot tell, go on with the normal analysis below and skip the rest of this section.
+3. Only when the text points to the related repository, confirm before you route. Make these two `search_code` calls together in one step and read the results in this order:
+   - (a) in THIS repository, for the innermost cause or the code path the report names: the system call, the identifier, the command file or the setting behind the error. Never search for the outer wrapper message, and never for the error text the user saw on its own.
+   - (b) in the related repository, for the same cause or code path.
+   If (a) finds the cause or a caller of it here, keep the issue here and ignore (b). Route only when (b) finds the code that fails and (a) finds nothing. Hits only on a wrapper message, a generic word, a test or a document are not evidence. When both searches find something, or neither does, keep the issue here.
+4. Cite what you found. The `rationale` you give when you add `related-repo` names the file path found by (b) and says what (a) found (for example "nothing in this repository"). A decision that rests on the `when` text, the title or a keyword has no evidence.
+5. Be sure before you say HIGH. Give `confidence: HIGH` only when the rationale cites that file path and (a) found nothing here. Without such a path the confidence is never HIGH.
 
-If the evidence is missing, mixed (the cause is found in both repositories) or only a keyword matched, the issue stays in this repository: skip the linked-issue steps below, say plainly in your comment which part might belong in the other repository and why, and continue with the normal analysis. A maintainer or the plan gate can still move it. When in doubt, keep it here.
+If you keep an issue after step 3 because the evidence is missing or mixed, skip the linked-issue steps below, say plainly in your comment which part might belong in the other repository and why, and continue with the normal analysis. A maintainer or the plan gate can still move it. When in doubt, keep it here.
 
 ### Create the linked issue
 When the evidence shows that the current issue belongs in a related repository:
