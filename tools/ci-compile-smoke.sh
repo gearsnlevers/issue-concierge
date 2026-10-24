@@ -71,6 +71,23 @@ for label in plan-approval-required dependency-required; do
     exit 1
   fi
 done
+# A routed issue starts held (docs/multi-phase-design.md, "Split-repo routing"): the canonical issue the issue
+# worker opens in a related repository must carry the hold in the compiled safe-output configuration, where it
+# takes effect, not only in a prompt. The settings the updater generates from related-repos.md are not needed here.
+node -e '
+const fs = require("fs");
+const line = fs.readFileSync(process.argv[1], "utf8").split("\n").find((l) => l.includes("GH_AW_SAFE_OUTPUTS_HANDLER_CONFIG:"));
+if (!line) { console.error("no safe-output handler configuration in the compiled issue-worker lock"); process.exit(1); }
+const cfg = JSON.parse(JSON.parse(line.slice(line.indexOf(": ") + 2).trim()));
+const labels = cfg.create_issue && cfg.create_issue.labels;
+if (JSON.stringify(labels) !== JSON.stringify(["plan-approval-required"])) {
+  console.error("create_issue labels are " + JSON.stringify(labels));
+  process.exit(1);
+}
+' "$tmp/.github/workflows/issue-worker.lock.yml" || {
+  echo "::error::the issue worker's canonical issue does not start with the plan-approval-required hold in its compiled configuration"
+  exit 1
+}
 # Prompt rendering (docs/multi-phase-design.md, "Plan comment identity"): gh-aw removes HTML comments when it
 # renders a prompt, so the text plan triage must find has to be plain text. The compiled lock does not hold the
 # prompt: it imports the .md at run time, so the prompt is the source minus its HTML comments. If a future gh-aw

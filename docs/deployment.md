@@ -76,6 +76,8 @@ notes: |
 
 When the worker links an issue it creates a canonical issue in the related repository, cross-links both sides, and applies the internal label `related-repo` to the original. The original stays open until the canonical issue is closed, at which point `related-repo-closer` closes it.
 
+The canonical issue starts with the label `plan-approval-required`, so a maintainer reads its plan and removes the label before a coding agent starts. Install the Concierge in the related repository too (the updater creates the label), or create the label there, so the hold exists and is honored. Why, and how to switch it off: [multi-phase-design.md](multi-phase-design.md#split-repo-routing-linked-issues).
+
 
 
 The related-repo closer runs in the repository that owns the fix and writes to the original issue. `SIGNAL_TOKEN` cannot do that. On `add-comment`, `add-labels`, and `close-issue`, set both `github-token` to the secret named in this repository's `related-repos.md` for the other repository, and `allowed-repos` to that repository:
