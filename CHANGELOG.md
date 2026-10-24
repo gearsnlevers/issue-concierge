@@ -1,5 +1,12 @@
 # Changelog
 
+## [v1.0.21] - 2026-10-24
+
+### What's Changed
+* fix: Waiting for Release skips hand closes and stops re-reading the same pull request by @vscheuber in https://github.com/vscheuber/repo-concierge/pull/43
+
+**Full Changelog**: https://github.com/vscheuber/repo-concierge/compare/v1.0.20...v1.0.21
+
 ## [v1.0.20] - 2026-10-24
 
 ### What's Changed
