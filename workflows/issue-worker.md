@@ -52,6 +52,10 @@ safe-outputs:
     target: "*"
   create-issue:
     max: 1
+    # The canonical issue starts held: a maintainer reads its plan and removes the label to release it
+    # (docs/multi-phase-design.md, "Split-repo routing"). A routing mistake then costs a comment, not a pull request.
+    labels:
+      - plan-approval-required
     # concierge:cross-repo
   threat-detection:
     enabled: true
@@ -81,7 +85,21 @@ Determine what makes an issue meaningful by reading, in order:
 ## Related repositories (linked-issue flow)
 If `.github/agentic-workflows/related-repos.md` exists, read it.
 
-When the current issue clearly belongs in a related repository (per the `when` text):
+Where an issue belongs is decided by where the code that has to change lives. The `when` text and the notes in that file describe how the project is layered. They tell you where to look. They are never evidence by themselves.
+
+### Decide from evidence
+Do this before you create anything. Read the issue and its comments once. Do not call `search_repositories`: the repositories are named in the file. Run the two searches in step 2 in the same step.
+
+1. Take the cause, not the wrapper. From the report take the innermost error: the last message of an error chain or stack trace, a system error code, or the place a stack trace names. When there is no error, take the behavior described and the command or feature it belongs to. A message that one layer wraps around a failure from another layer (for example "Error getting tokens" around "EAGAIN: resource temporarily unavailable, read") only says where the failure was caught, not where it started.
+2. Look in both repositories. Use `search_code` in this repository and in the related one for that cause, or for the code path the report names (the command, the function or the setting). Open a file only when a result needs it.
+3. Apply the layering the repository states. If its `AGENTS.md` or an accepted decision record says which layer owns what (for example that a library has no terminal or prompt code), apply that statement to the cause you took. It outranks the `when` text.
+4. Cite what you found. The `rationale` you give when you add `related-repo` names at least one file path from step 2 and says what the code there does. A decision that rests on the `when` text, the title or a keyword such as "authentication" has no evidence.
+5. Be sure before you say HIGH. Give `confidence: HIGH` only when the rationale cites a file path from step 2 and that code is what has to change. Without such a path the confidence is never HIGH.
+
+If the evidence is missing, mixed (the cause is found in both repositories) or only a keyword matched, the issue stays in this repository: skip the linked-issue steps below, say plainly in your comment which part might belong in the other repository and why, and continue with the normal analysis. A maintainer or the plan gate can still move it. When in doubt, keep it here.
+
+### Create the linked issue
+When the evidence shows that the current issue belongs in a related repository:
 
 The `secret` field on that entry names the Actions secret the workflow uses to create the issue. You do not use the secret. You only create the issue in the related repository.
 
@@ -89,6 +107,7 @@ The `secret` field on that entry names the Actions secret the workflow uses to c
    - Set `temporary_id` to exactly `aw_canonical`. Do not choose another id and do not leave it out.
    - Title: same as the original, or a clear summary.
    - Body: include the original report and a line `Reported from {owner}/{repo}#{number}`. This is the original issue, whose number you know.
+   - Do not set labels on it. The system opens it with the hold label `plan-approval-required`; a maintainer removes that label after reading its plan.
 2. On the original (non-canonical) issue:
    - Post a plain-language comment. You cannot know the new issue's number yet, so refer to it only as `#aw_canonical`. Write exactly that token: no owner or repository in front of it, no number of your own, and never another `#aw_` id. After the issue is created the system replaces `#aw_canonical` with the full reference (`owner/repo#number`).
      If the related entry has `release.requires_consumer_release: true`:
@@ -119,6 +138,8 @@ When you hesitate between out of scope and unclear, choose unclear. Never call a
 Read the issue body **and every comment**.
 Post a short, plain-language comment. Do not mention labels, gates, workflows, or any internal harness terms.
 
+Say only what you checked. Every statement in the comment about the code, a commit, a pull request or another issue must come from a tool call you made in this run. If you did not look, leave the statement out, or say that you did not check. A guess is never allowed, and neither is a "nothing has changed" or "nothing touches this" that no search or listing in this run showed.
+
 Cover, in ordinary language:
 - Whether the report is clear enough to act on
 - Whether the request fits the project's scope, only when a scope file exists and the answer is not simply yes
@@ -129,8 +150,10 @@ Cover, in ordinary language:
 Use the issue's creation date as the line.
 
 1. From the report, name the files or subsystem that would have to change.
-2. Look at commits and merged pull requests that touch those files after the issue was opened.
-3. Read the current code for the reported behavior.
+2. Look at commits and merged pull requests that touch those files after the issue was opened (`list_commits`, `search_commits` or `search_pull_requests`).
+3. Read the current code for the reported behavior (`search_code`, `get_file_contents`).
+
+Run steps 2 and 3 as tool calls. If you did not run them, write nothing about whether the behavior is fixed, still present or cannot be reproduced; do not guess. Never write that no change touches a file or subsystem unless a listing or search in this run showed it.
 
 Then say one of these, plainly:
 

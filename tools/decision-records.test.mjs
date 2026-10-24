@@ -113,7 +113,7 @@ test('plan triage: it never lifts the hold itself, and the approval gate points 
   assert.match(s, /You never lift this hold yourself: removing the label is the maintainer's decision, and `plan-approval-resume` hands the issue on/);
   assert.match(
     section(planTriage.body, 'Approval gate'),
-    /Otherwise, and unless the issue already carries `plan-approval-required` \(see "A hold that is already there"\) or the plan reports a conflict with a decision record \(see "A conflict with a decision record"\), emit `plan-triage-handoff`\./
+    /Otherwise, and unless the issue already carries `plan-approval-required` \(see "A hold that is already there"\), the plan reports a conflict with a decision record \(see "A conflict with a decision record"\) or the plan reports a wrong layer \(see "A wrong layer"\), emit `plan-triage-handoff`\./
   );
 });
 

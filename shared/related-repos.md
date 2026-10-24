@@ -34,9 +34,9 @@ notes: |
 
 ## Linked-issue behavior
 
-When the issue worker decides an issue belongs in a related repository:
+When the issue worker decides an issue belongs in a related repository (it decides from evidence: it searches the code of both repositories for the innermost cause, cites a file path, and keeps the issue here when the evidence is missing or mixed):
 
-1. It creates a **canonical** issue in that repository.
+1. It creates a **canonical** issue in that repository, which starts with the hold label `plan-approval-required` until a maintainer has read its plan.
 2. It cross-links both issues with plain-language comments.
 3. It applies the internal label `related-repo` to the **original** (non-canonical) issue and does not start planning there.
 4. The original issue stays open.
@@ -45,3 +45,11 @@ When the issue worker decides an issue belongs in a related repository:
    - Otherwise `related-repo-closer` closes the original issue with a short notice.
 
 The label `related-repo` is internal. Reporters never see or manage it.
+
+## Writing `when` and `notes`
+
+The issue worker uses these as a guide to where to look, never as proof. Say which code lives where, so that a search can confirm it, and not how often an issue belongs somewhere:
+
+- Name what each repository owns in terms of code (for example "the library owns the facade and the API calls; the CLI owns prompts, terminal input and output, the interactive mode, packaging and the commands that wrap the library") and point at the repository's `AGENTS.md` or decision records for the layering. When they say which layer owns what, the worker applies that statement over the `when` text.
+- Do not write a keyword rule ("authentication flows go to the library") or a prior ("most issues belong in the library"): an error message produced by one layer is often only the wrapper around a failure from the other, and a prior sends every borderline issue the same way. Say instead "when in doubt, keep the issue here".
+- Keep the two files of a split project symmetrical: each names what the other repository owns, so that an issue can be routed back.
