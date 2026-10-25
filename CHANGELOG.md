@@ -1,5 +1,13 @@
 # Changelog
 
+## [v1.1.0] - 2026-10-25
+
+### What's Changed
+* chore: compile and test the gates with gh-aw v0.93.0 by @vscheuber in https://github.com/vscheuber/repo-concierge/pull/45
+* feat: a weekly check that the Concierge's own pins are current by @vscheuber in https://github.com/vscheuber/repo-concierge/pull/46
+
+**Full Changelog**: https://github.com/vscheuber/repo-concierge/compare/v1.0.22...v1.1.0
+
 ## [v1.0.22] - 2026-10-25
 
 ### What's Changed
