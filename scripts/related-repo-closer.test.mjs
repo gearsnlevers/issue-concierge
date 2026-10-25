@@ -18,7 +18,7 @@ import {
 // it had to name the original in its outputs, and it named the closed issue itself (repo frodo-lib, number 806),
 // so the write was refused (HTTP 403: the token it used belongs to the other repository) and the original,
 // frodo-cli#922, was never updated. Everything the closer does is decided by data, so a script does it (record
-// 0026). These tests pin what it decides, what it writes and where, and that it never needs a guess.
+// 0026, 0027). These tests pin what it decides, what it writes and where, and that it never needs a guess.
 
 const THIS = 'rockcarver/frodo-lib';
 const RELATED = 'rockcarver/frodo-cli';
@@ -210,13 +210,17 @@ test('a dry run of a close decides everything and writes nothing', () => {
   assert.deepEqual(w.calls, []);
 });
 
-test('an issue opened by an owner, a member or a collaborator counts, and by no one else', () => {
-  for (const association of ['OWNER', 'MEMBER', 'COLLABORATOR', 'collaborator']) {
-    assert.equal(decide(canonical({ author_association: association }), ctxFor(github())).action, 'waiting', association);
+test('who opened the canonical issue is not asked: the workflow token cannot see a private organization membership', () => {
+  // frodo-lib#806 was opened by a maintainer, and the workflow token reported the association as NONE or CONTRIBUTOR
+  for (const association of ['OWNER', 'MEMBER', 'COLLABORATOR', 'CONTRIBUTOR', 'NONE', 'FIRST_TIMER', undefined]) {
+    assert.equal(decide(canonical({ author_association: association }), ctxFor(github())).action, 'waiting', String(association));
   }
-  for (const association of ['NONE', 'CONTRIBUTOR', 'FIRST_TIME_CONTRIBUTOR', 'FIRST_TIMER', 'MANNEQUIN', undefined]) {
-    assert.equal(decide(canonical({ author_association: association }), ctxFor(github())).action, 'skip', String(association));
-  }
+});
+
+test('a stranger\'s issue that links the original is not confirmed: the harness\'s comment names another issue', () => {
+  const verdict = decide(canonical({ number: 999, author_association: 'NONE' }), ctxFor(github()));
+  assert.equal(verdict.action, 'skip');
+  assert.match(verdict.reason, /no comment from the harness that names rockcarver\/frodo-lib#999/);
 });
 
 test('a dry run decides everything and writes nothing', () => {
@@ -234,8 +238,6 @@ const skips = [
   ['an issue that is not closed', canonical({ state: 'open' }), /not closed/],
   ['an issue opened by a bot', canonical({ user: { login: 'github-actions[bot]', type: 'Bot' } }), /bot/],
   ['an issue without the link label', canonical({ labels: [{ name: 'bug' }] }), /does not carry original-in-related-repo/],
-  ['an issue opened by someone without a role here', canonical({ author_association: 'NONE' }), /without a role/],
-  ['an issue opened by a contributor', canonical({ author_association: 'CONTRIBUTOR' }), /without a role/],
   ['an issue closed as not planned', canonical({ state_reason: 'not_planned' }), /not planned.*left to a maintainer/],
   ['an issue closed as a duplicate', canonical({ state_reason: 'duplicate' }), /duplicate.*left to a maintainer/],
   ['an issue with no link', canonical({ body: 'no link here' }), /no link to an original/],
