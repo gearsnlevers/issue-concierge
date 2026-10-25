@@ -1,5 +1,14 @@
 # Changelog
 
+## [v1.1.2] - 2026-10-25
+
+### What's Changed
+* docs: start the decision record log, and add AGENTS.md by @vscheuber in https://github.com/vscheuber/repo-concierge/pull/48
+* docs: write decision records so they stay true by @vscheuber in https://github.com/vscheuber/repo-concierge/pull/49
+* fix: the release closer decides from git which fixes a release contains by @vscheuber in https://github.com/vscheuber/repo-concierge/pull/50
+
+**Full Changelog**: https://github.com/vscheuber/repo-concierge/compare/v1.1.1...v1.1.2
+
 ## [v1.1.1] - 2026-10-25
 
 ### What's Changed
