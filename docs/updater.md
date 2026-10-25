@@ -44,6 +44,8 @@ CROSS_REPO_TOKEN: ${{ secrets.<secret> }}
 
 Both come from the related repository in `related-repos.md` that names a `secret`, and a marker is removed when there is none. One related repository with a secret is supported (a safe output takes one token); two is an error. `check-deployment` verifies the compiled result of the first and the generated lines of the second.
 
+A marker takes effect one release late. The update that first installs a marker is made by the updater the deployment already has, the previous release's, which does not know it: the file arrives with the marker line left in and nothing generated, and `check-deployment` says so as a warning. Run the updater once more with the pinned release as the target (`gh workflow run concierge-updater.yml -f target=vX.Y.Z`): the updater that the first update installed writes the lines, in a second pull request. A deployment without a related repository needs no second run, and its marker line is only a comment until the next update removes it.
+
 ## Setting it up
 
 **The token.** The updater needs one repository secret, `CONCIERGE_TOKEN`: a fine-grained personal access token limited to **this repository** with Contents, Pull requests and Workflows write. Workflows write is required because the update changes files under `.github/workflows/`, which the default token cannot push. A pull request opened with the default token would also not run its checks. Without the secret the updater runs as a dry run and only reports. Fine-grained tokens expire; put the expiry in your calendar.

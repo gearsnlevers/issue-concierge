@@ -149,4 +149,5 @@ Give the maintainer: the tag and commit; the verification result of step 3 and t
 - A release created from a branch other than `main` is refused for real runs; use the dry run for other branches.
 - The updater runs daily by itself, so a deployment may already have the update pull request when you arrive. Inspect and merge that one; do not open another.
 - Merging an update pull request is not releasing anything: the release already exists. Releasing is never triggered by a merge.
+- A release that adds a setting the updater generates (a new `# concierge:cross-repo...` marker) reaches a deployment one release late: the update is made by the updater it already has. Dispatch the updater a second time with `-f target=<the tag>` after merging the first pull request, merge the second, and only then verify the rollout.
 - Do not edit managed files in a deployment to "fix" an update. Fix the harness, release again.

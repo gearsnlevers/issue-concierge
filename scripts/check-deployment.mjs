@@ -24,6 +24,7 @@ export const REQUIREMENTS = [{ file: 'issue-worker.lock.yml', outputs: ['create_
  * (`CROSS_REPO` and `CROSS_REPO_TOKEN`, from the `# concierge:cross-repo-env` marker).
  */
 export const CLOSER = 'related-repo-closer.yml';
+const CLOSER_MARKER = '# concierge:cross-repo-env';
 
 /** The files that tell coding agents how to work on the repository; either one is enough. */
 export const GUIDANCE_FILES = ['AGENTS.md', '.github/copilot-instructions.md'];
@@ -100,11 +101,19 @@ export function checkDeployment(relatedText, locks) {
       errors.push(`${CLOSER}: not found; ${rel.repo} needs it`);
     } else {
       const text = String(locks[CLOSER]);
-      if (envValue(text, 'CROSS_REPO') !== rel.repo) {
-        errors.push(`${CLOSER}: CROSS_REPO is not ${rel.repo}, so the closer cannot update issues there; run the Concierge updater, which writes it from related-repos.md`);
-      }
-      if (envValue(text, 'CROSS_REPO_TOKEN') !== `\${{ secrets.${rel.secret} }}`) {
-        errors.push(`${CLOSER}: CROSS_REPO_TOKEN does not use the secret ${rel.secret}; run the Concierge updater, which writes it from related-repos.md`);
+      if (text.includes(CLOSER_MARKER) && envValue(text, 'CROSS_REPO') === undefined && envValue(text, 'CROSS_REPO_TOKEN') === undefined) {
+        // The update that first installs the closer is made by the updater of the release before, which does not know
+        // the marker yet. That is a state to finish, not a mistake: the next run of the updater writes the lines.
+        warnings.push(
+          `${CLOSER}: still has the ${CLOSER_MARKER} marker, so CROSS_REPO and CROSS_REPO_TOKEN were not written: the updater that installed it predates the marker. Run the Concierge updater again (concierge-updater.yml, with target set to the pinned release); until then the closer updates nothing in ${rel.repo}`
+        );
+      } else {
+        if (envValue(text, 'CROSS_REPO') !== rel.repo) {
+          errors.push(`${CLOSER}: CROSS_REPO is not ${rel.repo}, so the closer cannot update issues there; run the Concierge updater, which writes it from related-repos.md`);
+        }
+        if (envValue(text, 'CROSS_REPO_TOKEN') !== `\${{ secrets.${rel.secret} }}`) {
+          errors.push(`${CLOSER}: CROSS_REPO_TOKEN does not use the secret ${rel.secret}; run the Concierge updater, which writes it from related-repos.md`);
+        }
       }
     }
     const token = '${GH_AW_SECRET_' + rel.secret + '}';

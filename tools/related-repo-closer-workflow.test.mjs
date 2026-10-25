@@ -79,3 +79,9 @@ test('the script never decides by a model: no network call but the GitHub API, n
   assert.doesNotMatch(script, /\bfetch\(|https?:\/\/|copilot|openai|anthropic/i);
   assert.deepEqual([...script.matchAll(/execFileSync\('([^']+)'/g)].map((m) => m[1]), ['gh']);
 });
+
+test('check-deployment runs for a pull request that changes the closer, and says what to do while the marker is not replaced', () => {
+  const check = read('workflows/check-deployment.yml');
+  assert.match(check, /pull_request:\n {4}paths:\n(?: {6}- .*\n)*? {6}- '\.github\/workflows\/related-repo-closer\.yml'\n/);
+  assert.match(read('scripts/check-deployment.mjs'), /Run the Concierge updater again/);
+});
