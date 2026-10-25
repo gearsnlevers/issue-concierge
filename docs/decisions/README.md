@@ -47,3 +47,4 @@ Copy `template.md` to `NNNN-short-title.md` (the next number, starting at 0001),
 | 0022 | [The environment agent is optional, and any worker may use it](0022-the-environment-agent-is-optional-and-any-worker-may-use-it.md) | accepted |
 | 0023 | [A repository tunes the gates with optional files, never by editing them](0023-a-repository-tunes-the-gates-with-optional-files-never-by-editing-them.md) | accepted |
 | 0024 | [A release contains a fix when git says so, not when the notes do](0024-a-release-contains-a-fix-when-git-says-so-not-when-the-notes-do.md) | accepted |
+| 0025 | [Both issues of a link carry a label](0025-both-issues-of-a-link-carry-a-label.md) | accepted |

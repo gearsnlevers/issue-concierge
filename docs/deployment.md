@@ -74,9 +74,9 @@ notes: |
 
 `secret` is optional. Set it when the worker should open the canonical issue in that repository. Each related repository can name a different secret.
 
-When the worker links an issue it creates a canonical issue in the related repository, cross-links both sides, and applies the internal label `related-repo` to the original. The original stays open until the canonical issue is closed, at which point `related-repo-closer` closes it.
+When the worker links an issue it creates a canonical issue in the related repository, cross-links both sides, applies the internal label `related-repo` to the original, and opens the canonical issue with `original-in-related-repo`, so each issue shows in a list that it has a counterpart in the other repository. The original stays open until the canonical issue is closed, at which point `related-repo-closer` closes it. `related-repo-closer` starts only for a closed issue that carries `original-in-related-repo`, so a canonical issue opened by hand needs that label too.
 
-The canonical issue starts with the label `plan-approval-required`, so a maintainer reads its plan and removes the label before a coding agent starts. Install the Concierge in the related repository too (the updater creates the label), or create the label there, so the hold exists and is honored. Why, and how to switch it off: [multi-phase-design.md](multi-phase-design.md#split-repo-routing-linked-issues).
+The canonical issue starts with the labels `plan-approval-required` and `original-in-related-repo`, so a maintainer reads its plan and removes the hold before a coding agent starts. Install the Concierge in the related repository too (the updater creates the labels), or create the labels there, so the hold exists and is honored and the closer can start. Why, and how to switch it off: [multi-phase-design.md](multi-phase-design.md#split-repo-routing-linked-issues).
 
 
 
@@ -230,7 +230,7 @@ The gates that classify or route use a light model and tight turn limits. The pl
 | issue-worker | small | 10 | rate-limit issues and comments |
 | issue-triage | small | 8 | |
 | plan-triage | small | 8 | |
-| related-repo-closer | small | 6 | |
+| related-repo-closer | small | 6 | starts only for a closed issue with `original-in-related-repo` |
 | waiting-for-release | small | 8 | 8 credits, 5 minutes; skipped before the model for closes by hand, not planned, duplicate; each lookup once |
 | release-closer | small | 8 | |
 | plan-worker | default | — | |
@@ -479,7 +479,8 @@ The workflows apply and react to specific labels. Create them once per repositor
 | `scope-review` | `fbca04` | May not fit the scope; a maintainer decides. To accept, remove it and add `issue-triage-handoff` |
 | `dependency-required` | `b60205` | Waiting for a dependency; the watcher removes it when the dependency is finished |
 | `dependency-satisfied` | `0e8a16` | Dependencies finished or cleared by a maintainer; issue triage lets the issue through |
-| `related-repo` | `fbca04` | Non-canonical issue; tracked in a related repository |
+| `related-repo` | `fbca04` | Original issue; the work is tracked in a related repository |
+| `original-in-related-repo` | `fef2c0` | Opened from an issue in a related repository; closing it updates that original |
 | `waiting-for-release` | `c5def5` | Fix is merged; waiting for a release that includes it |
 | `released` | `0e8a16` | A release includes this fix |
 | `issue-worker-ready` | `c2e0c6` | Issue worker finished |
@@ -540,7 +541,7 @@ Low/low pull requests that carry `pr-triage-handoff` and pass required checks ca
 - Add `plan-approval-required` by hand to an open, low-risk issue that has a plan comment, then add `plan-worker-ready` so that plan triage classifies it: confirm it gets complexity and risk labels, no `plan-triage-handoff` and no comment. Add `plan-triage-handoff` by hand and confirm the PR worker run ends without an assignment and the label is gone again. Remove the hold and confirm `plan-approval-resume` hands the issue to the PR gate and the coding agent is assigned. A hold added to an issue that plan triage has not classified is not resumed by removing it: re-add `plan-worker-ready` first.
 - Add a gate label (for example `plan-triage-handoff`) to a closed issue and confirm no workflow runs an agent. Open an issue that an open pull request already closes (`Fixes #N` in its body), add `plan-triage-handoff`, and confirm no coding agent is assigned and the issue gets one comment naming the pull request that already closes the issue; close that pull request, add the label again and confirm the hand-off goes through.
 - For a low/low item, confirm a pull request is opened. If you enabled auto-merge, confirm it can merge after checks.
-- For a split-repo case, confirm a canonical issue is created, the original receives `related-repo`, and the original is closed when the canonical issue closes. Open the test report from an account that is not a maintainer and confirm that the linked issue gets one comment right after it is created that starts `Original report:` and mentions the reporter. Make the linked issue ask for more information (leave out a required detail), and confirm that one comment on the linked issue mentions the reporter and points at the request. Remove `related-repo` from the original and confirm no further comment appears.
+- For a split-repo case, confirm a canonical issue is created with `plan-approval-required` and `original-in-related-repo`, the original receives `related-repo`, and the original is closed when the canonical issue closes. Open the test report from an account that is not a maintainer and confirm that the linked issue gets one comment right after it is created that starts `Original report:` and mentions the reporter. Make the linked issue ask for more information (leave out a required detail), and confirm that one comment on the linked issue mentions the reporter and points at the request. Remove `related-repo` from the original and confirm no further comment appears.
 
 ## Updating deployments
 
@@ -587,7 +588,7 @@ git push
 - [ ] Optional `.github/agentic-workflows/` config files added only if needed
 - [ ] Issue template present (or optional completeness override)
 - [ ] `gh aw compile` run and lock files committed
-- [ ] All recommended labels created (including `related-repo`, `dependency-required`, `dependency-satisfied`)
+- [ ] All recommended labels created (including `related-repo`, `original-in-related-repo`, `dependency-required`, `dependency-satisfied`)
 - [ ] Dependency watcher installed (`dependency-watch.yml` and `dependency-watch.mjs`)
 - [ ] Deployment check installed (`check-deployment.yml` and `check-deployment.mjs`) and passing; for each related repository the secret exists and its token has Issues: Read and write on that repository
 - [ ] Plan approval resume installed (`plan-approval-resume.yml` and `plan-approval-resume.mjs`)
