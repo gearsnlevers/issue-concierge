@@ -1,5 +1,12 @@
 # Changelog
 
+## [v1.1.1] - 2026-10-25
+
+### What's Changed
+* chore: compile and test the gates with gh-aw v0.93.3 by @vscheuber in https://github.com/vscheuber/repo-concierge/pull/47
+
+**Full Changelog**: https://github.com/vscheuber/repo-concierge/compare/v1.1.0...v1.1.1
+
 ## [v1.1.0] - 2026-10-25
 
 ### What's Changed
