@@ -10,7 +10,6 @@ files:
   - workflows/plan-triage.md
   - workflows/pr-worker.md
   - workflows/pr-triage.md
-  - workflows/related-repo-closer.md
   - workflows/release-closer.md
   - workflows/waiting-for-release.md
   - workflows/dependency-watch.yml
@@ -21,6 +20,8 @@ files:
   - scripts/plan-approval-resume.mjs
   - workflows/reporter-notify.yml
   - scripts/reporter-notify.mjs
+  - workflows/related-repo-closer.yml
+  - scripts/related-repo-closer.mjs
   - workflows/janitor.yml
   - scripts/janitor.mjs
   - workflows/concierge-updater.yml

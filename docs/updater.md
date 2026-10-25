@@ -26,14 +26,23 @@ To customize, use the places that are yours: `.github/agentic-workflows/` (compl
 
 ## Cross-repository settings come from `related-repos.md`
 
-The issue worker (`create-issue`) and the related-repo closer (`add-comment`, `add-labels`, `close-issue`) can only write to another repository when the safe output has both a `github-token` and an `allowed-repos` list. In the harness these places carry a `# concierge:cross-repo` marker. The updater replaces each marker with
+Two workflows write to another repository: the issue worker (`create-issue`) and the related-repo closer.
+
+The issue worker is a gh-aw definition. A safe output can only write to another repository when it has both a `github-token` and an `allowed-repos` list. In the harness the place carries a `# concierge:cross-repo` marker. The updater replaces it with
 
 ```yaml
 github-token: ${{ secrets.<secret> }}
 allowed-repos: ["<owner/repo>"]
 ```
 
-taken from the related repository in `related-repos.md` that names a `secret`, or removes the marker when there is none. One related repository with a secret is supported (a safe output takes one token); two is an error. `check-deployment` verifies the compiled result.
+The closer is a plain workflow, so it takes the same two facts as the environment of its step. Its marker is `# concierge:cross-repo-env`, and the updater replaces it with
+
+```yaml
+CROSS_REPO: <owner/repo>
+CROSS_REPO_TOKEN: ${{ secrets.<secret> }}
+```
+
+Both come from the related repository in `related-repos.md` that names a `secret`, and a marker is removed when there is none. One related repository with a secret is supported (a safe output takes one token); two is an error. `check-deployment` verifies the compiled result of the first and the generated lines of the second.
 
 ## Setting it up
 

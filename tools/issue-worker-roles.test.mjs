@@ -38,7 +38,7 @@ test('issue worker: opts out of the role check, under on:', () => {
 });
 
 test('no other workflow changes the role check', () => {
-  assert.ok(others.length >= 8, 'expected the other gate workflows');
+  assert.ok(others.length >= 7, 'expected the other gate workflows');
   for (const f of others) {
     assert.doesNotMatch(frontmatter(read(`workflows/${f}`)), /^\s*roles:/m, `${f} must keep gh-aw's default roles`);
   }

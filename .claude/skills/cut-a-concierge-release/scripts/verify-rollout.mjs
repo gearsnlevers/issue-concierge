@@ -5,7 +5,7 @@
 // For each deployment's default branch:
 //   - .github/concierge.yml pins the tag and the tag's commit;
 //   - every file the manifest installs is there and byte-identical to the release (files with a
-//     `# concierge:cross-repo` marker are compared without the generated token/allowed-repos lines);
+//     `# concierge:cross-repo` or `# concierge:cross-repo-env` marker are compared without the generated token, allowed-repos and CROSS_REPO lines);
 //   - files the previous release installed and this one dropped are gone;
 //   - every gh-aw lock file was compiled with the manifest's gh-aw version, and the role gate holds
 //     (docs/deployment.md, "Who can start a gate"): `issue-worker` has no membership check, every
@@ -33,9 +33,9 @@ async function readFile(repo, file, ref) {
   }
 }
 
-const GENERATED = /^\s*(github-token|allowed-repos):/;
-const MARKER = /^\s*# concierge:cross-repo\s*$/;
-/** A definition with the cross-repository settings left out, to compare source and deployed copy. */
+const GENERATED = /^\s*(github-token|allowed-repos|CROSS_REPO|CROSS_REPO_TOKEN):/;
+const MARKER = /^\s*# concierge:cross-repo(-env)?\s*$/;
+/** A definition or plain workflow with the cross-repository settings left out, to compare source and deployed copy. */
 export const withoutCrossRepo = (text) => text.split('\n').filter((l) => !GENERATED.test(l) && !MARKER.test(l)).join('\n');
 
 /** Problems with one lock file: compiler version and the role gate. Empty when it is right. */
@@ -66,7 +66,7 @@ async function verifyRepo(repo, tag, manifest, previous) {
       const text = await readFile(repo, f.dest);
       if (text === null) return note(false, `${f.dest} is missing`);
       if (sha256(text) === f.sha256) return;
-      if (f.kind === 'definition') {
+      if (f.kind === 'definition' || f.kind === 'workflow') {
         const source = await readFile(manifest.source ?? 'vscheuber/repo-concierge', f.path, manifest.commit);
         if (source !== null && withoutCrossRepo(source) === withoutCrossRepo(text)) return;
       }

@@ -40,11 +40,12 @@ When the issue worker decides an issue belongs in a related repository (it decid
 2. It cross-links both issues with plain-language comments.
 3. It applies the internal label `related-repo` to the **original** (non-canonical) issue and does not start planning there.
 4. The original issue stays open.
-5. When the canonical issue is closed:
+5. When the canonical issue is closed as completed:
    - If `release.requires_consumer_release` is set, the original issue stays open and gets `waiting-for-release`. It closes when a release of this repository includes the fix.
    - Otherwise `related-repo-closer` closes the original issue with a short notice.
+   - A canonical issue closed as not planned or as a duplicate changes nothing: a maintainer decides what the original says.
 
-The labels `related-repo` and `original-in-related-repo` are internal. Reporters never see or manage them. `related-repo-closer` starts only for a closed issue that carries `original-in-related-repo`, so a canonical issue opened by hand needs that label too.
+The labels `related-repo` and `original-in-related-repo` are internal. Reporters never see or manage them. `related-repo-closer` is a script, not a model: it starts only for a closed issue that carries `original-in-related-repo`, so a canonical issue opened by hand needs that label too.
 
 ## Writing `when` and `notes`
 

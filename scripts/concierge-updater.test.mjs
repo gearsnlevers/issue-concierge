@@ -127,6 +127,22 @@ test('cross-repo generation: settings from related-repos.md, or nothing', () => 
   assert.equal(applyCrossRepo('no marker\n', related), 'no marker\n');
 });
 
+test('cross-repo generation in a plain workflow: the environment from related-repos.md, or nothing', () => {
+  const text = 'env:\n  GH_TOKEN: x\n  # concierge:cross-repo-env\nrun: y\n';
+  const related = { repo: 'o/cli', secret: 'CLI_TOKEN' };
+  assert.equal(
+    applyCrossRepo(text, related),
+    'env:\n  GH_TOKEN: x\n  CROSS_REPO: o/cli\n  CROSS_REPO_TOKEN: ${{ secrets.CLI_TOKEN }}\nrun: y\n'
+  );
+  assert.equal(applyCrossRepo(text, null), 'env:\n  GH_TOKEN: x\nrun: y\n');
+  // the two markers are independent: a definition keeps using the safe-output form
+  const both = '    # concierge:cross-repo\n  # concierge:cross-repo-env\n';
+  assert.equal(
+    applyCrossRepo(both, related),
+    '    github-token: ${{ secrets.CLI_TOKEN }}\n    allowed-repos: ["o/cli"]\n  CROSS_REPO: o/cli\n  CROSS_REPO_TOKEN: ${{ secrets.CLI_TOKEN }}\n'
+  );
+});
+
 test('related repositories: one with a secret, warnings for the rest, an error for two', () => {
   const doc = (...r) => `this: o/me\n\nrelated:\n${r.map(([repo, secret]) => `  - role: x\n    repo: ${repo}\n${secret ? `    secret: ${secret}\n` : ''}    when: |\n      t\n`).join('')}`;
   assert.deepEqual(selectRelated('').related, null);
@@ -330,6 +346,21 @@ test('cross-repository settings come from related-repos.md', async () => {
   const d = deployment({ '.github/agentic-workflows/related-repos.md': 'this: o/me\n\nrelated:\n  - role: cli\n    repo: o/cli\n    secret: CLI_TOKEN\n    when: |\n      x\n' });
   await run({ root: d.root, local: true, source: 'o/concierge' }, h.ctx());
   assert.equal(d.read('.github/workflows/closer.md'), 'safe-outputs:\n  close-issue:\n    max: 1\n    github-token: ${{ secrets.CLI_TOKEN }}\n    allowed-repos: ["o/cli"]\n');
+});
+
+test('the environment of a plain workflow comes from related-repos.md, and the marker goes where there is none', async () => {
+  const closer = 'jobs:\n  close:\n    steps:\n      - env:\n          GH_TOKEN: x\n          # concierge:cross-repo-env\n';
+  const h = harness();
+  h.add('v1.0.0', { 'workflows/closer.yml': closer });
+  const withRelated = deployment({ '.github/agentic-workflows/related-repos.md': 'this: o/me\n\nrelated:\n  - role: cli\n    repo: o/cli\n    secret: CLI_TOKEN\n    when: |\n      x\n' });
+  await run({ root: withRelated.root, local: true, source: 'o/concierge' }, h.ctx());
+  assert.equal(
+    withRelated.read('.github/workflows/closer.yml'),
+    'jobs:\n  close:\n    steps:\n      - env:\n          GH_TOKEN: x\n          CROSS_REPO: o/cli\n          CROSS_REPO_TOKEN: ${{ secrets.CLI_TOKEN }}\n'
+  );
+  const without = deployment({});
+  await run({ root: without.root, local: true, source: 'o/concierge' }, h.ctx());
+  assert.equal(without.read('.github/workflows/closer.yml'), 'jobs:\n  close:\n    steps:\n      - env:\n          GH_TOKEN: x\n');
 });
 
 test('an explicit target repairs drift on the pinned release; a prerelease channel sees prereleases', async () => {

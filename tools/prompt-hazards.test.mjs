@@ -26,7 +26,7 @@ const MARKER = 'gh-aw-workflow-call-id: owner/repo/plan-worker';
 const ALLOWED_HTML_COMMENTS = {};
 
 test('no workflow prompt contains an HTML comment, except an explicitly allowed one', () => {
-  assert.ok(workflows.length >= 9, 'expected the gate workflows');
+  assert.ok(workflows.length >= 8, 'expected the gate workflows');
   for (const f of workflows) {
     const count = (body(read(`workflows/${f}`)).match(/<!--/g) ?? []).length;
     const allowed = ALLOWED_HTML_COMMENTS[f]?.count ?? 0;

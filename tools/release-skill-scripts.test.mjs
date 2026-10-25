@@ -123,6 +123,13 @@ test('lockProblems: compiler version and the role gate', () => {
   assert.match(lockProblems('pr-worker', lock('v0.92.0', '          id: check_membership\n          GH_AW_REQUIRED_ROLES: "all"\n'), 'v0.92.0').join(), /default roles/);
 });
 
+test('withoutCrossRepo ignores the generated environment of a plain workflow and its marker, nothing else', () => {
+  const source = 'env:\n  GH_TOKEN: x\n  # concierge:cross-repo-env\nrun: y\n';
+  const deployed = 'env:\n  GH_TOKEN: x\n  CROSS_REPO: o/r\n  CROSS_REPO_TOKEN: ${{ secrets.X }}\nrun: y\n';
+  assert.equal(withoutCrossRepo(source), withoutCrossRepo(deployed));
+  assert.notEqual(withoutCrossRepo(source), withoutCrossRepo(deployed.replace('GH_TOKEN: x', 'GH_TOKEN: z')));
+});
+
 test('withoutCrossRepo ignores the generated settings and the marker, nothing else', () => {
   const source = 'create-issue:\n  max: 1\n  # concierge:cross-repo\nthreat-detection: on\n';
   const deployed = 'create-issue:\n  max: 1\n  github-token: ${{ secrets.X }}\n  allowed-repos: ["o/r"]\nthreat-detection: on\n';
