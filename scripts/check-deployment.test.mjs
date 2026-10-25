@@ -23,9 +23,12 @@ const out = (over = {}) => ({
 });
 const lock = (config) =>
   `env:\n  GH_AW_SAFE_OUTPUTS_CONFIG: ${JSON.stringify(JSON.stringify(config))}\n  OTHER: x\n`;
+// The closer is a plain workflow: the updater writes the related repository and its secret into its environment.
+const closer = (repo = 'rockcarver/frodo-cli', secret = 'FRODO_CLI_ISSUES_TOKEN') =>
+  `jobs:\n  close-original:\n    steps:\n      - env:\n          GH_TOKEN: \${{ github.token }}\n          CROSS_REPO: ${repo}\n          CROSS_REPO_TOKEN: \${{ secrets.${secret} }}\n`;
 const healthy = () => ({
   'issue-worker.lock.yml': lock({ create_issue: out(), add_comment: { max: 2 } }),
-  'related-repo-closer.lock.yml': lock({ add_comment: out(), add_labels: out(), close_issue: out(), noop: {} }),
+  'related-repo-closer.yml': closer(),
 });
 
 test('a fully wired deployment passes', () => {
@@ -38,14 +41,10 @@ test('no related repositories: nothing to check', () => {
 
 test('the failure behind frodo-lib#757: token set but repository not allowed', () => {
   const locks = healthy();
-  locks['related-repo-closer.lock.yml'] = lock({
-    add_comment: out({ allowed_repos: undefined }),
-    add_labels: out({ allowed_repos: undefined }),
-    close_issue: out({ allowed_repos: undefined }),
-  });
+  locks['issue-worker.lock.yml'] = lock({ create_issue: out({ allowed_repos: undefined }) });
   const { errors } = checkDeployment(RELATED(), locks);
-  assert.equal(errors.length, 3);
-  assert.match(errors[0], /related-repo-closer\.lock\.yml: add-comment does not allow rockcarver\/frodo-cli/);
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /issue-worker\.lock\.yml: create-issue does not allow rockcarver\/frodo-cli/);
   assert.match(errors[0], /allowed-repos/);
 });
 
@@ -60,22 +59,48 @@ test('an unconfigured create-issue placeholder is an error (frodo-lib issue work
 
 test('the wrong secret is an error', () => {
   const locks = healthy();
-  locks['related-repo-closer.lock.yml'] = lock({
-    add_comment: out({ 'github-token': '${GH_AW_SECRET_SIGNAL_TOKEN}' }),
-    add_labels: out(),
-    close_issue: out(),
-  });
+  locks['issue-worker.lock.yml'] = lock({ create_issue: out({ 'github-token': '${GH_AW_SECRET_SIGNAL_TOKEN}' }) });
   const { errors } = checkDeployment(RELATED(), locks);
   assert.equal(errors.length, 1);
-  assert.match(errors[0], /add-comment does not use the secret FRODO_CLI_ISSUES_TOKEN/);
+  assert.match(errors[0], /create-issue does not use the secret FRODO_CLI_ISSUES_TOKEN/);
 });
 
 test('a disabled safe output and a missing lock file are errors', () => {
   const locks = healthy();
-  locks['related-repo-closer.lock.yml'] = lock({ add_comment: out(), add_labels: out() });
-  assert.match(checkDeployment(RELATED(), locks).errors.join('\n'), /close-issue is not enabled/);
+  locks['issue-worker.lock.yml'] = lock({ add_comment: { max: 2 } });
+  assert.match(checkDeployment(RELATED(), locks).errors.join('\n'), /create-issue is not enabled/);
   delete locks['issue-worker.lock.yml'];
   assert.match(checkDeployment(RELATED(), locks).errors.join('\n'), /issue-worker\.lock\.yml: not found/);
+});
+
+// The closer: a plain workflow whose environment the updater generates from related-repos.md.
+
+test('the closer must exist, write to the related repository and use its secret', () => {
+  const missing = healthy();
+  delete missing['related-repo-closer.yml'];
+  assert.match(checkDeployment(RELATED(), missing).errors.join('\n'), /related-repo-closer\.yml: not found; rockcarver\/frodo-cli needs it/);
+
+  const wrongRepo = healthy();
+  wrongRepo['related-repo-closer.yml'] = closer('x/y');
+  const repoErrors = checkDeployment(RELATED(), wrongRepo).errors;
+  assert.equal(repoErrors.length, 1);
+  assert.match(repoErrors[0], /CROSS_REPO is not rockcarver\/frodo-cli/);
+
+  const wrongSecret = healthy();
+  wrongSecret['related-repo-closer.yml'] = closer('rockcarver/frodo-cli', 'SIGNAL_TOKEN');
+  const secretErrors = checkDeployment(RELATED(), wrongSecret).errors;
+  assert.equal(secretErrors.length, 1);
+  assert.match(secretErrors[0], /CROSS_REPO_TOKEN does not use the secret FRODO_CLI_ISSUES_TOKEN/);
+
+  const notGenerated = healthy();
+  notGenerated['related-repo-closer.yml'] = 'env:\n  # concierge:cross-repo-env\n';
+  assert.equal(checkDeployment(RELATED(), notGenerated).errors.length, 2);
+});
+
+test('a repository name that only contains the related one is not accepted', () => {
+  const locks = healthy();
+  locks['related-repo-closer.yml'] = closer('rockcarver/frodo-cli-fork');
+  assert.match(checkDeployment(RELATED(), locks).errors.join('\n'), /CROSS_REPO is not rockcarver\/frodo-cli/);
 });
 
 test('a related repository without a secret is a warning, not an error', () => {

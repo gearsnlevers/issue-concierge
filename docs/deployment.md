@@ -23,8 +23,7 @@ gh aw add vscheuber/repo-concierge/issue-worker@main \
          vscheuber/repo-concierge/plan-worker@main \
          vscheuber/repo-concierge/plan-triage@main \
          vscheuber/repo-concierge/pr-worker@main \
-         vscheuber/repo-concierge/pr-triage@main \
-         vscheuber/repo-concierge/related-repo-closer@main
+         vscheuber/repo-concierge/pr-triage@main
 ```
 
 Alternatively, copy the seven `.md` files from `workflows/` in this repository into `.github/workflows/` of the target.
@@ -74,25 +73,24 @@ notes: |
 
 `secret` is optional. Set it when the worker should open the canonical issue in that repository. Each related repository can name a different secret.
 
-When the worker links an issue it creates a canonical issue in the related repository, cross-links both sides, applies the internal label `related-repo` to the original, and opens the canonical issue with `original-in-related-repo`, so each issue shows in a list that it has a counterpart in the other repository. The original stays open until the canonical issue is closed, at which point `related-repo-closer` closes it. `related-repo-closer` starts only for a closed issue that carries `original-in-related-repo`, so a canonical issue opened by hand needs that label too.
+When the worker links an issue it creates a canonical issue in the related repository, cross-links both sides, applies the internal label `related-repo` to the original, and opens the canonical issue with `original-in-related-repo`, so each issue shows in a list that it has a counterpart in the other repository. The original stays open until the canonical issue is closed, at which point `related-repo-closer` updates it. The closer is a plain workflow with a script and no model ([multi-phase-design.md](multi-phase-design.md#split-repo-routing-linked-issues), "The closer is code, not a model"). It starts only for a closed issue that carries `original-in-related-repo`, so a canonical issue opened by hand needs that label too. It acts only when the canonical issue was closed as completed: it closes the original with a short notice, or, when the original's `related-repos.md` sets `release.requires_consumer_release`, labels it `waiting-for-release` and comments. Installing it: copy `workflows/related-repo-closer.yml` to `.github/workflows/` and `scripts/related-repo-closer.mjs` to `.github/scripts/` (with `dependency-watch.mjs`, `reporter-notify.mjs` and `janitor.mjs`, which it imports).
 
 The canonical issue starts with the labels `plan-approval-required` and `original-in-related-repo`, so a maintainer reads its plan and removes the hold before a coding agent starts. Install the Concierge in the related repository too (the updater creates the labels), or create the labels there, so the hold exists and is honored and the closer can start. Why, and how to switch it off: [multi-phase-design.md](multi-phase-design.md#split-repo-routing-linked-issues).
 
 
 
-The related-repo closer runs in the repository that owns the fix and writes to the original issue. `SIGNAL_TOKEN` cannot do that. On `add-comment`, `add-labels`, and `close-issue`, set both `github-token` to the secret named in this repository's `related-repos.md` for the other repository, and `allowed-repos` to that repository:
+The related-repo closer runs in the repository that owns the fix and writes to the original issue, in the other repository. `SIGNAL_TOKEN` cannot do that. It reads with the workflow's own token and writes with the secret named in this repository's `related-repos.md` for the other repository, which its step receives as the environment variables `CROSS_REPO` (the other repository) and `CROSS_REPO_TOKEN`:
 
 ```yaml
-add-comment:
-  max: 1
-  target: "*"
-  github-token: ${{ secrets.OTHER_REPO_ISSUES_TOKEN }}
-  allowed-repos: ["owner/related-repo"]
+env:
+  GH_TOKEN: ${{ github.token }}
+  CROSS_REPO: owner/related-repo
+  CROSS_REPO_TOKEN: ${{ secrets.OTHER_REPO_ISSUES_TOKEN }}
 ```
 
-(With the Concierge updater these two settings are generated from `related-repos.md`; the manual wiring below is for deployments that do not use it. See [updater.md](updater.md).)
+(With the Concierge updater these two lines are generated from `related-repos.md` into the workflow's `# concierge:cross-repo-env` marker; the manual wiring is for deployments that do not use it. See [updater.md](updater.md).)
 
-`allowed-repos` is a gh-aw allowlist in the workflow, not a GitHub permission. Without it the safe output only acts in the repository it runs in, however good the token is, and the closer fails with a missing-tool report. The token is a separate requirement: it needs Issues: Read and write on the other repository, which the check below cannot verify.
+The script writes only to the repository in `CROSS_REPO`, and only to an issue that proves it is the original of the closed one (it carries `related-repo` and has a comment from the harness that names it). The token needs Issues: Read and write on the other repository, which the check below cannot verify. A closer without the token fails its run with a message and writes nothing.
 
 
 ## Release token
@@ -230,7 +228,6 @@ The gates that classify or route use a light model and tight turn limits. The pl
 | issue-worker | small | 10 | rate-limit issues and comments |
 | issue-triage | small | 8 | |
 | plan-triage | small | 8 | |
-| related-repo-closer | small | 6 | starts only for a closed issue with `original-in-related-repo` |
 | waiting-for-release | small | 8 | 8 credits, 5 minutes; skipped before the model for closes by hand, not planned, duplicate; each lookup once |
 | release-closer | small | 8 | |
 | plan-worker | default | — | |
@@ -285,7 +282,7 @@ Gate handoffs are labels. The next workflow starts on the `labeled` event.
 
 GitHub does not start a workflow from an event created by the default `GITHUB_TOKEN`. Safe-outputs apply labels as `github-actions[bot]`, so the next gate never runs unless the label is applied with a different token.
 
-Every deployment needs a secret named `SIGNAL_TOKEN` (rename it in the workflow frontmatter if you prefer another name). It is used as `github-token` on the `add-labels` safe-outputs, except the related-repo closer's, whose labels go to another repository with that repository's secret. The dependency watcher and plan approval resume (below) also use it, outside gh-aw, to change labels so the next gate starts. Issues and Pull requests: Read and write cover all of it. The pull requests permission is needed because the PR gate labels a pull request (`pr-worker-ready`, `pr-triage-handoff`, complexity and risk), and GitHub answers a label change on a pull request with `403 Resource not accessible by personal access token` when the token has only Issues. Observed on frodo-lib#771.
+Every deployment needs a secret named `SIGNAL_TOKEN` (rename it in the workflow frontmatter if you prefer another name). It is used as `github-token` on the `add-labels` safe-outputs. The related-repo closer does not use it: it writes to another repository with that repository's secret. The dependency watcher and plan approval resume (below) also use it, outside gh-aw, to change labels so the next gate starts. Issues and Pull requests: Read and write cover all of it. The pull requests permission is needed because the PR gate labels a pull request (`pr-worker-ready`, `pr-triage-handoff`, complexity and risk), and GitHub answers a label change on a pull request with `403 Resource not accessible by personal access token` when the token has only Issues. Observed on frodo-lib#771.
 
 Create a fine-grained token:
 
@@ -371,10 +368,10 @@ Run it on demand from the Actions tab, optionally with an issue number.
 
 ## Deployment check
 
-`check-deployment` catches the configuration mistakes that otherwise surface as a failed run weeks later. It reads the compiled `.lock.yml` files (what actually runs) and compares them with `.github/agentic-workflows/related-repos.md`. For every related repository that names a `secret`, it requires that:
+`check-deployment` catches the configuration mistakes that otherwise surface as a failed run weeks later. It reads the compiled `.lock.yml` of the issue worker and the text of the related-repo closer's workflow (what actually runs) and compares them with `.github/agentic-workflows/related-repos.md`. For every related repository that names a `secret`, it requires that:
 
 - `issue-worker` has `create-issue` enabled with `allowed-repos` containing the repository and `github-token` set to that secret;
-- `related-repo-closer` has `add-comment`, `add-labels` and `close-issue` enabled with the same `allowed-repos` and `github-token`.
+- `related-repo-closer.yml` has `CROSS_REPO` set to the repository and `CROSS_REPO_TOKEN` set to that secret (the updater writes both).
 
 It reports a warning for a related repository without a secret, or for an allowed repository that `related-repos.md` does not list. It also prints notices, never failures, when the repository has neither `AGENTS.md` nor `.github/copilot-instructions.md` (see "Repository guidance" above) and when it has neither a `docs/decisions/` nor a `decisions/` folder (see "Decision records" above). It runs on pull requests that touch the workflows or `related-repos.md`, and on demand. Install it in every deployment, even those without related repositories (it then passes immediately). Copy three files:
 
@@ -551,7 +548,7 @@ Overwrite the workflow files on the PR branch and push:
 
 ```bash
 git checkout add-agentic-workflows   # or whatever branch the PR uses
-for wf in issue-worker issue-triage plan-worker plan-triage pr-worker pr-triage related-repo-closer; do
+for wf in issue-worker issue-triage plan-worker plan-triage pr-worker pr-triage; do
   curl -fsSL "https://raw.githubusercontent.com/vscheuber/repo-concierge/main/workflows/${wf}.md" \
     -o ".github/workflows/${wf}.md"
 done
@@ -584,7 +581,7 @@ git push
 
 - [ ] Issues enabled
 - [ ] `COPILOT_GITHUB_TOKEN` set (org secret for orgs, repo secret for user repos) or org Copilot billing enabled
-- [ ] Workflow `.md` files added (including `related-repo-closer` if split-repo routing is used)
+- [ ] Workflow `.md` files added (and, if split-repo routing is used, `related-repo-closer.yml` and its script, see above)
 - [ ] Optional `.github/agentic-workflows/` config files added only if needed
 - [ ] Issue template present (or optional completeness override)
 - [ ] `gh aw compile` run and lock files committed

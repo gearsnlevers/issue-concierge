@@ -46,7 +46,7 @@ test("issue-worker: a closed issue is not analyzed, except on a maintainer's dis
   assert.match(cond, /github\.event\.issue\.pull_request == null/);
 });
 
-for (const name of ['related-repo-closer', 'waiting-for-release', 'release-closer']) {
+for (const name of ['waiting-for-release', 'release-closer']) {
   test(`${name}: acts on closed issues on purpose and must not require an open one`, () => {
     assert.doesNotMatch(wf(name).frontmatter, /issue\.state == 'open'/);
   });
@@ -55,7 +55,8 @@ for (const name of ['related-repo-closer', 'waiting-for-release', 'release-close
 test('every workflow is covered by one of the two groups above (a new gate must decide)', () => {
   const decided = new Set([
     'issue-triage', 'plan-worker', 'plan-triage', 'pr-worker', 'issue-worker',
-    'related-repo-closer', 'waiting-for-release', 'release-closer',
+    // the related-repo closer is a plain workflow now (tools/related-repo-closer-workflow.test.mjs)
+    'waiting-for-release', 'release-closer',
     // pull-request gate: keyed by a pull request label, not by an issue
     'pr-triage',
   ]);

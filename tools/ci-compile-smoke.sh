@@ -106,15 +106,6 @@ if (JSON.stringify(labels) !== JSON.stringify(["plan-approval-required", "origin
   echo "::error::the issue worker's canonical issue does not start with the plan-approval-required hold and the original-in-related-repo label in its compiled configuration"
   exit 1
 }
-# The related-repo closer starts only for a closed issue that carries the link label. gh-aw puts the condition on
-# the pre-activation job too, so for any other close the whole run is skipped before a runner or a model starts.
-closer="$tmp/.github/workflows/related-repo-closer.lock.yml"
-for job in pre_activation activation; do
-  if ! awk -v job="  $job:" '$0==job{f=1;next} f&&/^  [a-z_]+:$/{exit} f&&/^    if:/{p=1} f&&p{print} f&&/^    runs-on:/{exit}' "$closer" | tr '\n' ' ' | grep -qF "contains(github.event.issue.labels.*.name, 'original-in-related-repo')"; then
-    echo "::error::related-repo-closer does not require original-in-related-repo in its compiled $job condition"
-    exit 1
-  fi
-done
 # Prompt rendering (docs/multi-phase-design.md, "Plan comment identity"): gh-aw removes HTML comments when it
 # renders a prompt, so the text plan triage must find has to be plain text. The compiled lock does not hold the
 # prompt: it imports the .md at run time, so the prompt is the source minus its HTML comments. If a future gh-aw
