@@ -72,6 +72,12 @@ if ! grep -q "id: closed_by_merge" "$tmp/.github/workflows/waiting-for-release.l
   echo "::error::waiting-for-release lost its closed_by_merge step in the compiled lock"
   exit 1
 fi
+# What a release contains is decided by git, not by the release notes (frodo-lib#762, docs/multi-phase-design.md,
+# "Which fixes a release contains"): the closer's deterministic step must survive compilation, or the notes decide again.
+if ! grep -q "id: included_fixes" "$tmp/.github/workflows/release-closer.lock.yml"; then
+  echo "::error::release-closer lost its included_fixes step in the compiled lock"
+  exit 1
+fi
 # A blocking label stops the hand-off (docs/multi-phase-design.md, "Who may start when"): the PR worker is the
 # one gate that causes code, so a person's hold (`plan-approval-required`, also when it was added by hand) and
 # an unfinished dependency must be in its compiled ACTIVATION condition, not only in a prompt. Flatten the
