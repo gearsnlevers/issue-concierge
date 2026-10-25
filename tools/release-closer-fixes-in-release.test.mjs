@@ -166,6 +166,16 @@ test('an issue linked to a related repository is left to the agent, and a pull r
   assert.deepEqual(r.calls, []);
 });
 
+test('the canonical issue of a link (original-in-related-repo) is moved like any other: only the original is left to the agent', async () => {
+  const r = await run({
+    issues: [waiting(804, ['original-in-related-repo'])],
+    comments: { 804: [bot(WAIT)] },
+    pulls: { 775: { merged: true, merge_commit_sha: 'aaa111' } },
+    compare: { 'aaa111...v5.0.0-13': 'ahead' },
+  });
+  assert.equal(r.calls.length, 3, 'released added, waiting removed, comment posted');
+});
+
 test('the latest "Fixed in" comment decides when an issue was fixed more than once', async () => {
   const pulls = { 10: { merged: true, merge_commit_sha: 'old' }, 11: { merged: true, merge_commit_sha: 'new' } };
   const first = await run({ issues: [waiting(5)], comments: { 5: [bot('Fixed in #10. Waiting.'), bot('Fixed in #11. Waiting.')] }, pulls, compare: { 'old...v5.0.0-13': 'ahead', 'new...v5.0.0-13': 'behind' } });

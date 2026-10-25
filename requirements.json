@@ -77,7 +77,12 @@
     {
       "name": "related-repo",
       "color": "fbca04",
-      "description": "Non-canonical issue; tracked in a related repository"
+      "description": "Original issue; the work is tracked in a related repository"
+    },
+    {
+      "name": "original-in-related-repo",
+      "color": "fef2c0",
+      "description": "Opened from an issue in a related repository; closing it updates that original"
     },
     {
       "name": "waiting-for-release",

@@ -156,20 +156,20 @@ test('the canonical issue starts held: create-issue carries the hold label and k
   const fm = parts(worker).frontmatter;
   const block = fm.match(/^ {2}create-issue:\n((?: {4}.*\n)+)/m);
   assert.ok(block, 'create-issue block not found in the frontmatter');
-  assert.match(block[1], /^ {4}labels:\n {6}- plan-approval-required\n/m);
-  assert.equal([...block[1].matchAll(/^ {6}- /gm)].length, 1, 'the hold is the only label the system adds');
+  assert.match(block[1], /^ {4}labels:\n {6}- plan-approval-required\n {6}- original-in-related-repo\n/m);
+  assert.equal([...block[1].matchAll(/^ {6}- /gm)].length, 2, 'the hold and the link label are the only labels the system adds (tools/original-in-related-repo.test.mjs)');
   assert.equal((fm.match(/# concierge:cross-repo/g) ?? []).length, 1, 'the updater replaces this marker with the token and allowed repositories');
-  assert.match(create, /Do not set labels on it\. The system opens it with the hold label `plan-approval-required`/);
+  assert.match(create, /Do not set labels on it\. The system opens it with the hold label `plan-approval-required` and the link label `original-in-related-repo`/);
 });
 
 test('the updater keeps the hold when it generates the cross-repository settings', () => {
   const generated = applyCrossRepo(worker, { repo: 'o/lib', secret: 'LIB_TOKEN' });
   const block = generated.match(/^ {2}create-issue:\n((?: {4}.*\n)+)/m)[1];
-  assert.match(block, /labels:\n {6}- plan-approval-required\n/);
+  assert.match(block, /labels:\n {6}- plan-approval-required\n {6}- original-in-related-repo\n/);
   assert.match(block, /github-token: \$\{\{ secrets\.LIB_TOKEN \}\}\n/);
   assert.match(block, /allowed-repos: \["o\/lib"\]\n/);
   const without = applyCrossRepo(worker, null).match(/^ {2}create-issue:\n((?: {4}.*\n)+)/m)[1];
-  assert.match(without, /labels:\n {6}- plan-approval-required\n/, 'without related repositories the label stays and nothing else is added');
+  assert.match(without, /labels:\n {6}- plan-approval-required\n {6}- original-in-related-repo\n/, 'without related repositories the labels stay and nothing else is added');
   assert.doesNotMatch(without, /github-token|allowed-repos/);
 });
 
