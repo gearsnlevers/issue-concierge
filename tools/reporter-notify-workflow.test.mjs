@@ -81,7 +81,7 @@ test('manifest and docs list the workflow and its script', () => {
   assert.match(read('README.md'), /reporter-notify\.mjs/);
   assert.match(deployment, /\| `workflows\/reporter-notify\.yml` \| `\.github\/workflows\/reporter-notify\.yml` \|/);
   assert.match(deployment, /\| `scripts\/reporter-notify\.mjs` \| `\.github\/scripts\/reporter-notify\.mjs` \|/);
-  assert.match(deployment, /It imports `janitor\.mjs`, so install that too\. It needs no secret/);
+  assert.match(deployment, /It imports `janitor\.mjs` and `opt-out\.mjs`, so install those too\. It needs no secret/);
   assert.match(deployment, /confirm that one comment on the linked issue mentions the reporter and points at the request/);
   assert.match(design, /\| `Concierge 1d ▸ Reporter Notify` \| a linked issue is opened, or `plan-approval-required`, `issue-worker-ready` or `needs-info` is applied to it/);
 });

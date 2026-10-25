@@ -24,6 +24,7 @@ files:
   - scripts/related-repo-closer.mjs
   - workflows/janitor.yml
   - scripts/janitor.mjs
+  - scripts/opt-out.mjs
   - workflows/concierge-updater.yml
   - scripts/concierge-updater.mjs
   - workflows/pr-ready-signal.yml

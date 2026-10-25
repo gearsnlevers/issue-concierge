@@ -574,3 +574,39 @@ test('link notice: works for the body the worker really wrote on frodo-lib#806',
   assert.equal(r.notified, true);
   assert.equal(r.login, 'phalestrivir');
 });
+
+// An issue that carries no-auto-processing, or whose original does, gets no notice: a person handles it
+// (https://github.com/vscheuber/repo-concierge/blob/main/docs/decisions/0028-an-item-labelled-no-auto-processing-is-never-touched.md).
+test('no request notice for an opted-out issue, and no read at all; the control is notified', () => {
+  const w = world();
+  const r = notify(issue({ labels: [{ name: 'needs-info' }, { name: 'no-auto-processing' }] }), w.ctx);
+  assert.equal(r.notified, false);
+  assert.match(r.reason, /carries no-auto-processing/);
+  assert.deepEqual(w.posted, []);
+  assert.deepEqual(w.reads, [], 'nothing of the issue, its original or its comments is read');
+  assert.equal(notify(issue(), world().ctx).notified, true, 'the same issue without the label');
+});
+
+test('no link notice for an opted-out canonical issue', () => {
+  const w = world();
+  const r = notifyLink(issue({ labels: [{ name: 'no-auto-processing' }] }), w.ctx);
+  assert.equal(r.notified, false);
+  assert.match(r.reason, /carries no-auto-processing/);
+  assert.deepEqual(w.posted, []);
+  assert.deepEqual(w.reads, []);
+  assert.equal(notifyLink(issue({ labels: [] }), world().ctx).notified, true, 'the same issue without the label');
+});
+
+test('no notice when the original issue carries the label: its reporter is told nothing', () => {
+  const orig = {
+    status: 200,
+    data: { number: 887, user: { login: 'phalestrivir', type: 'User' }, labels: [{ name: 'bug' }, { name: 'related-repo' }, { name: 'no-auto-processing' }] },
+  };
+  for (const [fn, labels] of [[notify, [{ name: 'needs-info' }]], [notifyLink, []]]) {
+    const w = world({ 'repos/rockcarver/frodo-cli/issues/887': orig });
+    const r = fn(issue({ labels }), w.ctx);
+    assert.equal(r.notified, false, fn.name);
+    assert.match(r.reason, /original report: the issue carries no-auto-processing/, fn.name);
+    assert.deepEqual(w.posted, [], fn.name);
+  }
+});

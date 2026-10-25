@@ -475,3 +475,22 @@ test('main: the issue number and the repository are required', () => {
   assert.equal(runMain(mainRoutes(true), { env: { ISSUE_NUMBER: '' } }).status, 1);
   assert.equal(runMain(mainRoutes(true), { env: { ISSUE_NUMBER: 'abc' } }).status, 1);
 });
+
+// An opted-out canonical issue, or an original that carries the label, is left alone: no comment, no label, no close
+// (https://github.com/vscheuber/repo-concierge/blob/main/docs/decisions/0028-an-item-labelled-no-auto-processing-is-never-touched.md).
+test('a canonical issue that carries no-auto-processing is skipped before anything is read', () => {
+  const gh = github();
+  const verdict = decide(canonical({ labels: [{ name: LABEL_CANONICAL }, { name: 'no-auto-processing' }] }), ctxFor(gh));
+  assert.equal(verdict.action, 'skip');
+  assert.match(verdict.reason, /carries no-auto-processing/);
+  assert.deepEqual(gh.reads, [], 'the original is not even read');
+  assert.equal(decide(canonical(), ctxFor(github())).action, 'waiting', 'the control without the label');
+});
+
+test('an original that carries no-auto-processing is not commented on, labelled or closed', () => {
+  const gh = github({ [`repos/${RELATED}/issues/922`]: { status: 200, data: original({ labels: [{ name: LABEL_ORIGINAL }, { name: 'no-auto-processing' }] }) } });
+  const verdict = decide(canonical(), ctxFor(gh));
+  assert.equal(verdict.action, 'skip');
+  assert.match(verdict.reason, /922: the issue carries no-auto-processing/);
+  assert.ok(!gh.reads.some((p) => p.endsWith('/comments?per_page=100&page=1')), 'its comments are not read either');
+});

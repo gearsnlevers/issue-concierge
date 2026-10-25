@@ -71,7 +71,7 @@ test('the workflow, its script and everything the script imports are installed t
   for (const [, dep] of script.matchAll(/from '\.\/([\w-]+\.mjs)'/g)) {
     assert.match(manifest, new RegExp(`^  - scripts/${dep.replace(/[.]/g, '\\.')}$`, 'm'), `${dep} is imported by the closer but not installed`);
   }
-  assert.match(flat(workflow.replace(/^#\s?/gm, '')), /it imports dependency-watch\.mjs and reporter-notify\.mjs, which imports janitor\.mjs: install them too/);
+  assert.match(flat(workflow.replace(/^#\s?/gm, '')), /it imports dependency-watch\.mjs, opt-out\.mjs and reporter-notify\.mjs, which imports janitor\.mjs: install them too/);
 });
 
 test('the script never decides by a model: no network call but the GitHub API, no process but gh', () => {

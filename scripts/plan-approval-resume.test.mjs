@@ -208,3 +208,18 @@ test('resume hands a high-risk issue off exactly once, and does nothing for a bo
   resume(issue(['complexity/low', 'risk/high']), { ...ctx, actor: 'github-actions[bot]' });
   assert.deepEqual(calls, []);
 });
+
+// An issue that carries no-auto-processing is never handed to the PR gate, whoever removes the hold
+// (https://github.com/vscheuber/repo-concierge/blob/main/docs/decisions/0028-an-item-labelled-no-auto-processing-is-never-touched.md).
+test('an opted-out issue is not handed off, and nothing is written to it', () => {
+  const labelled = issue(['complexity/high', 'risk/high', 'no-auto-processing']);
+  const v = decide(labelled, 'plan-approval-required', 'a-maintainer');
+  assert.equal(v.handoff, false);
+  assert.match(v.reason, /carries no-auto-processing/);
+  const calls = [];
+  const out = resume(labelled, { removedLabel: 'plan-approval-required', actor: 'a-maintainer', addLabel: (l) => calls.push(['label', l]), comment: (b) => calls.push(['comment', b]) });
+  assert.equal(out.handoff, false);
+  assert.deepEqual(calls, []);
+  // the control: without the label the same removal hands the issue on
+  assert.equal(decide(issue(['complexity/high', 'risk/high']), 'plan-approval-required', 'a-maintainer').handoff, true);
+});

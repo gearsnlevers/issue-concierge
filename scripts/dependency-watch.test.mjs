@@ -1,6 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { spawnSync } from 'node:child_process';
 import {
   parseDependencies,
   parseRelatedRepos,
@@ -210,4 +213,51 @@ test('the compare lookup asks for the status only (the full payload can exceed 1
   const compare = calls.find(([p]) => p.includes('/compare/'));
   assert.ok(compare);
   assert.equal(compare[1]?.jq, '{status: .status}');
+});
+
+// The watcher never evaluates, comments on or relabels an issue that carries no-auto-processing, whatever it waits for
+// (https://github.com/vscheuber/repo-concierge/blob/main/docs/decisions/0028-an-item-labelled-no-auto-processing-is-never-touched.md).
+// The whole script runs against a fake `gh` that answers the list and records every call.
+const WATCH = path.resolve(import.meta.dirname, 'dependency-watch.mjs');
+
+function watchWith(issues) {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'watch-gh-'));
+  const log = path.join(dir, 'calls.jsonl');
+  const routes = { 'repos/o/r/issues?labels=dependency-required&state=open&per_page=100': issues };
+  for (const i of issues) routes[`repos/o/r/issues/${i.number}/comments?per_page=100`] = [];
+  fs.writeFileSync(path.join(dir, 'routes.json'), JSON.stringify(routes));
+  fs.writeFileSync(
+    path.join(dir, 'gh'),
+    `#!/usr/bin/env node
+const fs = require('node:fs');
+const args = process.argv.slice(2);
+const routes = JSON.parse(fs.readFileSync(${JSON.stringify(path.join(dir, 'routes.json'))}, 'utf8'));
+const method = args.includes('--method') ? args[args.indexOf('--method') + 1] : 'GET';
+fs.appendFileSync(${JSON.stringify(log)}, JSON.stringify({ target: args[1], method }) + '\\n');
+if (method !== 'GET') { process.stdout.write('{}'); process.exit(0); }
+const r = routes[args[1]];
+if (r === undefined) { process.stderr.write('gh: Not Found (HTTP 404)\\n'); process.exit(1); }
+process.stdout.write(JSON.stringify(r));
+`,
+    { mode: 0o755 }
+  );
+  const r = spawnSync(process.execPath, [WATCH], {
+    cwd: dir,
+    env: { PATH: `${dir}${path.delimiter}${process.env.PATH}`, GITHUB_REPOSITORY: 'o/r', GH_TOKEN: 'read', SIGNAL_TOKEN: 'signal' },
+    encoding: 'utf8',
+  });
+  const calls = fs.existsSync(log) ? fs.readFileSync(log, 'utf8').trim().split('\n').map((l) => JSON.parse(l)) : [];
+  return { status: r.status, out: r.stdout + r.stderr, calls };
+}
+const waitingIssue = (number, extra = []) => ({ number, body: 'No declared dependency here.', labels: [{ name: 'dependency-required' }, ...extra.map((name) => ({ name }))] });
+
+test('the watcher skips an opted-out issue that waits on a dependency: no read of its comments, no write, and says why', () => {
+  const r = watchWith([waitingIssue(1, ['no-auto-processing']), waitingIssue(2)]);
+  assert.equal(r.status, 0, r.out);
+  assert.match(r.out, /#1: skipped \(the issue carries no-auto-processing/);
+  assert.ok(!r.calls.some((c) => c.target.startsWith('repos/o/r/issues/1/')), 'nothing is requested for #1 after the list');
+  // the control next to it: #2 is evaluated and, with nothing to wait for, released with a fresh gate label
+  assert.ok(r.calls.some((c) => c.target === 'repos/o/r/issues/2/comments?per_page=100'));
+  assert.ok(r.calls.some((c) => c.method === 'POST' && c.target === 'repos/o/r/issues/2/labels'), 'the control is relabelled');
+  assert.ok(!r.calls.some((c) => c.method !== 'GET' && /issues\/1\//.test(c.target)), 'no write to the opted-out issue');
 });

@@ -85,6 +85,11 @@
       "description": "Opened from an issue in a related repository; closing it updates that original"
     },
     {
+      "name": "no-auto-processing",
+      "color": "6a737d",
+      "description": "Concierge never touches this item; remove the label to hand it over"
+    },
+    {
       "name": "waiting-for-release",
       "color": "c5def5",
       "description": "Fix is merged; waiting for a release that includes it"

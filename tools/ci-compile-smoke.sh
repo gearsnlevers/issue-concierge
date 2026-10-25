@@ -88,6 +88,28 @@ for label in plan-approval-required dependency-required; do
     exit 1
   fi
 done
+# An item that carries no-auto-processing is never touched (docs/multi-phase-design.md, "Opting an item out"): every
+# gate must read the label in its compiled ACTIVATION condition, where it stops a run before it starts (PR triage reads
+# the pull request's labels), the issue worker must start on a label being removed, and the release closer's
+# deterministic step must keep the skip. Flatten the whitespace first: gh-aw wraps the condition.
+for name in issue-worker issue-triage plan-worker plan-triage pr-worker pr-triage waiting-for-release; do
+  if ! activation_if "$tmp/.github/workflows/$name.lock.yml" | tr '\n' ' ' | tr -s ' ' | grep -qE "!contains\(github\.event\.(issue|pull_request)\.labels\.\*\.name, 'no-auto-processing'\)"; then
+    echo "::error::$name does not stop at no-auto-processing in its compiled activation condition"
+    exit 1
+  fi
+done
+if ! tr '\n' ' ' < "$tmp/.github/workflows/issue-worker.lock.yml" | tr -s ' ' | grep -qE "issues:( +types:)? +- opened +- reopened +- edited +- unlabeled"; then
+  echo "::error::the issue worker does not start on a label being removed in its compiled lock"
+  exit 1
+fi
+if ! activation_if "$tmp/.github/workflows/issue-worker.lock.yml" | tr '\n' ' ' | tr -s ' ' | grep -qF "(github.event.action != 'unlabeled' || github.event.label.name == 'no-auto-processing')"; then
+  echo "::error::the issue worker's compiled activation condition lets the removal of any label through"
+  exit 1
+fi
+if ! grep -qF "if (names.includes('no-auto-processing')) continue;" "$tmp/.github/workflows/release-closer.lock.yml"; then
+  echo "::error::release-closer lost the no-auto-processing skip of its included_fixes step in the compiled lock"
+  exit 1
+fi
 # A routed issue starts held and is marked as opened from another repository (docs/multi-phase-design.md,
 # "Split-repo routing", "Both issues of a link carry a label"): the canonical issue the issue worker opens in a
 # related repository must carry the hold and the link label in the compiled safe-output configuration, where they

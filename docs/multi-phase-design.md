@@ -83,6 +83,7 @@ Every label event runs in its own concurrency group (the item number plus the la
 | `complexity/*`, `risk/*` | plan triage | never | stays |
 | `low-hanging-fruit`, `priority/*` | issue triage | never | stays |
 | `duplicate`, `invalid`, `already-fixed`, `out-of-scope`, `spam` | issue triage | never | stays (it explains the closure) |
+| `no-auto-processing` | a maintainer, by hand (no gate adds or removes it) | a maintainer, which hands the issue over | stays |
 | `related-repo` | issue worker | never | stays |
 | `original-in-related-repo` | issue worker's `create-issue` configuration | never | stays |
 | `waiting-for-release`, `released` | the `waiting-for-release` workflow, then the release closer | `waiting-for-release` goes when the release lands | `released` stays |
@@ -219,6 +220,32 @@ The issue worker is the earlier, wording-level layer: when it finds an open pull
 Every issue-driven workflow carries an activation condition (`if:` in the frontmatter) so it never starts for bot-authored issues: `github.event.issue.user.type != 'Bot'`. `issue-worker` additionally requires that the triggering comment was not written by a bot and that the comment is not on a pull request. Without this, the issues gh-aw files about its own failures were analyzed, planned and closed like real work, and the harness's own comments re-triggered the worker. A manual run of `issue-worker` with an issue number is unaffected, so a maintainer can still opt a bot-authored issue in.
 
 The PR gate worker only routes to the coding agent, so it uses the small model like the triage workflows; the plan worker is the only gate that still uses the default model.
+
+## Opting an item out
+
+An issue or pull request that carries `no-auto-processing` is never touched by the Concierge. The rule is the decision record [an item labelled no-auto-processing is never touched](https://github.com/vscheuber/repo-concierge/blob/main/docs/decisions/0028-an-item-labelled-no-auto-processing-is-never-touched.md).
+
+**Why it exists.** The issue worker starts on any new, edited or reopened issue and on any comment, and a maintainer's comment on frodo-cli#518, an issue from before the Concierge that had never been through it, started intake, then triage, then a plan with a hold label, three bot comments in all. The maintainers wanted to handle that issue by hand and had no way to say so. Closed issues and bot-authored issues already start nothing ("Who may start when", "Bot activity is not work"); this is the equivalent for an issue a person wants out.
+
+**What it stops.** Everything: no gate starts, nothing is labelled, commented on, planned, assigned or closed, and a closed issue gets no "Fixed in" and no "Included in" comment. The guarantee is the `if:` of each workflow, so no run starts and nothing is spent; the scripts check the label for the items they pick from a query. A prompt that repeats the rule is only a first layer.
+
+| Workflow or script | Where the label is checked |
+|---|---|
+| issue worker | `if:` (the issue's labels in the event); the `unlabeled` event starts it only for this label |
+| issue triage, plan worker, plan triage | `if:` |
+| PR worker | `if:` and the live check of the `existing_fix` step |
+| PR triage | `if:`, on the pull request's labels |
+| Waiting for Release | `if:` and the `closed_by_merge` step |
+| release closer | the `included_fixes` step skips it, and the prompt repeats it |
+| janitor | `if:` for events, `scripts/janitor.mjs` for sweeps and manual runs |
+| reporter notices | `if:`, and the script for the issue and for its original |
+| plan approval resume, PR ready signal | `if:`, and the script |
+| dependency watcher | `if:` for the label event, and the script's loop |
+| related-repo closer | `if:`, and the script for the canonical issue and for the original |
+
+**Handing an issue over.** Removing the label starts the issue worker once: it listens for `unlabeled` and its condition lets that event through for this label only (removing any other label starts nothing). It then follows its other conditions: the issue must be open, not written by a bot, and not a pull request. A manual dispatch of the issue worker works on a labelled issue, because a dispatch carries no issue payload and is the explicit act of a person.
+
+**Limits, on purpose.** The label belongs to the item that carries it. A pull request is its own item: a labelled pull request is skipped by PR triage, the janitor and the ready signal, and a labelled issue does not opt out a pull request somebody opened for it. The dependency watcher still reads the state of a labelled issue that another issue depends on, because it cannot tell whether that issue is finished otherwise; it changes nothing on it. The label is applied by a person only: no gate adds it, and none removes it.
 
 ## Split-repo routing (linked issues)
 

@@ -58,7 +58,7 @@ test('the closer starts only for a closed issue that carries the link label, and
   assert.ok(m, 'the job condition was not found');
   assert.equal(
     flat(m[1]).trim(),
-    `github.event_name == 'workflow_dispatch' || (github.event.issue.user.type != 'Bot' && contains(github.event.issue.labels.*.name, '${LABEL}'))`
+    `github.event_name == 'workflow_dispatch' || (github.event.issue.user.type != 'Bot' && contains(github.event.issue.labels.*.name, '${LABEL}') && !contains(github.event.issue.labels.*.name, 'no-auto-processing'))`
   );
 });
 
