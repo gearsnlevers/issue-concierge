@@ -21,6 +21,12 @@ Repo Concierge is consumed by pinned release, never by branch. `main` is work in
 
 Prereleases (`premajor`, `prerelease`) are marked as prereleases on GitHub. Deployments on the default channel ignore them.
 
+## Keeping the pins current
+
+Dependabot cannot see the workflow files the Concierge delivers (they live in `workflows/`, and it only reads `.github/workflows/`) or the gh-aw version in `requirements.json`. A deployment that runs Dependabot then finds the stale pins first and proposes edits to files the Concierge owns, which the next update overwrites. So the Concierge keeps its own pins current: the `Currency check` workflow runs weekly (and by hand), compares them with the latest releases and keeps one open issue listing what is behind; it closes the issue when nothing is. Look at that issue before cutting a release. Moving gh-aw is a release like any other: change `ghAw.version`, run `tools/ci-compile-smoke.sh`, compare the compiled lock files, read the gh-aw release notes.
+
+The Concierge does not configure Dependabot in a deployment and does not require any exclusion: what a deployment does with Dependabot is its maintainers' choice. The update pull request lists an edited managed file under "Local changes this update overwrites"; the compiled lock files are rebuilt from the definitions, so a hand edit there is replaced without being listed.
+
 ## Cutting a release
 
 The release workflow (`Actions > Release`) is modeled on the release workflows of the `vscheuber/*-action` repositories and uses the same actions:
