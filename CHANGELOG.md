@@ -1,5 +1,12 @@
 # Changelog
 
+## [v1.4.0] - 2026-10-25
+
+### What's Changed
+* feat: an item labelled no-auto-processing is never touched by the Concierge by @vscheuber in https://github.com/vscheuber/repo-concierge/pull/55
+
+**Full Changelog**: https://github.com/vscheuber/repo-concierge/compare/v1.3.2...v1.4.0
+
 ## [v1.3.2] - 2026-10-25
 
 ### What's Changed
