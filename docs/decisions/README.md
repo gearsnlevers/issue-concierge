@@ -50,3 +50,4 @@ Copy `template.md` to `NNNN-short-title.md` (the next number, starting at 0001),
 | 0025 | [Both issues of a link carry a label](0025-both-issues-of-a-link-carry-a-label.md) | accepted |
 | 0026 | [The related-repo closer is code, not a model](0026-the-related-repo-closer-is-code-not-a-model.md) | superseded by 0027 |
 | 0027 | [The related-repo closer trusts the proof of the link, not the author of the issue](0027-the-related-repo-closer-trusts-the-proof-of-the-link-not-its-author.md) | accepted |
+| 0028 | [An item labelled no-auto-processing is never touched by the Concierge](0028-an-item-labelled-no-auto-processing-is-never-touched.md) | accepted |

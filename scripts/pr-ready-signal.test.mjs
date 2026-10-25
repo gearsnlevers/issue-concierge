@@ -149,3 +149,30 @@ test('the label goes on with the signal token, which is how PR triage starts', (
   assert.match(y, /SIGNAL_TOKEN: \$\{\{ secrets\.SIGNAL_TOKEN \}\}/);
   assert.match(y, /node \.github\/scripts\/pr-ready-signal\.mjs/);
 });
+
+// A pull request that carries no-auto-processing is not signalled for PR triage, on any path
+// (https://github.com/vscheuber/repo-concierge/blob/main/docs/decisions/0028-an-item-labelled-no-auto-processing-is-never-touched.md).
+const OPT_PR = pr({ labels: [{ name: 'no-auto-processing' }] });
+
+test('an opted-out pull request is not signalled by a direct trigger or by the sweep rule', () => {
+  for (const trigger of ['ready_for_review', 'manual']) {
+    const v = decide({ pr: OPT_PR, trigger });
+    assert.equal(v.add, false, trigger);
+    assert.match(v.reason, /carries no-auto-processing/);
+    assert.equal(decide({ pr: pr(), trigger }).add, true, `${trigger}: the control without the label`);
+  }
+  const events = [started('13:21:10'), finished('14:06:14')];
+  assert.equal(decideSweep({ pr: OPT_PR, events }).add, false);
+  assert.match(decideSweep({ pr: OPT_PR, events }).reason, /carries no-auto-processing/);
+  assert.equal(decideSweep({ pr: pr(), events }).add, true, 'the control without the label');
+});
+
+test('a sweep skips an opted-out pull request without reading its timeline and still signals the others', async () => {
+  const f = fake({
+    pulls: [pr({ number: 1 }), pr({ number: 2, labels: [{ name: 'no-auto-processing' }] })],
+    timelines: { 1: [started('13:21:10'), finished('14:06:14')], 2: [started('13:21:10'), finished('14:06:14')] },
+  });
+  await run({ trigger: 'sweep' }, f.ctx);
+  assert.deepEqual(f.calls.added, [1]);
+  assert.match(f.calls.logs.join('\n'), /#2: skipped .*carries no-auto-processing/);
+});

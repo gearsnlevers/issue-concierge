@@ -643,3 +643,31 @@ test('the docs state the rules the sweep depends on', () => {
   assert.match(held, /only while the default branch's copy of that workflow still has a job-level `if: github\.actor == 'dependabot\[bot\]'` on every job/);
   assert.match(held, /`pull-requests: read`/);
 });
+
+// An item that carries no-auto-processing keeps every label as a person left it, even a stale gate label
+// (docs/multi-phase-design.md, "Opting an item out"). The control item next to it is cleaned as before.
+const OPT = 'no-auto-processing';
+
+test('the sweep leaves an opted-out issue and an opted-out pull request alone, and cleans their neighbours', async () => {
+  const f = fake([
+    item(1, ['issue-worker-ready', 'issue-triage-handoff']),
+    item(2, ['issue-worker-ready', 'issue-triage-handoff', OPT]),
+    item(3, ['pr-worker-ready', 'pr-triage-handoff'], { pull_request: {} }),
+    item(4, ['pr-worker-ready', 'pr-triage-handoff', OPT], { pull_request: {} }),
+  ]);
+  const changed = await run({}, f.ctx);
+  assert.deepEqual(f.removed.sort(), ['1:issue-worker-ready', '3:pr-worker-ready']);
+  assert.deepEqual(changed.map((c) => c.number).sort(), [1, 3]);
+  assert.match(f.logs.join('\n'), /#2 \(issue, open\): skipped, the issue carries no-auto-processing/);
+  assert.match(f.logs.join('\n'), /#4 \(pull request, open\): skipped, the pull request carries no-auto-processing/);
+});
+
+test('a run on one opted-out item, a sweep of closed items and a dry run change nothing for it either', async () => {
+  const f = fake([item(5, ['issue-worker-ready', 'backlog', OPT]), item(6, ['issue-triage-handoff', 'dependency-satisfied', OPT], { state: 'closed' })]);
+  assert.deepEqual(await run({ number: 5 }, f.ctx), []);
+  assert.deepEqual(await run({ includeClosed: true }, f.ctx), []);
+  assert.deepEqual(await run({ number: 5, dryRun: true }, f.ctx), []);
+  assert.deepEqual(f.removed, []);
+  const control = fake([item(5, ['issue-worker-ready', 'backlog'])]);
+  assert.equal((await run({ number: 5 }, control.ctx)).length, 1, 'the same item without the label is cleaned');
+});

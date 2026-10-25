@@ -302,12 +302,13 @@ After the secret exists, remove and re-add the handoff label (or re-run the work
 
 Issues can declare `Depends on: owner/repo#N`. Issue triage applies `dependency-required` and the issue waits. A plain GitHub Actions workflow, with no LLM, resolves the dependencies and resumes the issue. Rules and edge cases: [shared/dependencies.md](../shared/dependencies.md).
 
-Install it in every deployment. Copy two files:
+Install it in every deployment. Copy these files:
 
 | From this repository | To the consuming repository |
 |----------------------|-----------------------------|
 | `workflows/dependency-watch.yml` | `.github/workflows/dependency-watch.yml` |
 | `scripts/dependency-watch.mjs` | `.github/scripts/dependency-watch.mjs` |
+| `scripts/opt-out.mjs` | `.github/scripts/opt-out.mjs` (the one label check every script shares) |
 
 It is not a gh-aw workflow, so `gh aw compile` does not touch it. Update it by copying the files again.
 
@@ -331,7 +332,7 @@ When an issue was opened from another repository (a split-repo case, see below),
 | `workflows/reporter-notify.yml` | `.github/workflows/reporter-notify.yml` |
 | `scripts/reporter-notify.mjs` | `.github/scripts/reporter-notify.mjs` |
 
-It imports `janitor.mjs`, so install that too. It needs no secret: it reads the original issue with the workflow token, so it works for public related repositories only (a private original is skipped). It runs when a linked issue (one with a `Reported from` line) is opened or gets `plan-approval-required`, `issue-worker-ready` or `needs-info`, or by hand for one issue. It waits a few seconds, at most four checks 15 seconds apart, for the original to confirm the link, because the issue worker labels the original just after it creates the linked issue. It does not run for issues that are not linked. The rules are in [multi-phase-design.md](multi-phase-design.md#split-repo-routing-linked-issues). To stop notifications for a pair of linked issues, remove `related-repo` from the original issue.
+It imports `janitor.mjs` and `opt-out.mjs`, so install those too. It needs no secret: it reads the original issue with the workflow token, so it works for public related repositories only (a private original is skipped). It runs when a linked issue (one with a `Reported from` line) is opened or gets `plan-approval-required`, `issue-worker-ready` or `needs-info`, or by hand for one issue. It waits a few seconds, at most four checks 15 seconds apart, for the original to confirm the link, because the issue worker labels the original just after it creates the linked issue. It does not run for issues that are not linked. The rules are in [multi-phase-design.md](multi-phase-design.md#split-repo-routing-linked-issues). To stop notifications for a pair of linked issues, remove `related-repo` from the original issue.
 
 ### PR ready signal
 
@@ -342,7 +343,7 @@ The coding agent cannot add labels, so a plain Actions workflow (no LLM) adds `p
 | `workflows/pr-ready-signal.yml` | `.github/workflows/pr-ready-signal.yml` |
 | `scripts/pr-ready-signal.mjs` | `.github/scripts/pr-ready-signal.mjs` |
 
-It imports `janitor.mjs`, so install that too. The triggers and what each one means are in [multi-phase-design.md](multi-phase-design.md#3-pr-gate). To signal a pull request by hand, run the workflow with its number.
+It imports `janitor.mjs` and `opt-out.mjs`, so install those too. The triggers and what each one means are in [multi-phase-design.md](multi-phase-design.md#3-pr-gate). To signal a pull request by hand, run the workflow with its number.
 
 ### Janitor
 
@@ -353,7 +354,7 @@ A plain Actions workflow (no LLM) keeps issues and pull requests showing where t
 | `workflows/janitor.yml` | `.github/workflows/janitor.yml` |
 | `scripts/janitor.mjs` | `.github/scripts/janitor.mjs` |
 
-`plan-approval-resume.mjs` imports `janitor.mjs`, so install both together. To tidy issues that closed before the janitor existed, run the workflow once with `include_closed` (use `dry_run` first; it also lists the held runs it would delete and why). The rules are in [multi-phase-design.md](multi-phase-design.md#label-lifecycle) and [multi-phase-design.md](multi-phase-design.md#held-runs).
+`plan-approval-resume.mjs` imports `janitor.mjs` and `opt-out.mjs`, so install the three together; the janitor imports `opt-out.mjs` as well. To tidy issues that closed before the janitor existed, run the workflow once with `include_closed` (use `dry_run` first; it also lists the held runs it would delete and why). The rules are in [multi-phase-design.md](multi-phase-design.md#label-lifecycle) and [multi-phase-design.md](multi-phase-design.md#held-runs).
 
 Requirements: `SIGNAL_TOKEN` with Issues: Read and write (it applies `plan-triage-handoff` so the PR gate starts), and the existing `plan-triage-handoff` label. It acts only on an open issue that has `complexity/high` or `risk/high`, has no `plan-triage-handoff`, and is not labeled `dependency-required`, and it ignores a removal made by a bot account (approval is a human decision). To resume an issue whose label was removed before the workflow was installed, run it from the Actions tab with the issue number.
 
@@ -478,6 +479,7 @@ The workflows apply and react to specific labels. Create them once per repositor
 | `dependency-satisfied` | `0e8a16` | Dependencies finished or cleared by a maintainer; issue triage lets the issue through |
 | `related-repo` | `fbca04` | Original issue; the work is tracked in a related repository |
 | `original-in-related-repo` | `fef2c0` | Opened from an issue in a related repository; closing it updates that original |
+| `no-auto-processing` | `6a737d` | Concierge never touches this item; remove the label to hand it over |
 | `waiting-for-release` | `c5def5` | Fix is merged; waiting for a release that includes it |
 | `released` | `0e8a16` | A release includes this fix |
 | `issue-worker-ready` | `c2e0c6` | Issue worker finished |
@@ -499,6 +501,20 @@ Example bulk creation (requires `gh`):
 gh label create "complexity/low" --color 0e8a16 --description "Mechanical or minimal design impact; high autonomy possible" --force
 # … repeat for the remaining labels
 ```
+
+### Keeping an item out of the Concierge (`no-auto-processing`)
+
+An issue or pull request with the label `no-auto-processing` is never touched by the Concierge ([the decision record](https://github.com/vscheuber/repo-concierge/blob/main/docs/decisions/0028-an-item-labelled-no-auto-processing-is-never-touched.md)). Create it with the other labels (it is in the table above). A maintainer adds it by hand to anything they handle themselves; removing it from an open issue starts intake once.
+
+A repository that adopts the Concierge with issues of its own should label them once, because a comment on an old issue starts the issue worker like a new one. Label every issue created before the adoption date, open and closed (a reopened old issue would otherwise start intake), in small batches:
+
+```bash
+REPO=owner/repo; BEFORE=YYYY-MM-DD   # the day the Concierge was installed
+gh issue list --repo "$REPO" --state all --limit 1000 --search "created:<$BEFORE" --json number --jq '.[].number' \
+  | while read -r n; do gh issue edit "$n" --repo "$REPO" --add-label no-auto-processing; sleep 1; done
+```
+
+Labelling fires `labeled` events: every workflow skips an event for an item that carries the label, so no gate and no agent run starts.
 
 ## 5. Branch protection / rulesets
 
@@ -536,6 +552,7 @@ Low/low pull requests that carry `pr-triage-handoff` and pass required checks ca
 - For an actionable issue, confirm a plan comment appears (its raw body ends with the hidden `gh-aw-workflow-call-id: owner/repo/plan-worker` comment, with the real repository), that complexity/risk labels are applied, and that the plan triage run did not end in a `noop` saying it could not identify the plan.
 - For an issue that plan triage rates high risk (a change to authentication, say) even though its complexity is low, confirm it gets `plan-approval-required` and the comment "High risk. Remove the plan-approval-required label to resume.", and no `plan-triage-handoff`; then remove the label yourself and confirm `plan-approval-resume` hands the issue to the PR gate. For a bug report that contains an error or stack trace, confirm the plan says how the cause was checked, or marks it "Hypothesis (unverified)".
 - Add `plan-approval-required` by hand to an open, low-risk issue that has a plan comment, then add `plan-worker-ready` so that plan triage classifies it: confirm it gets complexity and risk labels, no `plan-triage-handoff` and no comment. Add `plan-triage-handoff` by hand and confirm the PR worker run ends without an assignment and the label is gone again. Remove the hold and confirm `plan-approval-resume` hands the issue to the PR gate and the coding agent is assigned. A hold added to an issue that plan triage has not classified is not resumed by removing it: re-add `plan-worker-ready` first.
+- Add `no-auto-processing` to an open issue and comment on it: confirm the issue worker is skipped. Remove the label and confirm the issue worker starts once, and that removing a different label starts it not at all.
 - Add a gate label (for example `plan-triage-handoff`) to a closed issue and confirm no workflow runs an agent. Open an issue that an open pull request already closes (`Fixes #N` in its body), add `plan-triage-handoff`, and confirm no coding agent is assigned and the issue gets one comment naming the pull request that already closes the issue; close that pull request, add the label again and confirm the hand-off goes through.
 - For a low/low item, confirm a pull request is opened. If you enabled auto-merge, confirm it can merge after checks.
 - For a split-repo case, confirm a canonical issue is created with `plan-approval-required` and `original-in-related-repo`, the original receives `related-repo`, and the original is closed when the canonical issue closes. Open the test report from an account that is not a maintainer and confirm that the linked issue gets one comment right after it is created that starts `Original report:` and mentions the reporter. Make the linked issue ask for more information (leave out a required detail), and confirm that one comment on the linked issue mentions the reporter and points at the request. Remove `related-repo` from the original and confirm no further comment appears.
@@ -585,7 +602,8 @@ git push
 - [ ] Optional `.github/agentic-workflows/` config files added only if needed
 - [ ] Issue template present (or optional completeness override)
 - [ ] `gh aw compile` run and lock files committed
-- [ ] All recommended labels created (including `related-repo`, `original-in-related-repo`, `dependency-required`, `dependency-satisfied`)
+- [ ] All recommended labels created (including `related-repo`, `original-in-related-repo`, `no-auto-processing`, `dependency-required`, `dependency-satisfied`)
+- [ ] Issues from before the adoption labelled `no-auto-processing` (see "Keeping an item out of the Concierge")
 - [ ] Dependency watcher installed (`dependency-watch.yml` and `dependency-watch.mjs`)
 - [ ] Deployment check installed (`check-deployment.yml` and `check-deployment.mjs`) and passing; for each related repository the secret exists and its token has Issues: Read and write on that repository
 - [ ] Plan approval resume installed (`plan-approval-resume.yml` and `plan-approval-resume.mjs`)
