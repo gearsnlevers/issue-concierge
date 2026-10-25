@@ -81,7 +81,7 @@ An issue that declares `Depends on:` an unfinished issue or pull request receive
 - Standard agents run read-only; writes go through validated safe-outputs.
 - Threat detection scans proposed outputs before application.
 - Network access, credit budgets, and execution time are capped per workflow.
-- Auto-merge is reserved for the lowest complexity and risk combinations and still depends on repository branch protection.
+- Auto-merge for the lowest complexity and risk combination is aspirational and not enabled anywhere yet: the harness is new and has not proven reliable, and it must first stop out-of-scope issues reliably. The Concierge never merges or enables it, and it would still depend on repository branch protection.
 
 ## Recommended Labels
 
@@ -116,39 +116,38 @@ Create these in consuming repositories (full list and colors in [docs/deployment
 
 | Complexity \ Risk | Low | Medium | High |
 |-------------------|-----|--------|------|
-| Low | Agent + auto-merge eligible | Agent + human review | Stop until `plan-approval-required` is removed, then hand off (agent + human review + tight path limits) |
+| Low | Agent + human review (auto-merge is aspirational) | Agent + human review | Stop until `plan-approval-required` is removed, then hand off (agent + human review + tight path limits) |
 | Medium | Agent + human review | Agent + human review | Stop until `plan-approval-required` is removed, then hand off (human review required) |
 | High | Stop until `plan-approval-required` is removed, then hand off | Stop until `plan-approval-required` is removed, then hand off | Stop until `plan-approval-required` is removed, then hand off |
 
-Repositories may override the matrix locally.
+The matrix is fixed in the workflows. A repository tunes what counts as complex or risky in `complexity.md` and `risk.md` (see Fine-tuning per Repository).
 
 ## Repository configuration
 
-The harness relies on ordinary GitHub branch protection and auto-merge. Recommended settings for the default branch (details in [docs/deployment.md](docs/deployment.md)):
+The harness relies on ordinary GitHub branch protection; auto-merge is not used yet. Recommended settings for the default branch (details in [docs/deployment.md](docs/deployment.md)):
 
 | Setting | Value | Reason |
 |---------|-------|--------|
 | Require a pull request before merging | On | Direct pushes bypass the PR gate |
-| Required approving reviews | 0 | Allows low/low auto-merge; human review for medium/high is enforced by labels and process, not by a blanket review requirement |
+| Required approving reviews | 0 | Would let low/low auto-merge work once it is enabled; human review for medium/high is enforced by labels and process, not by a blanket review requirement |
 | Dismiss stale pull request approvals | Off | Only relevant when required reviews > 0 |
-| Require status checks to pass | On (your CI) | Auto-merge waits for green checks |
+| Require status checks to pass | On (your CI) | Any auto-merge waits for green checks |
 | Require conversation resolution | Off | Optional; not required for the harness |
 | Allow force pushes | Off | Protects history |
 | Allow deletions | Off | Protects the branch |
-| Auto-merge | Enabled | Lets eligible low/low PRs merge when checks pass |
+| Auto-merge | Off | Aspirational, not enabled anywhere yet; the Concierge never enables it |
 
 Also create the labels listed above. Without the labels the workflows cannot signal or classify.
 
 ## Fine-tuning per Repository
 
-Consuming repositories can:
-- Adjust allowed label lists and credit caps.
-- Add repository-specific instructions.
-- Import shared components.
-- Inject a custom environment agent (see `shared/env-agent-contract.md`).
-- Keep core routing and safety logic in this central repository.
+A repository tunes the gates with optional files under `.github/agentic-workflows/`, never by editing the installed workflows, because an update replaces those (with the Concierge updater, the update pull request lists every managed file a deployment edited):
+- `issue-completeness.md`: what a complete report is, if the issue templates do not say.
+- `scope.md`: what the project does not do.
+- `complexity.md` and `risk.md`: what the two gauges mean in this repository.
+- `related-repos.md`: which repository owns what, with the secret and release rules for each.
 
-Local edits are preserved by the 3-way merge performed by `gh aw update`.
+Templates are in `shared/`. A repository can also supply an environment agent (see `shared/env-agent-contract.md`). Credit budgets, models and the routing and safety logic stay in this repository and change by release.
 
 ## Structure
 

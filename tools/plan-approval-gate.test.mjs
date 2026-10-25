@@ -105,7 +105,7 @@ test('docs: the gate, the labels and the routing matrix say high risk stops too'
   const readme = flat(read('README.md'));
   assert.match(readme, /High complexity or high risk adds `plan-approval-required`, and a maintainer can add it by hand to any issue to read the plan first/);
   assert.match(readme, /Added by plan triage for high complexity or high risk, or by a maintainer by hand\./);
-  assert.match(readme, /\| Low \| Agent \+ auto-merge eligible \| Agent \+ human review \| Stop until `plan-approval-required` is removed/);
+  assert.match(readme, /\| Low \| [^|]+ \| Agent \+ human review \| Stop until `plan-approval-required` is removed/);
   assert.match(readme, /\| Medium \| Agent \+ human review \| Agent \+ human review \| Stop until `plan-approval-required` is removed/);
 
   const deployment = flat(read('docs/deployment.md'));

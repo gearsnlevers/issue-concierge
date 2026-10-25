@@ -19,6 +19,6 @@ Complexity measures how much design judgment is required. Higher complexity redu
 ### complexity/high
 - Architectural, cross-cutting, or poorly specified
 - Significant design impact
-- Design discussion and the `design-approved` label are required before an agent may be assigned
+- A maintainer reads the plan and removes the `plan-approval-required` label before an agent may be assigned
 
 Repositories may adjust the exact thresholds while keeping complexity independent of risk.

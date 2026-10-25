@@ -30,6 +30,7 @@ Running the issue worker over old issues raised the question of what an agent ma
 
 - When unsure, the issue stays open with a question or a parking label. Closing without a person is limited to cases that cite evidence.
 - Each issue costs the worker a few searches, inside its budget ([0010](0010-gate-budgets-follow-measured-runs.md)).
+- The maintainers want it shown that the gate stops out-of-scope issues reliably before auto-merge is considered ([0005](0005-a-maintainer-holds-the-levers-of-the-pipeline.md)).
 
 ## Alternatives considered
 

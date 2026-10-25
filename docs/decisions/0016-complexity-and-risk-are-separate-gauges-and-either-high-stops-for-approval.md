@@ -31,10 +31,6 @@ One combined label answers two questions at once: how much design judgment a cha
 - The definitions are qualitative. How many files, or which paths, mean which level is left to the model unless a repository writes it down. Tuning the gauges means editing those two files, not the gates.
 - A label never merges anything. The stops wait for a person and the merge stays a maintainer's.
 
-## Known deviations
-
-- `shared/complexity.md` still names a `design-approved` label for high complexity. The hold is `plan-approval-required` ([0004](0004-gates-advance-by-labels.md)).
-
 ## Alternatives considered
 
 - One label for both (the first build): rejected, the two answer different questions.
