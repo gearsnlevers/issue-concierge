@@ -92,9 +92,24 @@ test('the closer must exist, write to the related repository and use its secret'
   assert.equal(secretErrors.length, 1);
   assert.match(secretErrors[0], /CROSS_REPO_TOKEN does not use the secret FRODO_CLI_ISSUES_TOKEN/);
 
-  const notGenerated = healthy();
-  notGenerated['related-repo-closer.yml'] = 'env:\n  # concierge:cross-repo-env\n';
-  assert.equal(checkDeployment(RELATED(), notGenerated).errors.length, 2);
+  const neither = healthy();
+  neither['related-repo-closer.yml'] = 'env:\n  GH_TOKEN: x\n';
+  assert.equal(checkDeployment(RELATED(), neither).errors.length, 2);
+});
+
+test('a closer the previous updater installed, with the marker not yet replaced, is a warning to finish, not an error', () => {
+  const locks = healthy();
+  locks['related-repo-closer.yml'] = 'env:\n  GH_TOKEN: x\n  # concierge:cross-repo-env\n';
+  const { errors, warnings } = checkDeployment(RELATED(), locks);
+  assert.deepEqual(errors, []);
+  assert.equal(warnings.length, 1);
+  assert.match(warnings[0], /still has the # concierge:cross-repo-env marker/);
+  assert.match(warnings[0], /Run the Concierge updater again/);
+  assert.match(warnings[0], /updates nothing in rockcarver\/frodo-cli/);
+
+  // a marker beside a wrong value is a mistake, not a transition
+  locks['related-repo-closer.yml'] = 'env:\n  # concierge:cross-repo-env\n  CROSS_REPO: x/y\n';
+  assert.match(checkDeployment(RELATED(), locks).errors.join('\n'), /CROSS_REPO is not rockcarver\/frodo-cli/);
 });
 
 test('a repository name that only contains the related one is not accepted', () => {
