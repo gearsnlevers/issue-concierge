@@ -328,4 +328,4 @@ What it gives up: nobody looks at the pull request before a model reads it, and 
 Optional. Any worker may invoke it if the consuming repository defines it.
 
 ### Merge
-Branch protection and auto-merge rules act on the final labels.
+Branch protection acts on the final labels, and a maintainer merges. Auto-merge is aspirational and enabled nowhere yet: the Concierge never enables it.

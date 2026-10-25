@@ -223,17 +223,18 @@ No `COPILOT_GITHUB_TOKEN` is required. Prefer this when available, because it is
 
 ## Cost controls
 
-Early gates use a light model and tight turn limits. Later gates keep the default model.
+The gates that classify or route use a light model and tight turn limits. The plan worker, which writes the plan, and PR triage, which reads a diff, keep the default model.
 
 | Workflow | Model | max-turns | Extra |
 |----------|-------|-----------|-------|
-| issue-worker | small | 10 | skip if related-repo/duplicate/spam; rate-limit issues and comments |
-| issue-triage | small | 8 | skip if related-repo/duplicate/spam |
+| issue-worker | small | 10 | rate-limit issues and comments |
+| issue-triage | small | 8 | |
 | plan-triage | small | 8 | |
 | related-repo-closer | small | 6 | |
 | waiting-for-release | small | 8 | 8 credits, 5 minutes; skipped before the model for closes by hand, not planned, duplicate; each lookup once |
+| release-closer | small | 8 | |
 | plan-worker | default | — | |
-| pr-worker | default | — | |
+| pr-worker | small | — | only assigns the coding agent |
 | pr-triage | default | — | |
 
 `issue-worker` also rate-limits `issues` and `issue_comment` events to 5 runs per user per 30 minutes, so a chatty reporter, or one who edits an issue over and over, does not restart the agent every time. People with write access are exempt.
@@ -284,7 +285,7 @@ Gate handoffs are labels. The next workflow starts on the `labeled` event.
 
 GitHub does not start a workflow from an event created by the default `GITHUB_TOKEN`. Safe-outputs apply labels as `github-actions[bot]`, so the next gate never runs unless the label is applied with a different token.
 
-Every deployment needs a secret named `SIGNAL_TOKEN` (rename it in the workflow frontmatter if you prefer another name). It is used as `github-token` on every `add-labels` safe-output. The dependency watcher and plan approval resume (below) also use it, outside gh-aw, to change labels so the next gate starts. Issues and Pull requests: Read and write cover all of it. The pull requests permission is needed because the PR gate labels a pull request (`pr-worker-ready`, `pr-triage-handoff`, complexity and risk), and GitHub answers a label change on a pull request with `403 Resource not accessible by personal access token` when the token has only Issues. Observed on frodo-lib#771.
+Every deployment needs a secret named `SIGNAL_TOKEN` (rename it in the workflow frontmatter if you prefer another name). It is used as `github-token` on the `add-labels` safe-outputs, except the related-repo closer's, whose labels go to another repository with that repository's secret. The dependency watcher and plan approval resume (below) also use it, outside gh-aw, to change labels so the next gate starts. Issues and Pull requests: Read and write cover all of it. The pull requests permission is needed because the PR gate labels a pull request (`pr-worker-ready`, `pr-triage-handoff`, complexity and risk), and GitHub answers a label change on a pull request with `403 Resource not accessible by personal access token` when the token has only Issues. Observed on frodo-lib#771.
 
 Create a fine-grained token:
 
@@ -513,15 +514,17 @@ Recommended settings on the default branch:
 | Require status checks to pass | On (your existing CI) |
 | Allow force pushes | Off |
 | Allow deletions | Off |
-| Auto-merge | Enabled |
+| Auto-merge | Off |
 
-These can be applied with classic branch protection or with a ruleset. Required reviews stay at 0 so low-complexity / low-risk pull requests can auto-merge after checks pass. Human review for medium and high items is enforced by the label gates and by maintainers, not by a blanket review requirement.
+These can be applied with classic branch protection or with a ruleset. Required reviews stay at 0 so that low-complexity / low-risk pull requests could auto-merge after checks pass, once auto-merge is enabled. Human review for medium and high items is enforced by the label gates and by maintainers, not by a blanket review requirement.
 
 ## 6. Enable auto-merge (optional)
 
-Repository Settings → General → Pull Requests → Allow auto-merge.
+Auto-merge is aspirational and not enabled anywhere yet: the harness is new and has not proven reliable, and it must first stop out-of-scope issues reliably. The Concierge does not enable it or need it, and a maintainer merging by hand is the default.
 
-Low/low pull requests that carry `pr-triage-handoff` and pass required checks can then merge without further intervention.
+To allow it, once you decide to: Repository Settings → General → Pull Requests → Allow auto-merge.
+
+Low/low pull requests that carry `pr-triage-handoff` and pass required checks can then merge without further intervention, once auto-merge is switched on for the pull request (by a person, or by a workflow of your own).
 
 ## 7. Verify
 
@@ -536,7 +539,7 @@ Low/low pull requests that carry `pr-triage-handoff` and pass required checks ca
 - For an issue that plan triage rates high risk (a change to authentication, say) even though its complexity is low, confirm it gets `plan-approval-required` and the comment "High risk. Remove the plan-approval-required label to resume.", and no `plan-triage-handoff`; then remove the label yourself and confirm `plan-approval-resume` hands the issue to the PR gate. For a bug report that contains an error or stack trace, confirm the plan says how the cause was checked, or marks it "Hypothesis (unverified)".
 - Add `plan-approval-required` by hand to an open, low-risk issue that has a plan comment, then add `plan-worker-ready` so that plan triage classifies it: confirm it gets complexity and risk labels, no `plan-triage-handoff` and no comment. Add `plan-triage-handoff` by hand and confirm the PR worker run ends without an assignment and the label is gone again. Remove the hold and confirm `plan-approval-resume` hands the issue to the PR gate and the coding agent is assigned. A hold added to an issue that plan triage has not classified is not resumed by removing it: re-add `plan-worker-ready` first.
 - Add a gate label (for example `plan-triage-handoff`) to a closed issue and confirm no workflow runs an agent. Open an issue that an open pull request already closes (`Fixes #N` in its body), add `plan-triage-handoff`, and confirm no coding agent is assigned and the issue gets one comment naming the pull request that already closes the issue; close that pull request, add the label again and confirm the hand-off goes through.
-- For a low/low item, confirm a pull request is opened and can auto-merge after checks.
+- For a low/low item, confirm a pull request is opened. If you enabled auto-merge, confirm it can merge after checks.
 - For a split-repo case, confirm a canonical issue is created, the original receives `related-repo`, and the original is closed when the canonical issue closes. Open the test report from an account that is not a maintainer and confirm that the linked issue gets one comment right after it is created that starts `Original report:` and mentions the reporter. Make the linked issue ask for more information (leave out a required detail), and confirm that one comment on the linked issue mentions the reporter and points at the request. Remove `related-repo` from the original and confirm no further comment appears.
 
 ## Updating deployments
