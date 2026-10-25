@@ -11,7 +11,7 @@ import fs from 'node:fs';
 //     it cannot be forgotten, and the issue worker is still not allowed to add it with `add-labels`;
 //   - the related-repo closer starts only for a closed issue that carries it. Before, it started a model run on
 //     every close of an issue not opened by a bot, to look for a `Reported from` line. The `if:` is the guarantee;
-//     a canonical issue opened by hand needs the label too. The closer is a plain workflow now (record 0026);
+//     a canonical issue opened by hand needs the label too. The closer is a plain workflow now (record 0027);
 //     what its script does is pinned in scripts/related-repo-closer.test.mjs and the workflow in
 //     tools/related-repo-closer-workflow.test.mjs.
 // The compiled lock of the issue worker is checked in tools/ci-compile-smoke.sh.

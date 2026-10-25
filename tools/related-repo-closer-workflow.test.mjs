@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
 // The related-repo closer is a plain workflow with a script, not a gh-aw definition and not a model run
-// (record 0026). On frodo-lib#806 the model named the closed issue itself as the original and the write to the
+// (records 0026 and 0027). On frodo-lib#806 the model named the closed issue itself as the original and the write to the
 // other repository was refused, so the original (frodo-cli#922) was never updated. What the script decides is
 // pinned in scripts/related-repo-closer.test.mjs; this pins the workflow around it: when it starts, what it may
 // do with the workflow's own token, where the token for the other repository comes from, and that everything

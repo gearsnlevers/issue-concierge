@@ -48,4 +48,5 @@ Copy `template.md` to `NNNN-short-title.md` (the next number, starting at 0001),
 | 0023 | [A repository tunes the gates with optional files, never by editing them](0023-a-repository-tunes-the-gates-with-optional-files-never-by-editing-them.md) | accepted |
 | 0024 | [A release contains a fix when git says so, not when the notes do](0024-a-release-contains-a-fix-when-git-says-so-not-when-the-notes-do.md) | accepted |
 | 0025 | [Both issues of a link carry a label](0025-both-issues-of-a-link-carry-a-label.md) | accepted |
-| 0026 | [The related-repo closer is code, not a model](0026-the-related-repo-closer-is-code-not-a-model.md) | accepted |
+| 0026 | [The related-repo closer is code, not a model](0026-the-related-repo-closer-is-code-not-a-model.md) | superseded by 0027 |
+| 0027 | [The related-repo closer trusts the proof of the link, not the author of the issue](0027-the-related-repo-closer-trusts-the-proof-of-the-link-not-its-author.md) | accepted |
