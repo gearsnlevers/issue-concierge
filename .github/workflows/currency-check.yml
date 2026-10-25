@@ -1,0 +1,34 @@
+# Repo Concierge's own workflow (not delivered to deployments). Weekly, and by hand.
+# Compares the actions pinned in workflows/ and .github/workflows/ and the gh-aw version in
+# requirements.json with their latest releases, and keeps one issue listing what is behind.
+name: Currency check
+
+on:
+  schedule:
+    - cron: '37 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: currency-check
+  cancel-in-progress: false
+
+jobs:
+  currency:
+    name: Currency check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
+      - name: Check
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node tools/check-currency.mjs
