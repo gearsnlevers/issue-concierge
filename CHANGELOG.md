@@ -1,5 +1,12 @@
 # Changelog
 
+## [v1.2.0] - 2026-10-25
+
+### What's Changed
+* feat: mark the canonical issue of a link with original-in-related-repo, and start the related-repo closer only for it by @vscheuber in https://github.com/vscheuber/repo-concierge/pull/51
+
+**Full Changelog**: https://github.com/vscheuber/repo-concierge/compare/v1.1.2...v1.2.0
+
 ## [v1.1.2] - 2026-10-25
 
 ### What's Changed
