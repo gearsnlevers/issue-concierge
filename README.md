@@ -155,7 +155,7 @@ Templates are in `shared/`. A repository can also supply an environment agent (s
 .
 ├── README.md
 ├── aw.yml
-├── .claude/skills/          agent skills: change-a-gate-workflow, cut-a-concierge-release
+├── .claude/skills/          agent skills: change-a-gate-workflow, cut-a-concierge-release, record-a-decision
 ├── docs/
 │   ├── deployment.md
 │   └── multi-phase-design.md
