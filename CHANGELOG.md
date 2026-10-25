@@ -1,5 +1,12 @@
 # Changelog
 
+## [v1.3.2] - 2026-10-25
+
+### What's Changed
+* fix: the related-repo closer does not ask who opened the canonical issue by @vscheuber in https://github.com/vscheuber/repo-concierge/pull/54
+
+**Full Changelog**: https://github.com/vscheuber/repo-concierge/compare/v1.3.1...v1.3.2
+
 ## [v1.3.1] - 2026-10-25
 
 ### What's Changed
