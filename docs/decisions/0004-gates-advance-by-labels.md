@@ -30,3 +30,8 @@ An issue passes through an issue gate, a plan gate and a PR gate, each with a wo
 
 - `SIGNAL_TOKEN` needs Issues and Pull requests read and write: a token with only Issues cannot label a pull request.
 - The PR signal can lag by up to 15 minutes. A finish is signalled once, a new feedback round again, and a label a maintainer or the janitor removed is not put back.
+
+## Alternatives considered
+
+- A positive approval label, `design-approved`, as first built: replaced by the blocking form `plan-approval-required`. Removing a label that is already on an issue is easier, and harder to get wrong, than finding the one right label among a hundred; the label's description says to remove it to resume.
+- Naming each signal by hand: replaced by `<worker>-ready` and `<triage>-handoff`, so that anyone who reads a label knows who set it and which agent acts next.

@@ -36,3 +36,12 @@ Copy `template.md` to `NNNN-short-title.md` (the next number, starting at 0001),
 | 0012 | [Workflows are named in run order](0012-workflows-are-named-in-run-order.md) | accepted |
 | 0013 | [The gh-aw version moves only by release, and the pins stay current](0013-the-gh-aw-version-moves-only-by-release-and-the-pins-stay-current.md) | accepted |
 | 0014 | [The Concierge does not configure Dependabot in deployments](0014-the-concierge-does-not-configure-dependabot-in-deployments.md) | accepted |
+| 0015 | [Every gate has a worker that produces and a triage agent that classifies](0015-every-gate-has-a-worker-that-produces-and-a-triage-agent-that-classifies.md) | accepted |
+| 0016 | [Complexity and risk are separate gauges, and either one at high stops for approval](0016-complexity-and-risk-are-separate-gauges-and-either-high-stops-for-approval.md) | accepted |
+| 0017 | [The issue gate closes an issue only on evidence](0017-the-issue-gate-closes-an-issue-only-on-evidence.md) | accepted |
+| 0018 | [Reporters are guided by plain comments, never by labels](0018-reporters-are-guided-by-plain-comments-never-by-labels.md) | accepted |
+| 0019 | [Split repositories link issues and never transfer them](0019-split-repositories-link-issues-and-never-transfer-them.md) | accepted |
+| 0020 | [Agents are read-only, and threat detection runs where untrusted text meets a write](0020-agents-are-read-only-and-threat-detection-runs-where-untrusted-text-meets-a-write.md) | accepted |
+| 0021 | [One secret per privilege](0021-one-secret-per-privilege.md) | accepted |
+| 0022 | [The environment agent is optional, and any worker may use it](0022-the-environment-agent-is-optional-and-any-worker-may-use-it.md) | accepted |
+| 0023 | [A repository tunes the gates with optional files, never by editing them](0023-a-repository-tunes-the-gates-with-optional-files-never-by-editing-them.md) | accepted |
