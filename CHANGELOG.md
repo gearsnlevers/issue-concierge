@@ -1,5 +1,12 @@
 # Changelog
 
+## [v1.0.22] - 2026-10-25
+
+### What's Changed
+* chore: the updater workflow uses actions/setup-node v7 by @vscheuber in https://github.com/vscheuber/repo-concierge/pull/44
+
+**Full Changelog**: https://github.com/vscheuber/repo-concierge/compare/v1.0.21...v1.0.22
+
 ## [v1.0.21] - 2026-10-24
 
 ### What's Changed
