@@ -30,7 +30,7 @@ Repo Concierge is an issue-to-release harness for GitHub, built on GitHub Agenti
 
 ## Decisions
 
-Accepted records are binding for humans and agents until a newer record supersedes them. If your task conflicts with one, stop and say so in the issue or pull request. A pull request that changes a decided behaviour adds or supersedes a record. Decisions for this repository are in [docs/decisions/](docs/decisions/README.md); the ones to read before changing a gate:
+Accepted records are binding for humans and agents until a newer record supersedes them. If your task conflicts with one, stop and say so in the issue or pull request. A pull request that changes a decided behaviour adds or supersedes a record. Decisions for this repository are in [docs/decisions/](docs/decisions/README.md); the ones to read before changing a gate: To write one, use the [record-a-decision](.claude/skills/record-a-decision/SKILL.md) skill.
 
 - [0005](docs/decisions/0005-a-maintainer-holds-the-levers-of-the-pipeline.md): a maintainer holds the levers: holds, approvals and merges are never the Concierge's.
 - [0007](docs/decisions/0007-only-the-issue-worker-is-open-to-every-reporter.md): only the issue worker is open to every reporter, within fixed limits.
