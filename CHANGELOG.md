@@ -1,5 +1,12 @@
 # Changelog
 
+## [v1.3.0] - 2026-10-25
+
+### What's Changed
+* fix: the related-repo closer is a script, not a model by @vscheuber in https://github.com/vscheuber/repo-concierge/pull/52
+
+**Full Changelog**: https://github.com/vscheuber/repo-concierge/compare/v1.2.0...v1.3.0
+
 ## [v1.2.0] - 2026-10-25
 
 ### What's Changed
