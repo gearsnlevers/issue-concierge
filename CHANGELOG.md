@@ -1,5 +1,12 @@
 # Changelog
 
+## [v1.3.1] - 2026-10-25
+
+### What's Changed
+* fix: a closer installed by the previous updater is a warning to finish, not an error by @vscheuber in https://github.com/vscheuber/repo-concierge/pull/53
+
+**Full Changelog**: https://github.com/vscheuber/repo-concierge/compare/v1.3.0...v1.3.1
+
 ## [v1.3.0] - 2026-10-25
 
 ### What's Changed
