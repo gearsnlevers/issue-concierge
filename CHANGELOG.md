@@ -1,5 +1,13 @@
 # Changelog
 
+## [v1.6.0] - 2026-10-26
+
+### What's Changed
+* fix: keep a stalled intake from stopping at the first gate by @vscheuber in https://github.com/vscheuber/repo-concierge/pull/58
+* feat: give an issue that never reached issue triage the gate label again by @vscheuber in https://github.com/vscheuber/repo-concierge/pull/59
+
+**Full Changelog**: https://github.com/vscheuber/repo-concierge/compare/v1.5.0...v1.6.0
+
 ## [v1.5.0] - 2026-10-26
 
 ### What's Changed
