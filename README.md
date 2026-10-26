@@ -172,6 +172,7 @@ Templates are in `shared/`. A repository can also supply an environment agent (s
 │   ├── dependency-watch.yml
 │   ├── plan-approval-resume.yml
 │   ├── reporter-notify.yml
+│   ├── stalled-issue-sweep.yml
 │   ├── janitor.yml
 │   ├── pr-ready-signal.yml
 │   └── check-deployment.yml
@@ -180,6 +181,7 @@ Templates are in `shared/`. A repository can also supply an environment agent (s
 │   ├── dependency-watch.mjs
 │   ├── plan-approval-resume.mjs
 │   ├── reporter-notify.mjs
+│   ├── stalled-issue-sweep.mjs
 │   ├── janitor.mjs
 │   ├── opt-out.mjs
 │   ├── pr-ready-signal.mjs
