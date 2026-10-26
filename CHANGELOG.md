@@ -1,5 +1,12 @@
 # Changelog
 
+## [v1.5.0] - 2026-10-26
+
+### What's Changed
+* feat: tell the reporter how an issue was resolved, and cite records by full URL by @vscheuber in https://github.com/vscheuber/repo-concierge/pull/56
+
+**Full Changelog**: https://github.com/vscheuber/repo-concierge/compare/v1.4.0...v1.5.0
+
 ## [v1.4.0] - 2026-10-25
 
 ### What's Changed
