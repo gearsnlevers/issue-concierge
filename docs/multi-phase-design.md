@@ -106,6 +106,14 @@ Example: an issue that went through the whole pipeline ends with its type, `comp
 
 **Reopening** an issue puts it back at the issue gate: the worker re-adds `issue-worker-ready` and triage runs again. Because closing removed `dependency-satisfied`, triage gates the issue again if it still declares a dependency, and the watcher clears it again within the hour.
 
+## Gate labels are applied, not suggested
+
+A gate hands on by a label, and the label event starts the next gate. gh-aw sends every label a worker asks for with the model's `confidence` and `rationale` (issue intent), and a label below `HIGH` is not applied: it is held as a suggestion that a person must accept on the issue page. The run still reports success (`Successfully added 0 labels ... Suggested 1 labels`), there is no label event, and the next gate never starts. The first sighting was the assignment (frodo-lib#760, see "3. PR gate"). On 2026-10-24 it happened at the first gate: the Issue Worker rated `issue-worker-ready` MEDIUM on frodo-lib#803 and #802, and #803, the canonical issue of frodo-cli#919, sat outside the pipeline until a maintainer added the label by hand. Of 14 requests for `issue-worker-ready` in the last 100 runs of frodo-lib and frodo-cli, 11 were HIGH and applied, the 2 MEDIUM ones were held (#802, #803), and 1 HIGH one was not added for a reason that was not looked into.
+
+- Issue triage, plan worker, plan triage and PR triage set `issue-intent: false` on `add-labels`, and the PR worker on the assignment, so their hand-offs are applied whatever the model thinks of its own confidence. Their prompts say so.
+- The Issue Worker is the exception. [Decision 0009](decisions/0009-issue-routing-decides-from-the-report-text.md) makes `related-repo` depend on a quoted rationale and a confidence (HIGH needs the quote), which exists only while issue intent is on. Its prompt therefore makes `issue-worker-ready` a signal that is always HIGH, and confidence decides only `related-repo`. That is a first layer: a model can still rate the signal lower.
+- `tools/ci-compile-smoke.sh` reads the compiled locks: `issue_intent` is false in the five gates above and absent in the Issue Worker. `tools/stalled-intake.test.mjs` pins the sources and the prompt.
+
 ## The resolution
 
 **Why it exists.** On 2026-10-25 an audit of what the Concierge writes when an issue closes found one-line comments only: "Fixed in #N. Waiting for a release that includes this.", then "Included in vX.". The original issue of a split-repository link got a line that only named the other issue. The reporter was never told what had been wrong, what changed or how to use it, and the model that wrote the first line was forbidden to read the pull request, where the explanation was. A maintainer had read that explanation before merging.
@@ -344,6 +352,12 @@ An issue declares a dependency with a `Depends on:`, `Blocked by:`, or `Requires
 The `dependency-watch` workflow (plain Actions, no LLM) resolves dependencies hourly, on demand, when the label is added, and when an issue closes, a pull request merges, a release is published, or `package.json` changes. Satisfied means merged, or closed as completed, in the same repository. For a related repository that requires a consumer release, it also means released, installable from the registry, and pinned by this repository. When every dependency is satisfied the watcher adds `dependency-satisfied`, removes `dependency-required`, and re-applies `issue-worker-ready` with the signal token so issue triage runs again and hands off.
 
 Full rules: `shared/dependencies.md`.
+
+#### A run that ends early, and a second analysis
+
+The worker has 14 turns (`max-turns`), and its prompt asks for at most ten of them for reading and searching, so the comment and the labels always fit; each is a tool call, and a run that reaches its limit first posts nothing. On frodo-lib#803 (2026-10-24) the first run used all ten of its then ten turns on the code behind the report and ended on `429 Maximum LLM invocations exceeded (10 / 10)` with no comment and no label. The `[aw]` failure issue called it a rate limit, which it was not, and the retry that a maintainer's comment started posted its comment and its label and hit the same limit on the closing reply. Measured before: 7 turns and 1.03 AIC on frodo-cli#887 (a report with no code to check), 1.54 AIC on frodo-lib#803, against `max-ai-credits: 16`. When a check is still open at turn ten the worker says what it did not check.
+
+Any event can start the worker again: a comment, an edit, the removal of `no-auto-processing`. An event that adds nothing to an analysis the worker already posted (a comment that only links or thanks, a label change, a typo fix) gets no second analysis: it posts no comment and signals as usual, so triage can run again on the analysis that is there. It writes a new comment only for something a reporter would want an answer to, and then says only what is new. Before this rule frodo-lib#802 got "Thanks for the follow-up" under its first analysis from a maintainer's note. The rule is in the prompt, so it lowers the number of repeated analyses; a model still decides each time.
 
 ### 2. Plan gate
 **Worker** → rough plan + `plan-worker-ready`. For a report that contains an error message or a stack trace the plan says how the likely cause was checked (the file and line it read, or "not verified") and labels an unchecked cause "Hypothesis (unverified)", so whoever approves the plan can see what is established and what is a guess.  

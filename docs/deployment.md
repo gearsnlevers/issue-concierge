@@ -225,7 +225,7 @@ The gates that classify or route use a light model and tight turn limits. The pl
 
 | Workflow | Model | max-turns | Extra |
 |----------|-------|-----------|-------|
-| issue-worker | small | 10 | rate-limit issues and comments |
+| issue-worker | small | 14 | rate-limit issues and comments |
 | issue-triage | small | 8 | |
 | plan-triage | small | 8 | |
 | release-closer | small | 8 | |
