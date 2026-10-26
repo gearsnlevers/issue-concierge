@@ -53,3 +53,4 @@ Copy `template.md` to `NNNN-short-title.md` (the next number, starting at 0001),
 | 0028 | [An item labelled no-auto-processing is never touched by the Concierge](0028-an-item-labelled-no-auto-processing-is-never-touched.md) | accepted |
 | 0029 | [The reporter is told how an issue was resolved](0029-the-reporter-is-told-how-an-issue-was-resolved.md) | accepted |
 | 0030 | [A stalled issue is given the gate label again by code](0030-a-stalled-issue-is-given-the-gate-label-again-by-code.md) | proposed |
+| 0031 | [The work of a link is routed back by one explicit act](0031-the-work-of-a-link-is-routed-back-by-one-explicit-act.md) | proposed |
