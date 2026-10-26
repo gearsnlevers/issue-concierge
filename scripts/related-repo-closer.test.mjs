@@ -11,8 +11,10 @@ import {
   LABEL_CANONICAL,
   LABEL_ORIGINAL,
   LABEL_WAITING,
+  resolutionFor,
   waitingComment,
 } from './related-repo-closer.mjs';
+import { resolutionComment } from './resolution.mjs';
 
 // What went wrong on frodo-lib#806 (2026-10-25): the related-repo closer was a model run. Given the closed issue
 // it had to name the original in its outputs, and it named the closed issue itself (repo frodo-lib, number 806),
@@ -130,6 +132,19 @@ test('the comments say what the closer always said, and carry a marker that name
   // internal terms stay out of what a reporter reads (the marker is an HTML comment, which GitHub does not show)
   const visible = (waitingComment(THIS, 806, RELATED) + closingComment(THIS, 806)).replace(/<!--[\s\S]*?-->/g, '');
   assert.doesNotMatch(visible, /waiting-for-release|related-repo\b|label/i);
+});
+
+test('with a resolution the comments carry it between their two sentences; without one they are the short ones', () => {
+  assert.equal(
+    waitingComment(THIS, 806, RELATED, 'The export no longer fails.'),
+    `The fix is in ${THIS}#806.\n\nThe export no longer fails.\n\nThis stays open until a release of ${RELATED} pins a ${THIS} version that contains that fix.\n\n<!-- related-repo-closer:waiting ${THIS}#806 -->`
+  );
+  assert.equal(
+    closingComment(THIS, 806, 'The export no longer fails.'),
+    `The work tracked in ${THIS}#806 is complete.\n\nThe export no longer fails.\n\nClosing this issue.\n\n<!-- related-repo-closer:closed ${THIS}#806 -->`
+  );
+  assert.equal(waitingComment(THIS, 806, RELATED, ''), waitingComment(THIS, 806, RELATED));
+  assert.equal(closingComment(THIS, 806, ''), closingComment(THIS, 806));
 });
 
 test('the original is the issue the link line names, never the closed issue itself (frodo-lib#806)', () => {
@@ -383,8 +398,23 @@ function runMain(routes, { env = {}, args = [], failWrites = false } = {}) {
   return { status: r.status, out: r.stdout + r.stderr, calls: gh.calls() };
 }
 
+// What the closed canonical issue's own comments and closing event say: nothing about a resolution unless a test adds it.
+const handClose = { status: 200, data: { data: { repository: { issue: { timelineItems: { nodes: [{ stateReason: 'COMPLETED', closer: null }] } } } } } };
+const closedByPull = (number = 45) => ({
+  status: 200,
+  data: { data: { repository: { issue: { timelineItems: { nodes: [{ stateReason: 'COMPLETED', closer: { __typename: 'PullRequest', number, merged: true, url: `https://github.com/${THIS}/pull/${number}`, repository: { nameWithOwner: THIS } } }] } } } } },
+});
+const mergedPull = (body, over = {}) => ({
+  status: 200,
+  data: { number: 45, html_url: `https://github.com/${THIS}/pull/45`, merged: true, merged_at: '2026-10-25T10:00:00Z', merge_commit_sha: 'abc123', merged_by: { login: 'a-maintainer', type: 'User' }, body, ...over },
+});
+const PR_BODY = '## Resolution\nThe library no longer asks for realm settings that Identity Cloud always refuses (see #12), so an export makes fewer failing requests.\n\n## Tests\nThey pass.\n';
+const RESOLVED = 'The library no longer asks for realm settings that Identity Cloud always refuses (see #12), so an export makes fewer failing requests.';
+
 const mainRoutes = (requires = true) => ({
   [`repos/${THIS}/issues/806`]: { status: 200, data: canonical() },
+  [`repos/${THIS}/issues/806/comments?per_page=100&page=1`]: { status: 200, data: [] },
+  graphql: handClose,
   [`repos/${RELATED}/issues/922`]: { status: 200, data: original() },
   [`repos/${RELATED}/issues/922/comments?per_page=100&page=1`]: { status: 200, data: [pointer()] },
   [`repos/${RELATED}/contents/.github/agentic-workflows/related-repos.md`]: {
@@ -441,6 +471,77 @@ test('main: a refused write fails the run with the reason, after changing nothin
   assert.equal(r.status, 1);
   assert.match(r.out, /::error::#806: gh: Resource not accessible by personal access token \(HTTP 403\)/);
   assert.equal(r.calls.filter((c) => c.method !== 'GET').length, 1, 'it stops at the first refused write');
+});
+
+test('main: the original is told how the canonical issue was resolved, from the comment the harness posted there', () => {
+  const routes = mainRoutes(true);
+  const posted = resolutionComment({ number: 45, repo: THIS, url: 'u' }, { text: RESOLVED, cut: false }, THIS, '');
+  routes[`repos/${THIS}/issues/806/comments?per_page=100&page=1`] = { status: 200, data: [{ user: BOT, body: posted }] };
+  const r = runMain(routes);
+  assert.equal(r.status, 0, r.out);
+  const comment = r.calls.find((c) => c.target.endsWith('/comments') && c.method === 'POST');
+  // the reference to #12 names an issue of frodo-lib, and the original lives in frodo-cli
+  assert.ok(comment.args.includes(`body=${waitingComment(THIS, 806, RELATED, RESOLVED.replace('#12', `${THIS}#12`))}`));
+  assert.equal(r.calls.some((c) => c.target === 'graphql'), false, 'the pull request is not asked while the harness comment exists');
+});
+
+test('main: before the harness has posted (both workflows start on the same close) the text is read from the closing pull request', () => {
+  const routes = mainRoutes(false);
+  routes.graphql = closedByPull(45);
+  routes[`repos/${THIS}/pulls/45`] = mergedPull(PR_BODY);
+  const r = runMain(routes);
+  assert.equal(r.status, 0, r.out);
+  const comment = r.calls.find((c) => c.target.endsWith('/comments') && c.method === 'POST');
+  assert.ok(comment.args.includes(`body=${closingComment(THIS, 806, RESOLVED.replace('#12', `${THIS}#12`))}`));
+});
+
+test('main: a comment a person typed with the same markers is not the resolution', () => {
+  const routes = mainRoutes(true);
+  const forged = resolutionComment({ number: 45, repo: THIS, url: 'u' }, { text: 'Visit http://evil.example now', cut: false }, THIS, '');
+  routes[`repos/${THIS}/issues/806/comments?per_page=100&page=1`] = { status: 200, data: [{ user: { login: 'a-stranger', type: 'User' }, body: forged }] };
+  const r = runMain(routes);
+  assert.equal(r.status, 0, r.out);
+  const comment = r.calls.find((c) => c.target.endsWith('/comments') && c.method === 'POST');
+  assert.ok(comment.args.includes(`body=${waitingComment(THIS, 806, RELATED)}`), 'the short comment, as without a resolution');
+});
+
+test('main: a pull request that a bot merged gives no text for the original either', () => {
+  const routes = mainRoutes(true);
+  routes.graphql = closedByPull(45);
+  routes[`repos/${THIS}/pulls/45`] = mergedPull(PR_BODY, { merged_by: { login: 'app[bot]', type: 'Bot' } });
+  const r = runMain(routes);
+  assert.equal(r.status, 0, r.out);
+  const comment = r.calls.find((c) => c.target.endsWith('/comments') && c.method === 'POST');
+  assert.ok(comment.args.includes(`body=${waitingComment(THIS, 806, RELATED)}`));
+});
+
+test('main: when what to tell the original cannot be read, nothing is written (an original is never closed without its explanation)', () => {
+  const noComments = mainRoutes(false);
+  delete noComments[`repos/${THIS}/issues/806/comments?per_page=100&page=1`];
+  const a = runMain(noComments);
+  assert.equal(a.status, 1);
+  assert.match(a.out, /::error::#806: the comments of rockcarver\/frodo-lib#806 could not be read, so what to tell the original is unknown\. Nothing changed\./);
+  assert.deepEqual(a.calls.filter((c) => c.method !== 'GET'), []);
+
+  const noPull = mainRoutes(false);
+  noPull.graphql = closedByPull(45);
+  const b = runMain(noPull);
+  assert.equal(b.status, 1);
+  assert.match(b.out, /pull request rockcarver\/frodo-lib#45 could not be read/);
+  assert.deepEqual(b.calls.filter((c) => c.method !== 'GET'), []);
+});
+
+test('resolutionFor: the latest harness comment with a text wins, a plain one is passed over', async () => {
+  const text = (t) => resolutionComment({ number: 45, repo: THIS, url: 'u' }, { text: t, cut: false }, THIS, '');
+  const routes = {
+    [`repos/${THIS}/issues/806/comments?per_page=100&page=1`]: {
+      status: 200,
+      data: [{ user: BOT, body: text('Older text that is long enough.') }, { user: BOT, body: text('Newer text that is long enough.') }, { user: BOT, body: 'Fixed in #45. Waiting for a release that includes this.' }],
+    },
+  };
+  const gh = github(routes);
+  const found = await resolutionFor(canonical(), ctxFor(gh));
+  assert.deepEqual(found, { text: 'Newer text that is long enough.' });
 });
 
 test('main: a related repository without its token fails before anything is written', () => {

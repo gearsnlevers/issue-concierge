@@ -121,12 +121,12 @@ test('PR triage: a labelled pull request starts nothing, one without the label s
   assert.equal(holds(cond, prEvent({ action: 'labeled', label: 'complexity/low' })), false);
 });
 
-test('Waiting for Release: a labelled issue that a pull request closed gets neither the pre-step nor the agent', () => {
-  const gate = md('waiting-for-release');
-  const closed = issueEvent({ action: 'closed', state: 'closed' });
-  guarded(frontmatterIf(gate), closed, 'the activation');
-  guarded(stepIf(gate, 'closed_by_merge'), closed, 'the closed_by_merge step');
-  assert.equal(holds(frontmatterIf(gate), { ...closed, needs: { pre_activation: { outputs: { closed_by_merge_result: 'failure' } } } }), false, 'what it already skipped');
+test('Waiting for Release: a labelled issue that a pull request closed starts no job (it is a plain workflow now)', () => {
+  const cond = jobIf(yml('waiting-for-release'), 'resolution');
+  guarded(cond, issueEvent({ action: 'closed', state: 'closed' }), 'a close');
+  assert.equal(holds(cond, issueEvent({ action: 'closed', state: 'closed', author: 'Bot' })), false, 'what it already skipped: a bot-written issue');
+  assert.equal(holds(cond, dispatched), true, 'a manual run is the explicit act of a person');
+  assert.equal(fs.existsSync(new URL('../workflows/waiting-for-release.md', import.meta.url)), false, 'no model gate is left to guard');
 });
 
 // ------------------------------------------------------------------ plain workflows

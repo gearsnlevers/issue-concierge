@@ -61,17 +61,6 @@ if ! activation_if "$tmp/.github/workflows/pr-worker.lock.yml" | grep -q "needs.
   echo "::error::pr-worker does not read the existing_fix outcome in its compiled activation condition"
   exit 1
 fi
-# Nothing waits for a release when nobody closed the issue with a pull request or a commit (frodo-cli#923,
-# docs/multi-phase-design.md, "Which closes count"): the waiting-for-release gate must read its guard step's
-# outcome in the compiled ACTIVATION condition, and the step must survive compilation as a non-failing step.
-if ! activation_if "$tmp/.github/workflows/waiting-for-release.lock.yml" | tr '\n' ' ' | tr -s ' ' | grep -qF "needs.pre_activation.outputs.closed_by_merge_result != 'failure'"; then
-  echo "::error::waiting-for-release does not read the closed_by_merge outcome in its compiled activation condition"
-  exit 1
-fi
-if ! grep -q "id: closed_by_merge" "$tmp/.github/workflows/waiting-for-release.lock.yml"; then
-  echo "::error::waiting-for-release lost its closed_by_merge step in the compiled lock"
-  exit 1
-fi
 # What a release contains is decided by git, not by the release notes (frodo-lib#762, docs/multi-phase-design.md,
 # "Which fixes a release contains"): the closer's deterministic step must survive compilation, or the notes decide again.
 if ! grep -q "id: included_fixes" "$tmp/.github/workflows/release-closer.lock.yml"; then
@@ -92,7 +81,7 @@ done
 # gate must read the label in its compiled ACTIVATION condition, where it stops a run before it starts (PR triage reads
 # the pull request's labels), the issue worker must start on a label being removed, and the release closer's
 # deterministic step must keep the skip. Flatten the whitespace first: gh-aw wraps the condition.
-for name in issue-worker issue-triage plan-worker plan-triage pr-worker pr-triage waiting-for-release; do
+for name in issue-worker issue-triage plan-worker plan-triage pr-worker pr-triage; do
   if ! activation_if "$tmp/.github/workflows/$name.lock.yml" | tr '\n' ' ' | tr -s ' ' | grep -qE "!contains\(github\.event\.(issue|pull_request)\.labels\.\*\.name, 'no-auto-processing'\)"; then
     echo "::error::$name does not stop at no-auto-processing in its compiled activation condition"
     exit 1

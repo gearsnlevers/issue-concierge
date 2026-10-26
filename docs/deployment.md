@@ -128,8 +128,8 @@ release:
 
 GitHub's close-on-merge stays in place. `Fixes #N` may close the issue. Release state is tracked with labels.
 
-- When an issue is closed by a merged pull request, `waiting-for-release` adds that label and a comment.
-- An issue a maintainer closes by hand (already fixed, no closing pull request or commit), as not planned or as a duplicate gets neither the label nor a comment: a step before the agent reads the close event and skips the run without a model call.
+- When an issue is closed by a merged pull request, `waiting-for-release` (a plain workflow, no model) adds that label and a comment. The comment is the pull request's `## Resolution` section, the explanation for the person who reported the issue (see "Waiting for Release and the resolution" below), or one line when the pull request has none.
+- An issue a maintainer closes by hand (already fixed, no closing pull request or commit), as not planned or as a duplicate, or by a commit, gets neither the label nor a comment: the workflow reads the close event and posts nothing.
 - When a release includes it, `release-closer` replaces `waiting-for-release` with `released` and comments.
 - A delegated CLI issue stays open. When the library issue closes, it gets `waiting-for-release`. It is closed only when a CLI release pins the library version that contains the fix, and then it gets `released`.
 
@@ -228,7 +228,6 @@ The gates that classify or route use a light model and tight turn limits. The pl
 | issue-worker | small | 10 | rate-limit issues and comments |
 | issue-triage | small | 8 | |
 | plan-triage | small | 8 | |
-| waiting-for-release | small | 8 | 8 credits, 5 minutes; skipped before the model for closes by hand, not planned, duplicate; each lookup once |
 | release-closer | small | 8 | |
 | plan-worker | default | — | |
 | pr-worker | small | — | only assigns the coding agent |
@@ -322,6 +321,20 @@ When a maintainer removes `plan-approval-required` from an issue plan triage has
 |----------------------|-----------------------------|
 | `workflows/plan-approval-resume.yml` | `.github/workflows/plan-approval-resume.yml` |
 | `scripts/plan-approval-resume.mjs` | `.github/scripts/plan-approval-resume.mjs` |
+
+### Waiting for Release and the resolution
+
+When an issue is closed because a pull request merged, a plain Actions workflow (no LLM) tells the reporter how it was resolved and marks the issue as waiting for the release that will contain the fix. The text is the `## Resolution` section of the pull request's description, which a maintainer read before merging; code copies it, so no model reads or writes it ([record 0029](https://github.com/vscheuber/repo-concierge/blob/main/docs/decisions/0029-the-reporter-is-told-how-an-issue-was-resolved.md)).
+
+| From this repository | To the consuming repository |
+|----------------------|-----------------------------|
+| `workflows/waiting-for-release.yml` | `.github/workflows/waiting-for-release.yml` |
+| `scripts/resolution.mjs` | `.github/scripts/resolution.mjs` |
+| `scripts/opt-out.mjs` | `.github/scripts/opt-out.mjs` |
+
+It imports `opt-out.mjs`, so install that too; the related-repo closer imports `resolution.mjs`. It needs no secret: its label and comment are written with the workflow token (`issues: write`, `pull-requests: read`). The updater installs all of this with the release.
+
+Write the section in every pull request that closes an issue, for the person who reported it: what was wrong, what changed, what they will see now and how to use it, in three to eight plain sentences. No labels, workflow names or decision numbers; cite a decision record by its full URL. The PR worker tells the coding agent to do this and PR triage reports on it. A pull request without a usable section (none, a placeholder such as `TBD`, or under 20 characters) gets the old one-line comment. The text is used only when a person merged the pull request, and the copy removes HTML, images and `@` mentions and is cut at 1,500 characters. Run it by hand for one closed issue (`dry_run` shows the comment without posting it) from the Actions tab.
 
 ### Reporter notify
 
@@ -605,6 +618,7 @@ git push
 - [ ] All recommended labels created (including `related-repo`, `original-in-related-repo`, `no-auto-processing`, `dependency-required`, `dependency-satisfied`)
 - [ ] Issues from before the adoption labelled `no-auto-processing` (see "Keeping an item out of the Concierge")
 - [ ] Dependency watcher installed (`dependency-watch.yml` and `dependency-watch.mjs`)
+- [ ] Waiting for Release installed (`waiting-for-release.yml` and `resolution.mjs`; the updater does it)
 - [ ] Deployment check installed (`check-deployment.yml` and `check-deployment.mjs`) and passing; for each related repository the secret exists and its token has Issues: Read and write on that repository
 - [ ] Plan approval resume installed (`plan-approval-resume.yml` and `plan-approval-resume.mjs`)
 - [ ] Reporter notify installed where there is a `related-repos.md` (`reporter-notify.yml` and `reporter-notify.mjs`)

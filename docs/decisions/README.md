@@ -40,7 +40,7 @@ Copy `template.md` to `NNNN-short-title.md` (the next number, starting at 0001),
 | 0015 | [Every gate has a worker that produces and a triage agent that classifies](0015-every-gate-has-a-worker-that-produces-and-a-triage-agent-that-classifies.md) | accepted |
 | 0016 | [Complexity and risk are separate gauges, and either one at high stops for approval](0016-complexity-and-risk-are-separate-gauges-and-either-high-stops-for-approval.md) | accepted |
 | 0017 | [The issue gate closes an issue only on evidence](0017-the-issue-gate-closes-an-issue-only-on-evidence.md) | accepted |
-| 0018 | [Reporters are guided by plain comments, never by labels](0018-reporters-are-guided-by-plain-comments-never-by-labels.md) | accepted |
+| 0018 | [Reporters are guided by plain comments, never by labels](0018-reporters-are-guided-by-plain-comments-never-by-labels.md) | superseded by 0029 |
 | 0019 | [Split repositories link issues and never transfer them](0019-split-repositories-link-issues-and-never-transfer-them.md) | accepted |
 | 0020 | [Agents are read-only, and threat detection runs where untrusted text meets a write](0020-agents-are-read-only-and-threat-detection-runs-where-untrusted-text-meets-a-write.md) | accepted |
 | 0021 | [One secret per privilege](0021-one-secret-per-privilege.md) | accepted |
@@ -51,3 +51,4 @@ Copy `template.md` to `NNNN-short-title.md` (the next number, starting at 0001),
 | 0026 | [The related-repo closer is code, not a model](0026-the-related-repo-closer-is-code-not-a-model.md) | superseded by 0027 |
 | 0027 | [The related-repo closer trusts the proof of the link, not the author of the issue](0027-the-related-repo-closer-trusts-the-proof-of-the-link-not-its-author.md) | accepted |
 | 0028 | [An item labelled no-auto-processing is never touched by the Concierge](0028-an-item-labelled-no-auto-processing-is-never-touched.md) | accepted |
+| 0029 | [The reporter is told how an issue was resolved](0029-the-reporter-is-told-how-an-issue-was-resolved.md) | accepted |

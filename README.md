@@ -168,6 +168,7 @@ Templates are in `shared/`. A repository can also supply an environment agent (s
 │   ├── plan-triage.md
 │   ├── pr-worker.md
 │   ├── pr-triage.md
+│   ├── waiting-for-release.yml
 │   ├── dependency-watch.yml
 │   ├── plan-approval-resume.yml
 │   ├── reporter-notify.yml
@@ -175,6 +176,7 @@ Templates are in `shared/`. A repository can also supply an environment agent (s
 │   ├── pr-ready-signal.yml
 │   └── check-deployment.yml
 ├── scripts/
+│   ├── resolution.mjs
 │   ├── dependency-watch.mjs
 │   ├── plan-approval-resume.mjs
 │   ├── reporter-notify.mjs
