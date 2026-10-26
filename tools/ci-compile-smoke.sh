@@ -61,6 +61,20 @@ if ! activation_if "$tmp/.github/workflows/pr-worker.lock.yml" | grep -q "needs.
   echo "::error::pr-worker does not read the existing_fix outcome in its compiled activation condition"
   exit 1
 fi
+# Gate labels are applied, not suggested (docs/multi-phase-design.md, "Gate labels are applied, not suggested"):
+# gh-aw holds a label below confidence HIGH as a suggestion, so no label event starts the next gate (frodo-lib#803).
+# Read the compiled locks: the setting must survive into the safe-output configuration. The issue worker is the one
+# gate that keeps the intent mechanism, `related-repo` needs its rationale and confidence (decision 0009).
+for name in issue-triage plan-worker plan-triage pr-worker pr-triage; do
+  if ! grep -q 'issue_intent\\":false' "$tmp/.github/workflows/$name.lock.yml"; then
+    echo "::error::$name still holds its hand-off label as a suggestion: issue-intent: false did not take effect"
+    exit 1
+  fi
+done
+if grep -q 'issue_intent' "$tmp/.github/workflows/issue-worker.lock.yml"; then
+  echo "::error::issue-worker turned the issue intent off: related-repo would lose its rationale and confidence (decision 0009)"
+  exit 1
+fi
 # What a release contains is decided by git, not by the release notes (frodo-lib#762, docs/multi-phase-design.md,
 # "Which fixes a release contains"): the closer's deterministic step must survive compilation, or the notes decide again.
 if ! grep -q "id: included_fixes" "$tmp/.github/workflows/release-closer.lock.yml"; then

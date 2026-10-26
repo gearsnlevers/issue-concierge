@@ -173,11 +173,16 @@ test('the updater keeps the hold when it generates the cross-repository settings
   assert.doesNotMatch(without, /github-token|allowed-repos/);
 });
 
-test('the budget of the issue worker is unchanged: the routing decision adds no search and no turns', () => {
+test('the budget of the issue worker: the routing decision adds no search and no turns, a report that names code gets 14', () => {
   const fm = parts(worker).frontmatter;
   // Measured on cli#887: 7 of 10 turns, 1.03 AIC. Neither a keep nor a route adds a search: the decision is made
   // from the report text after a single read of the issue.
-  assert.match(fm, /^max-turns: 10$/m);
+  // Raised from 10 to 14 after frodo-lib#803 (tools/stalled-intake.test.mjs): a report that names a function makes the
+  // worker check the code, and its first run used all ten turns on reading and searching and ended on
+  // "429 Maximum LLM invocations exceeded (10 / 10)" before it posted anything; the second run posted its comment and
+  // its label and then hit the same limit on the closing reply (1.54 AIC against a cap of 16). The prompt asks for
+  // at most ten turns of checking, so the comment and the labels always fit.
+  assert.match(fm, /^max-turns: 14$/m);
   assert.match(fm, /^max-ai-credits: 16$/m);
   assert.match(fm, /^ {2}model: small$/m);
 });
