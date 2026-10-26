@@ -1,5 +1,12 @@
 # Changelog
 
+## [v1.8.0] - 2026-10-26
+
+### What's Changed
+* feat: split a fix that needs two repositories from its plan, by a maintainer's act by @vscheuber in https://github.com/vscheuber/repo-concierge/pull/61
+
+**Full Changelog**: https://github.com/vscheuber/repo-concierge/compare/v1.7.0...v1.8.0
+
 ## [v1.7.0] - 2026-10-26
 
 **Full Changelog**: https://github.com/vscheuber/repo-concierge/compare/v1.6.0...v1.7.0
