@@ -43,6 +43,7 @@ The Actions sidebar sorts workflows by display name, so the names carry the orde
 | `Concierge 2a Plan Worker` | `issue-triage-handoff` |
 | `Concierge 2b Plan Triage` | `plan-worker-ready` |
 | `Concierge 2c ▸ Plan Approval Resume` | a maintainer removes `plan-approval-required` (and by hand) |
+| `Concierge 2d ▸ Spawn Work Items` | by hand, for an issue whose plan lists work in the related repository; a plain workflow, no model |
 | `Concierge 3a PR Worker` | `plan-triage-handoff` |
 | `Concierge 3b ▸ PR Ready Signal` | the coding agent finishes (and by hand for one pull request) |
 | `Concierge 3c PR Triage` | `pr-worker-ready` |
@@ -357,6 +358,27 @@ A link can be wrong. The plan gate may find that the fix belongs in the reposito
 Each step checks first whether it was done, and the order keeps the proof alive as long as it can: the proof ends when `related-repo` is removed, so the two comments name each other, and a run that finds the original without the label but with its own comment, and the canonical issue's comment that names the original, finishes the rest. A forged resume needs both comments, in the related repository. An original that carries `no-auto-processing` is refused: removing that label hands the issue to the issue worker, which is the maintainer's act.
 
 **What travels with a link.** The two workers used to share nothing but the report. On frodo-cli#919 the routing worker read the CLI's code and concluded "The depth limit sits in the library's tree resolution, with the CLI only formatting output", routed the issue on that, and wrote none of it down: the canonical issue held the report and the `Reported from` line, and the comment on the original said "tracked in ...". The plan worker of the library then started from nothing. Now the worker that routes writes a **Routing note** into the canonical issue's body: the words in the report that name the failing component (its rationale, quoted), what it read or searched with the file, or "nothing but the report", and what it did not check. The issue worker of the receiving repository treats the note as a lead and checks the part it can; the plan worker reads it, and for an issue passed back, the plan the other repository wrote, as leads too, reads the code they name before it relies on one, and writes "Layer: confirmed, see {file}", "Wrong layer: ..." or "Layer: not verified" with no repository named as the likely home of the fix. A lead is never a fact: both repositories are public and the text is read as untrusted, like the report.
+
+## Work in more than one repository
+
+A fix can need a change in two repositories: a library function and the command that calls it. The Concierge used to know two answers about where an issue belongs, keep it or route it (the layer check says "Wrong layer" or nothing), and no way to say "both". Splitting was a person writing the second issue and its `Depends on:` line by hand, as for the facade chain.
+
+**Intake does not split.** The issue worker decides from the report text (record 0009) and is the one gate open to every reporter (record 0007), so it keeps an issue that needs work on both sides, says in its comment which part might belong in the other repository and why, and creates nothing there. A split created from a guess about untrusted text would cost a held issue in another repository; a split proposed from code is cheap to check.
+
+**The plan proposes.** The plan worker reads the code on both sides (the layer check) and, when the fix needs a change in this repository and in the related one, writes one line per repository: `Work item: {owner}/{repo} | {what changes} | where: {file or function} | order: {first, independent or this}`. `this` is the line for the repository that holds the plan; `first` says that its own change needs the other one done first (merged, and released where `related-repos.md` says so); `independent` says neither waits. Plan triage holds such a plan (`plan-approval-required`, no hand-off) like a wrong layer and says that a maintainer splits it, or removes the hold if this repository's part can go on alone.
+
+**A maintainer splits it.** `Concierge 2d ▸ Spawn Work Items` ([decision 0032](decisions/0032-a-fix-that-needs-two-repositories-is-split-from-its-plan-by-a-maintainer.md); plain Actions, no LLM) is run by hand for the issue that holds the plan, with an optional dry run. For each line that names the related repository it:
+
+1. creates the work item there as an issue of its own: the sentence of the plan, where to look, `Part of {origin}` and a link to the plan, held for plan approval. It carries no link label and no `Reported from` line, so the closer and the reporter notice do not start for it, and a `Part of` issue is never routed by the issue worker there and never split again;
+2. comments on the origin about it. For `order: first` the comment carries a `Depends on:` line and the origin gets `dependency-required`: the dependency watcher then waits for the work item to be merged, released, installable and pinned (the rules of `shared/dependencies.md`), and starts the origin again, which is planned against the real code and goes through its own PR gate. The hold on the origin stays until a maintainer removes it. An `independent` item is only named.
+
+The origin is the tracker and the last link of the chain, so nothing new is needed to close it: it closes with its own pull request, as before. Each repository's pull request is made by that repository's gates; no agent edits two repositories.
+
+**Trust.** The plan is model output written from an untrusted report, so the script believes only what it can check: the repository must be the related repository this deployment is configured for (and nothing is created when the plan names another), every `Work item:` line must have the exact form, two lines for one repository stop the run, and the text that reaches the new issue is one bounded line without mentions or HTML comments (a marker must come from the script). The new issue starts held and the plan of the origin was read by the person who ran it.
+
+**Each step checks first**, so a run that stopped half way is finished by running it again: a work item that was created is found by the comment on the origin or, failing that, by the marker in its body (through the search API, which lags a minute).
+
+**What it does not do.** It does not perform the release or the pin bump of the first part: the watcher detects them (a Dependabot bump of the pin wakes it) but a maintainer or Dependabot does them. It supports one related repository, because the updater generates one token pair (more repositories need a token per repository, which a maintainer must read in the updater). It does not wait for `independent` items when it closes the origin, and it does not start itself on approval: both are the next steps if they prove worth it.
 
 ## Gates
 

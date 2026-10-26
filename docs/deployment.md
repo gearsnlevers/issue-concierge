@@ -369,6 +369,17 @@ When the fix of a linked issue belongs in the repository of the original after a
 
 It imports `related-repo-closer.mjs` (and what that imports), so install those too. It needs the secret `related-repos.md` names for the related repository, with Issues: Read and write there, like the closer: the updater writes `CROSS_REPO` and `CROSS_REPO_TOKEN` into the `# concierge:cross-repo-env` marker, and an empty token stops the run before anything is written. It writes to the canonical issue with the workflow token (`issues: write`). Run it from Actions with the canonical issue's number (`issue_number`), and with `dry_run` first to see what it would do. It refuses an issue that is not open, does not carry `original-in-related-repo`, or whose original is not confirmed, closed or opted out: remove `no-auto-processing` from the original yourself first, which hands it to the issue worker. Running it again finishes a run that stopped half way. The rules are in [multi-phase-design.md](multi-phase-design.md#routing-back).
 
+### Spawn work items
+
+When a plan says that the fix needs a change in this repository and in the related one (`Work item:` lines), a plain Actions workflow (no LLM) creates the work item in the related repository and gates the issue on it, in one act that a maintainer starts by hand after reading the plan. Install it in every repository that has a `related-repos.md`, next to route back.
+
+| From this repository | To the consuming repository |
+|----------------------|-----------------------------|
+| `workflows/spawn-work-items.yml` | `.github/workflows/spawn-work-items.yml` |
+| `scripts/spawn-work-items.mjs` | `.github/scripts/spawn-work-items.mjs` |
+
+It imports `related-repo-closer.mjs` (and what that imports), so install those too. It needs `SIGNAL_TOKEN` (the label that gates the issue must start the dependency watcher) and the secret `related-repos.md` names for the related repository, with Issues: Read and write there: the updater writes `CROSS_REPO` and `CROSS_REPO_TOKEN` into the `# concierge:cross-repo-env` marker. It supports one related repository and creates nothing for any other. Run it from Actions with the number of the issue that holds the plan (`issue_number`), and with `dry_run` first. It stops for a plan with a malformed line, two lines for one repository, or a repository other than the related one, and for an issue that carries `no-auto-processing`, is a pointer (`related-repo`) or is itself a work item. Running it again finishes a run that stopped half way. The rules are in [multi-phase-design.md](multi-phase-design.md#work-in-more-than-one-repository).
+
 ### PR ready signal
 
 The coding agent cannot add labels, so a plain Actions workflow (no LLM) adds `pr-worker-ready` to its pull request when it finishes, which starts PR triage. Install it with the other plain workflows. It needs `SIGNAL_TOKEN` (Issues and Pull requests: Read and write) so the label event starts triage. It sweeps every 15 minutes, so triage starts up to 15 minutes after the agent finishes. Triage itself (a `pull_request` run on a pull request the coding agent opened) then waits for a maintainer's "Approve and run workflows" like CI does, because of the repository's "Require approval for workflow runs" policy; that is the intended human step, and one click covers both.
@@ -645,6 +656,7 @@ git push
 - [ ] Plan approval resume installed (`plan-approval-resume.yml` and `plan-approval-resume.mjs`)
 - [ ] Reporter notify installed where there is a `related-repos.md` (`reporter-notify.yml` and `reporter-notify.mjs`)
 - [ ] Route back installed where there is a `related-repos.md` (`route-back.yml` and `route-back.mjs`; the updater does it and writes the token of the related repository)
+- [ ] Spawn work items installed where there is a `related-repos.md` (`spawn-work-items.yml` and `spawn-work-items.mjs`; needs `SIGNAL_TOKEN`; the updater does it and writes the token of the related repository)
 - [ ] Stalled issue sweep installed (`stalled-issue-sweep.yml` and `stalled-issue-sweep.mjs`; needs `SIGNAL_TOKEN`; the updater does it)
 - [ ] Janitor installed (`janitor.yml` and `janitor.mjs`)
 - [ ] PR ready signal installed (`pr-ready-signal.yml` and `pr-ready-signal.mjs`; needs `SIGNAL_TOKEN`)

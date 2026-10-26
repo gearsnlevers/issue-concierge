@@ -173,6 +173,7 @@ Templates are in `shared/`. A repository can also supply an environment agent (s
 │   ├── plan-approval-resume.yml
 │   ├── reporter-notify.yml
 │   ├── route-back.yml
+│   ├── spawn-work-items.yml
 │   ├── stalled-issue-sweep.yml
 │   ├── janitor.yml
 │   ├── pr-ready-signal.yml
@@ -183,6 +184,7 @@ Templates are in `shared/`. A repository can also supply an environment agent (s
 │   ├── plan-approval-resume.mjs
 │   ├── reporter-notify.mjs
 │   ├── route-back.mjs
+│   ├── spawn-work-items.mjs
 │   ├── stalled-issue-sweep.mjs
 │   ├── janitor.mjs
 │   ├── opt-out.mjs
