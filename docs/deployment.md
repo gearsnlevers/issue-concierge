@@ -358,6 +358,17 @@ An issue the issue worker analysed can end up outside the pipeline: its run ende
 
 It imports `janitor.mjs` and `opt-out.mjs`, so install those too. It needs `SIGNAL_TOKEN` (Issues: Read and write), because a label added with the workflow token starts no workflow, and it reads pull requests with the workflow token. It leaves alone issues without an analysis of this repository's issue worker, issues that show any progress past issue triage (the hold `plan-approval-required` does not count), originals marked `related-repo`, issues an open pull request closes, bot-authored issues and issues that carry `no-auto-processing`; it waits until the last sign of life is older than a run of issue triage can take, and it stops after a bounded number of re-entries. It never lifts a hold, never comments and never starts the issue worker. Run it by hand with `issue_number` for one issue, and with `dry_run` to see what it would do. The rules are in [multi-phase-design.md](multi-phase-design.md#stalled-issues).
 
+### Route back
+
+When the fix of a linked issue belongs in the repository of the original after all, a plain Actions workflow (no LLM) moves the work back in one act that a maintainer starts by hand: the original is held, told and handed to the plan gate of its repository, and the canonical issue is closed as not planned. Install it in every repository that has a `related-repos.md` and receives linked issues, next to the related-repo closer.
+
+| From this repository | To the consuming repository |
+|----------------------|-----------------------------|
+| `workflows/route-back.yml` | `.github/workflows/route-back.yml` |
+| `scripts/route-back.mjs` | `.github/scripts/route-back.mjs` |
+
+It imports `related-repo-closer.mjs` (and what that imports), so install those too. It needs the secret `related-repos.md` names for the related repository, with Issues: Read and write there, like the closer: the updater writes `CROSS_REPO` and `CROSS_REPO_TOKEN` into the `# concierge:cross-repo-env` marker, and an empty token stops the run before anything is written. It writes to the canonical issue with the workflow token (`issues: write`). Run it from Actions with the canonical issue's number (`issue_number`), and with `dry_run` first to see what it would do. It refuses an issue that is not open, does not carry `original-in-related-repo`, or whose original is not confirmed, closed or opted out: remove `no-auto-processing` from the original yourself first, which hands it to the issue worker. Running it again finishes a run that stopped half way. The rules are in [multi-phase-design.md](multi-phase-design.md#routing-back).
+
 ### PR ready signal
 
 The coding agent cannot add labels, so a plain Actions workflow (no LLM) adds `pr-worker-ready` to its pull request when it finishes, which starts PR triage. Install it with the other plain workflows. It needs `SIGNAL_TOKEN` (Issues and Pull requests: Read and write) so the label event starts triage. It sweeps every 15 minutes, so triage starts up to 15 minutes after the agent finishes. Triage itself (a `pull_request` run on a pull request the coding agent opened) then waits for a maintainer's "Approve and run workflows" like CI does, because of the repository's "Require approval for workflow runs" policy; that is the intended human step, and one click covers both.
@@ -633,6 +644,7 @@ git push
 - [ ] Deployment check installed (`check-deployment.yml` and `check-deployment.mjs`) and passing; for each related repository the secret exists and its token has Issues: Read and write on that repository
 - [ ] Plan approval resume installed (`plan-approval-resume.yml` and `plan-approval-resume.mjs`)
 - [ ] Reporter notify installed where there is a `related-repos.md` (`reporter-notify.yml` and `reporter-notify.mjs`)
+- [ ] Route back installed where there is a `related-repos.md` (`route-back.yml` and `route-back.mjs`; the updater does it and writes the token of the related repository)
 - [ ] Stalled issue sweep installed (`stalled-issue-sweep.yml` and `stalled-issue-sweep.mjs`; needs `SIGNAL_TOKEN`; the updater does it)
 - [ ] Janitor installed (`janitor.yml` and `janitor.mjs`)
 - [ ] PR ready signal installed (`pr-ready-signal.yml` and `pr-ready-signal.mjs`; needs `SIGNAL_TOKEN`)

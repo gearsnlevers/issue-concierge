@@ -25,6 +25,8 @@ files:
   - scripts/stalled-issue-sweep.mjs
   - workflows/related-repo-closer.yml
   - scripts/related-repo-closer.mjs
+  - workflows/route-back.yml
+  - scripts/route-back.mjs
   - workflows/janitor.yml
   - scripts/janitor.mjs
   - scripts/opt-out.mjs
