@@ -27,6 +27,8 @@ files:
   - scripts/related-repo-closer.mjs
   - workflows/route-back.yml
   - scripts/route-back.mjs
+  - workflows/spawn-work-items.yml
+  - scripts/spawn-work-items.mjs
   - workflows/janitor.yml
   - scripts/janitor.mjs
   - scripts/opt-out.mjs
