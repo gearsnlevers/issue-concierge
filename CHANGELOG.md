@@ -1,5 +1,9 @@
 # Changelog
 
+## [v1.7.0] - 2026-10-26
+
+**Full Changelog**: https://github.com/vscheuber/repo-concierge/compare/v1.6.0...v1.7.0
+
 ## [v1.6.0] - 2026-10-26
 
 ### What's Changed
