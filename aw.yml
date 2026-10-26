@@ -11,7 +11,8 @@ files:
   - workflows/pr-worker.md
   - workflows/pr-triage.md
   - workflows/release-closer.md
-  - workflows/waiting-for-release.md
+  - workflows/waiting-for-release.yml
+  - scripts/resolution.mjs
   - workflows/dependency-watch.yml
   - scripts/dependency-watch.mjs
   - workflows/check-deployment.yml

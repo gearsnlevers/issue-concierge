@@ -111,7 +111,7 @@ test('pr triage: reports one "Repository rules:" line and does not repeat what C
   assert.match(s, /the violations found, each as the rule, the file it comes from and the path in the diff; "no violations found"; or "no guidance file"/);
   assert.match(s, /When there is a violation, mention it in the recommended next action/);
   assert.match(s, /Do not repeat what the rules say CI checks; at most write "enforced by CI"/);
-  assert.match(flat(triage.body), /Post a short comment stating the final labels, the "Repository rules:" line, the "Decisions:" line and the recommended next action/);
+  assert.match(flat(triage.body), /Post a short comment stating the final labels, the "Repository rules:" line, the "Decisions:" line, the "Resolution:" line and the recommended next action/);
 });
 
 test('pr triage: advisory only, and it ranks below the safety policy and the workflow rules', () => {

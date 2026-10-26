@@ -29,7 +29,7 @@ test('it starts on a closed issue, or by hand for one issue with an optional dry
 });
 
 test('the workflow token may read, and nothing more: the writes use the other repository\'s token', () => {
-  assert.match(workflow, /^permissions:\n {2}contents: read\n {2}issues: read\n\n/m);
+  assert.match(workflow, /^permissions:\n {2}contents: read\n {2}issues: read\n {2}pull-requests: read\n\n/m);
   assert.doesNotMatch(workflow, /: write\b/);
 });
 
@@ -71,7 +71,7 @@ test('the workflow, its script and everything the script imports are installed t
   for (const [, dep] of script.matchAll(/from '\.\/([\w-]+\.mjs)'/g)) {
     assert.match(manifest, new RegExp(`^  - scripts/${dep.replace(/[.]/g, '\\.')}$`, 'm'), `${dep} is imported by the closer but not installed`);
   }
-  assert.match(flat(workflow.replace(/^#\s?/gm, '')), /it imports dependency-watch\.mjs, opt-out\.mjs and reporter-notify\.mjs, which imports janitor\.mjs: install them too/);
+  assert.match(flat(workflow.replace(/^#\s?/gm, '')), /it imports dependency-watch\.mjs, opt-out\.mjs, reporter-notify\.mjs, which imports janitor\.mjs, and resolution\.mjs: install them too/);
 });
 
 test('the script never decides by a model: no network call but the GitHub API, no process but gh', () => {

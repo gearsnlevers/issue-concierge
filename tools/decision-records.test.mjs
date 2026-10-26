@@ -68,16 +68,17 @@ test('plan worker: the reads join the guidance reads and stay bounded to the ind
 test('plan worker: the plan gets a short "Decisions that apply" heading, one record per line', () => {
   const s = section(plan.body, 'Decision records');
   assert.match(s, /Put a heading "Decisions that apply" in the plan with at most five lines, one record per line/);
-  assert.match(s, /each naming the record number and what it binds in your own words/);
-  assert.match(s, /"0001: the realm picker stays and opens only when other mandatory connection settings are missing"/);
+  assert.match(s, /each naming the record by its full URL/);
+  assert.match(s, /`https:\/\/github\.com\/owner\/repo\/blob\/main\/docs\/decisions\/0001-the-realm-picker-stays\.md`/);
+  assert.match(s, /Never write a record as a bare number or as a relative link/);
   assert.match(s, /Do not paste or summarize the record\. Leave the heading out when no record applies/);
   assert.match(section(plan.body, 'Plan contents'), /Decisions that apply, and any conflict with one, when the repository has decision records/);
 });
 
 test('plan worker: a conflict is reported plainly and never resolved by the worker', () => {
   const s = section(plan.body, 'Decision records');
-  assert.match(s, /If the request conflicts with an accepted record, say so plainly on its own line under that heading, starting with "Conflicts with" and the record number/);
-  assert.match(s, /"Conflicts with 0003: needs a maintainer decision"/);
+  assert.match(s, /If the request conflicts with an accepted record, say so plainly on its own line under that heading, starting with "Conflicts with" and the record's full URL/);
+  assert.match(s, /"Conflicts with https:\/\/github\.com\/owner\/repo\/blob\/main\/docs\/decisions\/0003-short-title\.md: needs a maintainer decision"/);
   assert.match(s, /Do not resolve the conflict yourself, do not plan around it, and do not silently follow either side/);
 });
 
@@ -104,7 +105,7 @@ test('plan triage: a "Conflicts with" line adds the human hold and no hand-off',
 
 test('plan triage: the comment wording, and no comment when the hold is already there', () => {
   const s = section(planTriage.body, 'A conflict with a decision record');
-  assert.match(s, /"This conflicts with decision record NNNN\. A maintainer has to decide: change the request, or supersede the record\. Remove the plan-approval-required label to resume\."/);
+  assert.match(s, /"This conflicts with the decision record at \{URL\}\. A maintainer has to decide: change the request, or supersede the record\. Remove the plan-approval-required label to resume\."/);
   assert.match(s, /unless the issue already carries `plan-approval-required` \(then post no comment, as under "A hold that is already there"\)/);
 });
 
@@ -185,10 +186,10 @@ test('pr triage: a pull request that changes the records is judged by the defaul
 test('pr triage: one "Decisions:" line with three possible outcomes, a violation goes into the next action', () => {
   const s = section(prTriage.body, 'Decision records (advisory)');
   assert.match(s, /Add one line to the comment that starts with "Decisions:"/);
-  assert.match(s, /the violations found, each as the record number and the path in the diff; "no conflicts found"; or "no decision records"/);
+  assert.match(s, /the violations found, each as the record's full URL \(`https:\/\/github\.com\/\$\{\{ github\.repository \}\}\/blob\/<default branch>\/<path of the record>`, never a bare number or a relative link\) and the path in the diff; "no conflicts found"; or "no decision records"/);
   assert.match(s, /When there is a violation, mention it in the recommended next action/);
   assert.match(s, /If neither folder has an index, write "no decision records" in the line below and skip the rest/);
-  assert.match(flat(prTriage.body), /Post a short comment stating the final labels, the "Repository rules:" line, the "Decisions:" line and the recommended next action/);
+  assert.match(flat(prTriage.body), /Post a short comment stating the final labels, the "Repository rules:" line, the "Decisions:" line, the "Resolution:" line and the recommended next action/);
 });
 
 test('pr triage: advisory only, ranking below the safety policy and the workflow rules', () => {
@@ -258,14 +259,14 @@ test('docs: the design explains the records, the conflict hold, the trust rule a
   assert.match(s, /Only `accepted` records bind/);
   assert.match(s, /keeps the same folder at the repository root as `decisions\/`, with the index `decisions\/README\.md`\. The gates look for `docs\/decisions\/README\.md` first and then for `decisions\/README\.md`; the first one found wins, and records from both folders are never merged/);
   assert.match(s, /A decision that binds several repositories is written once, in the repository the others list in their `AGENTS\.md`, with a `repos:` list/);
-  assert.match(s, /Conflicts with 0003: needs a maintainer decision/);
+  assert.match(s, /Conflicts with https:\/\/github\.com\/owner\/repo\/blob\/main\/docs\/decisions\/0003-short-title\.md: needs a maintainer decision/);
   assert.match(s, /add `plan-approval-required`, emit no `plan-triage-handoff`/);
   assert.match(s, /The default branch/);
   assert.match(s, /PR triage never passes a ref/);
   assert.match(s, /says in the comment that the decision records change in this pull request/);
   assert.match(s, /Records rank below the harness's safety policy/);
   assert.match(s, /so its `max-ai-credits` goes from 24 to 28/);
-  assert.match(s, /Decisions: violates 0001: src\/utils\/interactive\/RealmPickers\.ts is deleted/);
+  assert.match(s, /Decisions: violates https:\/\/github\.com\/owner\/repo\/blob\/main\/docs\/decisions\/0001-the-realm-picker-stays\.md: src\/utils\/interactive\/RealmPickers\.ts is deleted/);
   assert.match(section(design, 'Repository guidance'), /see "Decision records" below/);
 });
 
