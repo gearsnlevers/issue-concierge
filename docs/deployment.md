@@ -347,6 +347,17 @@ When an issue was opened from another repository (a split-repo case, see below),
 
 It imports `janitor.mjs` and `opt-out.mjs`, so install those too. It needs no secret: it reads the original issue with the workflow token, so it works for public related repositories only (a private original is skipped). It runs when a linked issue (one with a `Reported from` line) is opened or gets `plan-approval-required`, `issue-worker-ready` or `needs-info`, or by hand for one issue. It waits a few seconds, at most four checks 15 seconds apart, for the original to confirm the link, because the issue worker labels the original just after it creates the linked issue. It does not run for issues that are not linked. The rules are in [multi-phase-design.md](multi-phase-design.md#split-repo-routing-linked-issues). To stop notifications for a pair of linked issues, remove `related-repo` from the original issue.
 
+### Stalled issue sweep
+
+An issue the issue worker analysed can end up outside the pipeline: its run ended before it signalled, or its request for the gate label was held back as a suggestion, so issue triage never started. A plain Actions workflow (no LLM) finds such issues every hour and gives them `issue-worker-ready` again, so triage reads the analysis that is already there. Install it with the other plain workflows.
+
+| From this repository | To the consuming repository |
+|----------------------|-----------------------------|
+| `workflows/stalled-issue-sweep.yml` | `.github/workflows/stalled-issue-sweep.yml` |
+| `scripts/stalled-issue-sweep.mjs` | `.github/scripts/stalled-issue-sweep.mjs` |
+
+It imports `janitor.mjs` and `opt-out.mjs`, so install those too. It needs `SIGNAL_TOKEN` (Issues: Read and write), because a label added with the workflow token starts no workflow, and it reads pull requests with the workflow token. It leaves alone issues without an analysis of this repository's issue worker, issues that show any progress past issue triage (the hold `plan-approval-required` does not count), originals marked `related-repo`, issues an open pull request closes, bot-authored issues and issues that carry `no-auto-processing`; it waits until the last sign of life is older than a run of issue triage can take, and it stops after a bounded number of re-entries. It never lifts a hold, never comments and never starts the issue worker. Run it by hand with `issue_number` for one issue, and with `dry_run` to see what it would do. The rules are in [multi-phase-design.md](multi-phase-design.md#stalled-issues).
+
 ### PR ready signal
 
 The coding agent cannot add labels, so a plain Actions workflow (no LLM) adds `pr-worker-ready` to its pull request when it finishes, which starts PR triage. Install it with the other plain workflows. It needs `SIGNAL_TOKEN` (Issues and Pull requests: Read and write) so the label event starts triage. It sweeps every 15 minutes, so triage starts up to 15 minutes after the agent finishes. Triage itself (a `pull_request` run on a pull request the coding agent opened) then waits for a maintainer's "Approve and run workflows" like CI does, because of the repository's "Require approval for workflow runs" policy; that is the intended human step, and one click covers both.
@@ -622,6 +633,7 @@ git push
 - [ ] Deployment check installed (`check-deployment.yml` and `check-deployment.mjs`) and passing; for each related repository the secret exists and its token has Issues: Read and write on that repository
 - [ ] Plan approval resume installed (`plan-approval-resume.yml` and `plan-approval-resume.mjs`)
 - [ ] Reporter notify installed where there is a `related-repos.md` (`reporter-notify.yml` and `reporter-notify.mjs`)
+- [ ] Stalled issue sweep installed (`stalled-issue-sweep.yml` and `stalled-issue-sweep.mjs`; needs `SIGNAL_TOKEN`; the updater does it)
 - [ ] Janitor installed (`janitor.yml` and `janitor.mjs`)
 - [ ] PR ready signal installed (`pr-ready-signal.yml` and `pr-ready-signal.mjs`; needs `SIGNAL_TOKEN`)
 - [ ] Branch protection / ruleset configured (require PR, status checks, no force-push)

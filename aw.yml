@@ -21,6 +21,8 @@ files:
   - scripts/plan-approval-resume.mjs
   - workflows/reporter-notify.yml
   - scripts/reporter-notify.mjs
+  - workflows/stalled-issue-sweep.yml
+  - scripts/stalled-issue-sweep.mjs
   - workflows/related-repo-closer.yml
   - scripts/related-repo-closer.mjs
   - workflows/janitor.yml

@@ -39,6 +39,7 @@ The Actions sidebar sorts workflows by display name, so the names carry the orde
 | `Concierge 1b Issue Triage` | `issue-worker-ready` |
 | `Concierge 1c ▸ Dependency Watch` | hourly, on dependency events, and on demand |
 | `Concierge 1d ▸ Reporter Notify` | a linked issue is opened, or `plan-approval-required`, `issue-worker-ready` or `needs-info` is applied to it (and by hand for one issue) |
+| `Concierge 1e ▸ Stalled Issue Sweep` | hourly, and on demand for one issue or all of them |
 | `Concierge 2a Plan Worker` | `issue-triage-handoff` |
 | `Concierge 2b Plan Triage` | `plan-worker-ready` |
 | `Concierge 2c ▸ Plan Approval Resume` | a maintainer removes `plan-approval-required` (and by hand) |
@@ -238,6 +239,20 @@ The issue worker is the earlier, wording-level layer: when it finds an open pull
 Every issue-driven workflow carries an activation condition (`if:` in the frontmatter) so it never starts for bot-authored issues: `github.event.issue.user.type != 'Bot'`. `issue-worker` additionally requires that the triggering comment was not written by a bot and that the comment is not on a pull request. Without this, the issues gh-aw files about its own failures were analyzed, planned and closed like real work, and the harness's own comments re-triggered the worker. A manual run of `issue-worker` with an issue number is unaffected, so a maintainer can still opt a bot-authored issue in.
 
 The PR gate worker only routes to the coding agent, so it uses the small model like the triage workflows; the plan worker is the only gate that still uses the default model.
+
+## Stalled issues
+
+The issue worker can end without signalling. Its run can reach the turn limit before it posts (frodo-lib#803, 2026-10-24: ten turns on reading the code, `429 Maximum LLM invocations exceeded (10 / 10)`, no comment, no label), or it can post and ask for `issue-worker-ready` with a confidence below HIGH, which gh-aw holds back as a suggestion (`Successfully added 0 labels ... Suggested 1 labels`), so no label event starts issue triage. The issue then sits outside the pipeline with nothing saying so. A routed issue is the worst case: it starts held, so a missing triage looks like the hold doing its job, and removing the hold does nothing because `plan-approval-resume` rightly finds no classification to approve. A restart through the issue worker is no way back: it writes another analysis (frodo-lib#802 got one).
+
+`Concierge 1e ▸ Stalled Issue Sweep` (plain Actions, no LLM, [decision 0030](decisions/0030-a-stalled-issue-is-given-the-gate-label-again-by-code.md)) does what a maintainer did by hand: every hour it gives `issue-worker-ready` again, with `SIGNAL_TOKEN`, to an open issue that has an analysis of this repository's issue worker and no evidence of being past issue triage. It removes the label first when it is there, because re-adding a label that is there starts nothing; issue triage then reads the analysis that is already there and writes no second one.
+
+- **Evidence of being past triage** is the janitor's list, without the hold: an outcome of issue triage (`TRIAGE_OUTCOMES`), `plan-worker-ready`, `plan-triage-handoff`, a `complexity/*` or `risk/*` label, or the coding agent as assignee, and also a comment of a later gate (issue triage, plan worker, plan triage, PR worker or PR triage of this repository; the marker gh-aw appends names the gate). The comment matters because the labels can vanish: on an issue that carries the hold the janitor takes `issue-triage-handoff` and `plan-worker-ready` away within seconds, and plan triage's classification comes only after the plan, so for a few minutes on frodo-lib#803 (2026-10-26, found by a dry run of the sweep) a plan comment was the only trace that the gates were running. `plan-approval-required` is not evidence, which is the difference to the janitor: it reads the hold as "the plan is decided" and removes `issue-worker-ready` within seconds, harmlessly, because the label event has already started the run.
+- **It leaves alone** pull requests, closed issues, bot-authored issues, originals marked `related-repo` (planning happens on the linked issue), issues that carry `no-auto-processing`, issues an open pull request closes (the worker adds no gate label for those on purpose), and issues without an analysis of this repository's worker (the other repository's worker writes the first comment of a canonical issue, and its marker names the other repository).
+- **It waits and it stops.** The last sign of life, the analysis or the gate label, has to be older than a run of issue triage can take, and it stops after a bounded number of gate labels since the last analysis, the worker's own included: a person must look. It never loops.
+- **It never writes anything but the gate label.** No comment, no hold, no other label, no start of the issue worker. A hold stays until a maintainer removes it, and once the gates have run on a routed issue there is a plan to read before they do.
+- **By hand**, `workflow_dispatch` takes an `issue_number` (it then ignores how recent the last sign of life is) and a `dry_run` that only says what it would do.
+
+What it does not heal: a stall at a later gate (a plan worker that failed, a plan triage that did not classify) and an issue the worker never commented on, whose failure the `[aw]` issue of the failed run reports. Not seen live yet: a real stalled issue given the label again by the schedule.
 
 ## Opting an item out
 
