@@ -1,0 +1,48 @@
+{
+  "id": "happy-path-to-the-hold",
+  "title": "A complete enhancement goes through intake, triage, plan and plan triage, and stops at the hold",
+  "covers": [
+    "the issue worker finishes a code-reading report inside its turn budget and leaves exactly one analysis",
+    "the gate labels are applied, so every gate starts the next",
+    "plan triage classifies an issue that already carries the hold, and hands nothing on",
+    "a thanks comment on an analysed issue starts nothing"
+  ],
+  "profiles": ["public", "private"],
+  "repo": "lib",
+  "issue": {
+    "title": "listWidgets: sort numbers inside names as numbers",
+    "body": "## Problem\n\n`listWidgets` compares names as plain text, so a list with numbers in the names comes out in a surprising order:\n\n```js\nlistWidgets([{ name: 'widget10' }, { name: 'widget2' }, { name: 'widget1' }]).map((w) => w.name);\n// ['widget1', 'widget10', 'widget2']\n```\n\n## Proposal\n\nCompare the numbers inside names as numbers, so the result is `['widget1', 'widget2', 'widget10']`. Names without numbers must sort as they do now, still ignoring case.\n\n## Acceptance\n\n- A test for the example above.\n- The existing tests still pass.",
+    "labels": ["enhancement", "plan-approval-required"]
+  },
+  "steps": [
+    {
+      "wait": {
+        "timeoutMinutes": 35,
+        "checks": [
+          { "name": "intake left one analysis", "type": "comments", "workflow": "issue-worker", "count": 1 },
+          { "name": "the plan worker left one plan", "type": "comments", "workflow": "plan-worker", "count": 1 },
+          { "name": "plan triage classified the issue and the hold stayed", "type": "labels", "include": ["plan-approval-required"], "oneWithPrefix": ["complexity/", "risk/"], "exclude": ["plan-triage-handoff", "pr-worker-ready"] },
+          { "name": "the gates ran", "type": "runs", "min": 3 },
+          { "name": "no run failed", "type": "noFailedRuns" },
+          { "name": "no failure issue was opened", "type": "noFailureIssues" },
+          { "name": "the plan lists the decision records that apply", "type": "comments", "workflow": "plan-worker", "match": "Decisions that apply", "min": 1, "warn": true },
+          { "name": "the plan lists the repository rules that apply", "type": "comments", "workflow": "plan-worker", "match": "Repository rules that apply", "min": 1, "warn": true }
+        ]
+      }
+    },
+    { "expect": { "checks": [{ "name": "nothing started coding", "type": "noPullRequest" }] } },
+    { "comment": "Thanks, this is what I meant." },
+    { "settle": { "minutes": 8 } },
+    {
+      "expect": {
+        "checks": [
+          { "name": "still one analysis", "type": "comments", "workflow": "issue-worker", "count": 1 },
+          { "name": "still one plan", "type": "comments", "workflow": "plan-worker", "count": 1 },
+          { "name": "the hold is still there", "type": "labels", "include": ["plan-approval-required"], "exclude": ["plan-triage-handoff"] },
+          { "name": "nothing started coding", "type": "noPullRequest" },
+          { "name": "no run failed", "type": "noFailedRuns" }
+        ]
+      }
+    }
+  ]
+}

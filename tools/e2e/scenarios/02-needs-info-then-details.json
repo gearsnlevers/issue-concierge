@@ -1,0 +1,45 @@
+{
+  "id": "needs-info-then-details",
+  "title": "A request without details is asked for them, and the answer starts the pipeline again",
+  "covers": [
+    "the issue gate asks for details instead of planning a request it cannot act on",
+    "a reply with the details on a needs-info issue gets a new analysis and the pipeline continues"
+  ],
+  "profiles": ["public", "private"],
+  "repo": "lib",
+  "issue": {
+    "title": "Make the tree thing better",
+    "body": "It would be nice if the tree thing was better. Please look into it.",
+    "labels": ["enhancement", "plan-approval-required"]
+  },
+  "steps": [
+    {
+      "wait": {
+        "timeoutMinutes": 20,
+        "checks": [
+          { "name": "details were asked for", "type": "labels", "include": ["needs-info"], "exclude": ["issue-triage-handoff", "plan-worker-ready"] },
+          { "name": "somebody told the reporter", "type": "comments", "min": 1 },
+          { "name": "no plan yet", "type": "comments", "workflow": "plan-worker", "count": 0 },
+          { "name": "the gates ran", "type": "runs", "min": 1 },
+          { "name": "no run failed", "type": "noFailedRuns" }
+        ]
+      }
+    },
+    {
+      "comment": "Sorry, I was not clear. `flattenTree` should accept a second argument, a maximum depth. With `maxDepth: 1` it should list the root and its direct children only, and nothing below them. Without the argument it must behave as it does today. A test should cover both cases."
+    },
+    {
+      "wait": {
+        "timeoutMinutes": 40,
+        "checks": [
+          { "name": "the plan worker left one plan", "type": "comments", "workflow": "plan-worker", "count": 1 },
+          { "name": "the hold stayed", "type": "labels", "include": ["plan-approval-required"], "exclude": ["plan-triage-handoff"] },
+          { "name": "no run failed", "type": "noFailedRuns" },
+          { "name": "no failure issue was opened", "type": "noFailureIssues" },
+          { "name": "needs-info was cleared once the details arrived", "type": "labels", "exclude": ["needs-info"], "warn": true }
+        ]
+      }
+    },
+    { "expect": { "checks": [{ "name": "nothing started coding", "type": "noPullRequest" }] } }
+  ]
+}

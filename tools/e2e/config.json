@@ -1,0 +1,7 @@
+{
+  "owner": "gearsnlevers",
+  "profiles": {
+    "public": { "lib": "e2e-lib", "app": "e2e-app" },
+    "private": { "lib": "e2e-lib-private", "app": "e2e-app-private" }
+  }
+}

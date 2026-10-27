@@ -1,0 +1,41 @@
+{
+  "id": "opt-out-then-hand-over",
+  "title": "An issue labelled no-auto-processing is left alone, and removing the label hands it over once",
+  "covers": [
+    "an opted-out issue gets no comment, no label and no run that does anything",
+    "removing the opt-out label starts the issue worker exactly once"
+  ],
+  "profiles": ["public", "private"],
+  "repo": "lib",
+  "issue": {
+    "title": "listWidgets: accept a locale for sorting",
+    "body": "## Proposal\n\nLet `listWidgets` take an optional locale, for example `listWidgets(widgets, 'sv')`, and sort the names by the rules of that locale. Without it, nothing changes.\n\n## Acceptance\n\n- A test that sorts `ä` after `z` for `sv`.",
+    "labels": ["enhancement", "no-auto-processing"]
+  },
+  "steps": [
+    { "settle": { "minutes": 6 } },
+    {
+      "expect": {
+        "checks": [
+          { "name": "the Concierge said nothing", "type": "noBotComments" },
+          { "name": "the Concierge added no label", "type": "labels", "only": ["enhancement", "no-auto-processing"] },
+          { "name": "no run failed", "type": "noFailedRuns" }
+        ]
+      }
+    },
+    { "label": ["plan-approval-required"] },
+    { "unlabel": ["no-auto-processing"] },
+    {
+      "wait": {
+        "timeoutMinutes": 25,
+        "checks": [
+          { "name": "intake ran once after the hand-over", "type": "comments", "workflow": "issue-worker", "count": 1 },
+          { "name": "the gates ran", "type": "runs", "min": 1 },
+          { "name": "no run failed", "type": "noFailedRuns" },
+          { "name": "no failure issue was opened", "type": "noFailureIssues" }
+        ]
+      }
+    },
+    { "expect": { "checks": [{ "name": "nothing started coding", "type": "noPullRequest" }] } }
+  ]
+}

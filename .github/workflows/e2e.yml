@@ -1,0 +1,50 @@
+name: E2E
+
+# The end-to-end scenarios (docs/e2e.md): mock enhancements are filed in the sandbox repositories and the real gates run
+# on them. It takes tens of minutes and spends model credits, so it runs on demand and once a week, never on a pull
+# request: a pull request could change the runner and would run with the token.
+
+on:
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: "The pair to run on: public, private or all"
+        required: false
+        default: all
+      scenario:
+        description: "Scenario ids, comma separated (empty runs them all)"
+        required: false
+        default: ''
+  schedule:
+    - cron: '23 5 * * 1'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: e2e
+  cancel-in-progress: false
+
+jobs:
+  e2e:
+    name: Scenarios
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
+      - name: Close what an earlier run left open
+        env:
+          GH_TOKEN: ${{ secrets.E2E_RUNNER_TOKEN }}
+        run: node tools/e2e/run.mjs --cleanup-stale 6
+
+      - name: Run the scenarios
+        env:
+          GH_TOKEN: ${{ secrets.E2E_RUNNER_TOKEN }}
+          PROFILE: ${{ inputs.profile || 'all' }}
+          SCENARIO: ${{ inputs.scenario }}
+        run: node tools/e2e/run.mjs --yes --profile "$PROFILE" ${SCENARIO:+--scenario "$SCENARIO"}

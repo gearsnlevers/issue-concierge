@@ -1,0 +1,32 @@
+{
+  "id": "out-of-scope-closes",
+  "title": "A request that matches an explicit exclusion in the project's scope is declined and closed as not planned",
+  "covers": [
+    "the scope check closes a request that matches an Out of scope item, with an explanation and the label out-of-scope",
+    "a declined request is never planned"
+  ],
+  "profiles": ["public", "private"],
+  "repo": "lib",
+  "issue": {
+    "title": "Add a web dashboard that draws the tree",
+    "body": "## Problem\n\nI would like to see the result of `flattenTree` as a picture instead of a list.\n\n## Proposal\n\nShip a small web page with the library that draws the tree as an interactive diagram, with zoom, a dark theme and a button that exports a PNG.\n\n## Acceptance\n\n- The page opens in a browser and shows the tree.",
+    "labels": ["enhancement", "plan-approval-required"]
+  },
+  "steps": [
+    {
+      "wait": {
+        "timeoutMinutes": 20,
+        "checks": [
+          { "name": "closed as not planned", "type": "state", "state": "closed", "reason": "not_planned" },
+          { "name": "labelled out-of-scope", "type": "labels", "include": ["out-of-scope"] },
+          { "name": "the reporter was told why", "type": "comments", "workflow": "issue-worker", "min": 1 },
+          { "name": "never planned", "type": "comments", "workflow": "plan-worker", "count": 0 },
+          { "name": "the gates ran", "type": "runs", "min": 1 },
+          { "name": "no run failed", "type": "noFailedRuns" },
+          { "name": "no failure issue was opened", "type": "noFailureIssues" }
+        ]
+      }
+    },
+    { "expect": { "checks": [{ "name": "nothing started coding", "type": "noPullRequest" }] } }
+  ]
+}

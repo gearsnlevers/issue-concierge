@@ -1,0 +1,19 @@
+{
+  "name": "{{name}}",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Sandbox command line app for the Repo Concierge end-to-end tests",
+  "type": "module",
+  "bin": {
+    "{{name}}": "src/cli.js"
+  },
+  "scripts": {
+    "test": "node --test"
+  },
+  "dependencies": {
+    "{{other_name}}": "github:{{other}}#main"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
