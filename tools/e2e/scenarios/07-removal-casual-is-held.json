@@ -1,0 +1,32 @@
+{
+  "id": "removal-casual-is-held",
+  "title": "A casual, not urgent request to remove something that exists is held for a maintainer, not parked as backlog",
+  "covers": [
+    "a request to delete an exported function and a command, worded as a tidy-up with no rush, gets needs-decision",
+    "the change check comes before 'valid but not urgent': the issue is not parked as backlog and not handed on as low-hanging fruit",
+    "nothing is planned for it"
+  ],
+  "profiles": ["public", "private"],
+  "repo": "lib",
+  "issue": {
+    "title": "Tidy up: drop the widgets command, flattenTree covers it",
+    "body": "## Problem\n\nThe `widgets` command in the app and `listWidgets` in the library do what `flattenTree` plus a filter already do. Nobody I know uses them.\n\n## Proposal\n\nDelete `listWidgets` and the `widgets` command whenever someone has a spare hour, and point people at `flattenTree(root).filter(...)`. It is a small cleanup of about a dozen lines and the tests for it go with it. No rush.\n\n## Acceptance\n\n- `listWidgets` and the `widgets` command are gone.\n- The remaining tests pass.",
+    "labels": ["enhancement", "plan-approval-required"]
+  },
+  "steps": [
+    {
+      "wait": {
+        "timeoutMinutes": 25,
+        "checks": [
+          { "name": "held for a maintainer, not parked", "type": "labels", "include": ["needs-decision"], "exclude": ["backlog", "low-hanging-fruit", "issue-triage-handoff", "plan-worker-ready", "plan-triage-handoff"] },
+          { "name": "nothing was planned", "type": "comments", "workflow": "plan-worker", "count": 0 },
+          { "name": "the issue was not closed", "type": "state", "state": "open" },
+          { "name": "the gates ran", "type": "runs", "min": 1 },
+          { "name": "no run failed", "type": "noFailedRuns" },
+          { "name": "no failure issue was opened", "type": "noFailureIssues" }
+        ]
+      }
+    },
+    { "expect": { "checks": [{ "name": "nothing started coding", "type": "noPullRequest" }] } }
+  ]
+}

@@ -5,7 +5,8 @@
     "the issue worker finishes a code-reading report inside its turn budget and leaves exactly one analysis",
     "the gate labels are applied, so every gate starts the next",
     "plan triage classifies an issue that already carries the hold, and hands nothing on",
-    "a thanks comment on an analysed issue starts nothing"
+    "a thanks comment on an analysed issue starts nothing",
+    "a refinement inside what the project documents and tests (a better sort order) is picked up, not held as a change to what exists"
   ],
   "profiles": ["public", "private"],
   "repo": "lib",
@@ -22,6 +23,7 @@
           { "name": "intake left one analysis", "type": "comments", "workflow": "issue-worker", "count": 1 },
           { "name": "the plan worker left one plan", "type": "comments", "workflow": "plan-worker", "count": 1 },
           { "name": "plan triage classified the issue and the hold stayed", "type": "labels", "include": ["plan-approval-required"], "oneWithPrefix": ["complexity/", "risk/"], "exclude": ["plan-triage-handoff", "pr-worker-ready"] },
+          { "name": "a refinement inside the contract was not held as a change to what exists", "type": "labels", "exclude": ["needs-decision"] },
           { "name": "the gates ran", "type": "runs", "min": 3 },
           { "name": "no run failed", "type": "noFailedRuns" },
           { "name": "no failure issue was opened", "type": "noFailureIssues" },

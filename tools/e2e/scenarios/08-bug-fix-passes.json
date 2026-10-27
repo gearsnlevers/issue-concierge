@@ -1,0 +1,34 @@
+{
+  "id": "bug-fix-passes",
+  "title": "A bug in something that exists is analysed, planned and classified like before: the change check holds only what changes what exists",
+  "covers": [
+    "a crash in an exported function is a fix, not a change to what exists: no needs-decision",
+    "it is planned once and classified, and stops at the hold",
+    "the plan carries no 'Breaking change:' line for a fix"
+  ],
+  "profiles": ["public", "private"],
+  "repo": "lib",
+  "issue": {
+    "title": "listWidgets throws when a widget has no name",
+    "body": "## Problem\n\n`listWidgets` crashes if one of the widgets has no `name`:\n\n```js\nlistWidgets([{ name: 'b' }, {}]);\n// TypeError: Cannot read properties of undefined (reading 'localeCompare')\n```\n\n## Expected\n\nNo error. A widget without a name is listed after the named ones, and the named ones keep their order.\n\n## Acceptance\n\n- A test for the example above.\n- The existing tests still pass.",
+    "labels": ["bug", "plan-approval-required"]
+  },
+  "steps": [
+    {
+      "wait": {
+        "timeoutMinutes": 35,
+        "checks": [
+          { "name": "not held as a change to what exists", "type": "labels", "exclude": ["needs-decision", "scope-review", "out-of-scope", "backlog"] },
+          { "name": "intake left one analysis", "type": "comments", "workflow": "issue-worker", "count": 1 },
+          { "name": "the plan worker left one plan", "type": "comments", "workflow": "plan-worker", "count": 1 },
+          { "name": "plan triage classified the issue and the hold stayed", "type": "labels", "include": ["plan-approval-required"], "oneWithPrefix": ["complexity/", "risk/"], "exclude": ["plan-triage-handoff", "pr-worker-ready"] },
+          { "name": "the plan carries no breaking change", "type": "comments", "workflow": "plan-worker", "match": "(^|\\n)\\s*[-*]*\\s*(\\*\\*)?Breaking change:", "count": 0 },
+          { "name": "the gates ran", "type": "runs", "min": 3 },
+          { "name": "no run failed", "type": "noFailedRuns" },
+          { "name": "no failure issue was opened", "type": "noFailureIssues" }
+        ]
+      }
+    },
+    { "expect": { "checks": [{ "name": "nothing started coding", "type": "noPullRequest" }] } }
+  ]
+}

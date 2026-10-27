@@ -65,6 +65,11 @@
       "description": "May not fit the scope; a maintainer decides. To accept, remove it and add `issue-triage-handoff`"
     },
     {
+      "name": "needs-decision",
+      "color": "5319e7",
+      "description": "Changes what exists; a maintainer decides. To accept, remove it and add `issue-triage-handoff`"
+    },
+    {
       "name": "dependency-required",
       "color": "b60205",
       "description": "Waiting for a dependency; the watcher removes it when the dependency is finished"

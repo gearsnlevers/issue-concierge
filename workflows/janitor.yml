@@ -64,7 +64,7 @@ jobs:
     # An item that carries no-auto-processing is left alone ("Opting an item out" in docs/multi-phase-design.md).
     if: >-
       (github.event.action != 'labeled'
-      || contains(fromJSON('["issue-worker-ready","issue-triage-handoff","plan-worker-ready","plan-triage-handoff","pr-worker-ready","pr-triage-handoff","backlog","needs-info","dependency-required","scope-review","out-of-scope","duplicate","invalid","already-fixed","spam","plan-approval-required"]'), github.event.label.name))
+      || contains(fromJSON('["issue-worker-ready","issue-triage-handoff","plan-worker-ready","plan-triage-handoff","pr-worker-ready","pr-triage-handoff","backlog","needs-info","dependency-required","scope-review","needs-decision","out-of-scope","duplicate","invalid","already-fixed","spam","plan-approval-required"]'), github.event.label.name))
       && !contains(github.event.issue.labels.*.name, 'no-auto-processing')
       && !contains(github.event.pull_request.labels.*.name, 'no-auto-processing')
     runs-on: ubuntu-latest

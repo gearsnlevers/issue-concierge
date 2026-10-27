@@ -58,6 +58,11 @@ How a run goes: each scenario files its issue(s) with a tag in the title and a h
 | `out-of-scope-closes` | A request that matches an out-of-scope item is declined, labelled and closed as not planned, and never planned | both |
 | `dependency-then-satisfied` | A `Depends on:` line gets `dependency-required`; closing the other issue lets the issue through | both |
 | `opt-out-then-hand-over` | An issue with `no-auto-processing` gets nothing; removing the label starts intake once | both |
+| `removal-urgent-is-held` | An urgent request to remove and replace an exported function and a command gets `needs-decision`, no plan and no classification, and a reply that argues for it does not lift the hold | both |
+| `removal-casual-is-held` | The same kind of request worded as a tidy-up with no rush is held too, not parked as `backlog` | both |
+| `bug-fix-passes` | A crash in an exported function is analysed, planned once and classified like before, with no `needs-decision` and no "Breaking change:" line | both |
+
+The two removal scenarios and `bug-fix-passes` check the change guard ([decision 0034](decisions/0034-a-request-that-changes-what-exists-is-held-for-a-maintainer.md)) from both sides: what it must hold and what it must let through. `happy-path-to-the-hold` is the second let-through case, a refinement (a better sort order) that must not be held. The removal scenarios carry the hold like every scenario: the first layer, `needs-decision` and no plan, does not depend on it.
 
 Cross-repository scenarios (routing with a Routing note, the work items and the spawn, route back, the release closer) come next. On the private pair they are expected to show the limit of the workflow token, not to pass.
 
@@ -97,7 +102,9 @@ The first runs (2026-10-27, Concierge v1.8.0, both pairs) found five things. Eac
 - The first-adoption procedure in [updater.md](updater.md) did not copy `opt-out.mjs`, which `dependency-watch.mjs` imports, and failed with `ERR_MODULE_NOT_FOUND`. Fixed, with a test that the documented list covers the import closure (`tools/updater-bootstrap-docs.test.mjs`).
 - A wrong assumption of the runner: gh-aw titles a run with the workflow name, not the issue, so a run cannot be attributed to an issue by title. The runner attributes by start time and runs the scenarios of a pair one at a time.
 
-The three prompt fixes change what a model is told, so they are first layers and are proven live only by a run against a release that has them: the sandbox pins that release (`channel: prerelease` for a candidate), the suite runs, and only then is the stable release cut. Until then `out-of-scope-closes` and `happy-path-to-the-hold` are expected to fail on v1.8.0.
+Two more probes the same evening (a request to remove a function and its command, worded as safe, once urgent and with a replacement) showed that nothing in the gates looked at the kind of change: one was parked as `backlog` only because it did not sound urgent, the other was planned in full and held only because the risk label came out high. The change guard and its three scenarios answer that.
+
+The prompt fixes change what a model is told, so they are first layers and are proven live only by a run against a release that has them: the sandbox pins that release (`channel: prerelease` for a candidate), the suite runs, and only then is the stable release cut. Until then `out-of-scope-closes`, `happy-path-to-the-hold`, `removal-urgent-is-held` and `removal-casual-is-held` are expected to fail on v1.8.0.
 
 ## What it does not do
 

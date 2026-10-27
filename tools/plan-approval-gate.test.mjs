@@ -32,7 +32,7 @@ const worker = split(read('workflows/plan-worker.md'));
 test('plan triage: high complexity, high risk or both adds plan-approval-required and no handoff', () => {
   const s = section(triage.body, 'Approval gate');
   assert.match(s, /^If complexity is high, or risk is high, or both: - Add the label `plan-approval-required`\. - Do \*\*not\*\* emit `plan-triage-handoff`\./);
-  assert.match(s, /Otherwise, and unless the issue already carries `plan-approval-required` \(see "A hold that is already there"\), the plan reports a conflict with a decision record \(see "A conflict with a decision record"\) or the plan reports a wrong layer \(see "A wrong layer"\), emit `plan-triage-handoff`\./);
+  assert.match(s, /Otherwise, and unless the issue already carries `plan-approval-required` \(see "A hold that is already there"\), the plan reports a conflict with a decision record \(see "A conflict with a decision record"\) or the plan reports a wrong layer \(see "A wrong layer"\) or a breaking change \(see "A breaking change"\), emit `plan-triage-handoff`\./);
 });
 
 test('plan triage: the comment names the reason and says how to resume', () => {
