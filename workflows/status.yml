@@ -16,7 +16,9 @@
 # Install: copy this file to .github/workflows/status.yml, and scripts/status-issue.mjs,
 # scripts/concierge-settings.mjs and scripts/concierge-state.mjs to .github/scripts/ (they import janitor.mjs and
 # opt-out.mjs, so install those too).
-# Needs SIGNAL_TOKEN to pin the issue and to report when that token expires; without it the issue is still written.
+# Needs SIGNAL_TOKEN to pin the issue and to report when that token expires; without it the issue is still written. With
+# `mention-after-days` set it also names the maintainers in a comment on the page when something has waited too long, and
+# lists the collaborators with the workflow token or, if that may not, with SIGNAL_TOKEN.
 name: "Concierge 5a ▸ Status"
 
 on:

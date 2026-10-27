@@ -19,6 +19,7 @@ export const SCHEMA = {
   commands: { type: 'boolean', default: true },
   'commands-need': { type: 'enum', values: ['triage', 'write', 'maintain', 'admin'], default: 'triage' },
   'reporter-replies-days': { type: 'integer', min: 1, max: 90, default: 14 },
+  'mention-after-days': { type: 'integer', min: 0, max: 90, default: 0 },
 };
 
 export const DEFAULTS = Object.fromEntries(Object.entries(SCHEMA).map(([key, spec]) => [key, spec.default]));

@@ -12,12 +12,12 @@ test('a missing file, an empty file and a file of comments all mean the defaults
   for (const text of [undefined, null, '', '\n\n', '# only a comment\n   # and another\n']) {
     assert.deepEqual(parseSettings(text), { settings: DEFAULTS, problems: [] });
   }
-  assert.deepEqual(DEFAULTS, { 'status-issue': true, commands: true, 'commands-need': 'triage', 'reporter-replies-days': 14 });
+  assert.deepEqual(DEFAULTS, { 'status-issue': true, commands: true, 'commands-need': 'triage', 'reporter-replies-days': 14, 'mention-after-days': 0 });
 });
 
 test('values are read as the type the setting has, in any case for words, with comments and quotes allowed', () => {
-  const { settings, problems } = parseSettings(['# the status issue', 'status-issue: FALSE   # off for now', '', "reporter-replies-days: '30'", 'commands: False', 'commands-need: MAINTAIN'].join('\n'));
-  assert.deepEqual(settings, { 'status-issue': false, commands: false, 'commands-need': 'maintain', 'reporter-replies-days': 30 });
+  const { settings, problems } = parseSettings(['# the status issue', 'status-issue: FALSE   # off for now', '', "reporter-replies-days: '30'", 'commands: False', 'commands-need: MAINTAIN', 'mention-after-days: 7'].join('\n'));
+  assert.deepEqual(settings, { 'status-issue': false, commands: false, 'commands-need': 'maintain', 'reporter-replies-days': 30, 'mention-after-days': 7 });
   assert.deepEqual(problems, []);
 });
 
@@ -32,6 +32,9 @@ test('a value that cannot be used is reported and the default stays', () => {
   }
   assert.equal(bad('reporter-replies-days: 1').settings['reporter-replies-days'], 1);
   assert.equal(bad('reporter-replies-days: 90').settings['reporter-replies-days'], 90);
+  for (const value of ['-1', '91', '1.5', 'weekly']) assert.match(bad(`mention-after-days: ${value}`).problems[0], /mention-after-days must (be from 0 to 90|be a whole number from 0 to 90)/, value);
+  assert.equal(bad('mention-after-days: 0').settings['mention-after-days'], 0);
+  assert.equal(bad('mention-after-days: 90').settings['mention-after-days'], 90);
 });
 
 test('the role must be one that can use commands: read and made-up roles are reported, and triage stays the default', () => {
@@ -75,6 +78,14 @@ test('the starter file says that the pause is not a setting, and how to pause', 
   assert.match(starter, /NOT HERE: the pause switch\. A gate must be able to check it without starting a run, and only a repository\n# variable can be read that way\./);
   assert.match(starter, /create the repository variable CONCIERGE_PAUSED with the\n# value true/);
   assert.ok(!('CONCIERGE_PAUSED' in SCHEMA) && !('paused' in SCHEMA));
+});
+
+test('the starter file explains what mention-after-days does, who it names, how often, and when it stays quiet', () => {
+  const starter = fs.readFileSync(path.join(ROOT, 'shared/settings.yml'), 'utf8');
+  const doc = starter.split(/^# mention-after-days: .*$/m)[1].split(/^mention-after-days: /m)[0];
+  for (const phrase of ['people who have the maintain or admin role', 'a comment on the status issue', 'At most one such comment per this many days', 'the previous one is deleted', 'twenty people', 'titles in it are written so that they mention nobody', 'needs a token that may list', '0 turns it off', 'Nothing is mentioned while the Concierge is paused']) {
+    assert.ok(doc.replace(/\n#\s+/g, ' ').includes(phrase), phrase);
+  }
 });
 
 test('the starter file says where it goes, that it is optional and that it is read from the default branch', () => {

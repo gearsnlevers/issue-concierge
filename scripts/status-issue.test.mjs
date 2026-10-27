@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { LIST_CAP, MARKER, TITLE, collect, findStatusIssue, main, normalise, reconcile, render, summarize } from './status-issue.mjs';
+import { LIST_CAP, MARKER, MENTION_CAP, MENTION_MARKER, TITLE, collect, findStatusIssue, main, maintainersOf, normalise, nudge, overdue, planMention, reconcile, render, renderMention, summarize } from './status-issue.mjs';
 import { DEFAULTS } from './concierge-settings.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -259,14 +259,18 @@ test('normalise ignores the time of the last change and nothing else', () => {
 // ---------------------------------------------------------------- GitHub
 
 /** A fake GitHub: routes the calls of the script to canned answers and records every write. */
-function fakeCtx({ variable = { status: 200, data: { value: 'true', updated_at: '2026-10-27T09:30:00Z' } }, issues = [], botIssues = [], comments = [], issueComments = {}, events = {}, runs = [], files = {}, releases = [{ tag_name: 'v1.8.0', prerelease: false }], probe = { state: 'ok', expiresAt: null }, pinned = false, pinFails = null } = {}) {
+function fakeCtx({ collaborators = [{ login: 'alice', type: 'User', role_name: 'admin' }, { login: 'bob', type: 'User', role_name: 'maintain' }], collaboratorsFail = [], variable = { status: 200, data: { value: 'true', updated_at: '2026-10-27T09:30:00Z' } }, issues = [], botIssues = [], comments = [], issueComments = {}, events = {}, runs = [], files = {}, releases = [{ tag_name: 'v1.8.0', prerelease: false }], probe = { state: 'ok', expiresAt: null }, pinned = false, pinFails = null } = {}) {
   const calls = { list: [], write: [], graphql: [] };
   let isPinned = pinned;
   return {
     calls,
     now: NOW,
-    list(p) {
+    list(p, opts = {}) {
       calls.list.push(p);
+      if (p === 'repos/o/r/collaborators') {
+        (calls.collaboratorTokens ??= []).push(opts.token ?? 'workflow');
+        return collaboratorsFail.includes(opts.token ?? 'workflow') ? null : collaborators;
+      }
       if (/^repos\/o\/r\/issues\?state=all&creator=/.test(p)) return botIssues;
       if (p === 'repos/o/r/issues?state=open') return issues;
       if (p.startsWith('repos/o/r/issues/comments?since=')) return comments;
@@ -478,4 +482,147 @@ test('a page of a hundred workflow runs fits the buffer of the gh calls', () => 
   const source = fs.readFileSync(path.join(HERE, 'status-issue.mjs'), 'utf8');
   assert.match(source, /const MAX_BUFFER = 64 \* 1024 \* 1024;/);
   assert.equal([...source.matchAll(/maxBuffer: MAX_BUFFER/g)].length, 2, 'the reads and the writes');
+});
+
+// ---------------------------------------------------------------- the nudge
+
+const waiting = (days, labels = ['needs-decision']) => {
+  const f = raw({ issues: [issue(1, labels, { title: 'Remove the widgets command' }), issue(2, labels, { title: 'Newer request' })], events: new Map([[1, labelled(labels[0], ago(days * D))], [2, labelled(labels[0], ago(1 * D))]]) });
+  return summarize(f, SETTINGS, NOW);
+};
+
+test('overdue: what waits for a maintainer at least that many days, oldest first, and nothing for 0', () => {
+  const m = waiting(5);
+  assert.deepEqual(overdue(m, 5).map((i) => i.number), [1], 'exactly the period counts');
+  assert.deepEqual(overdue(m, 1).map((i) => i.number), [1, 2]);
+  assert.deepEqual(overdue(m, 6), []);
+  assert.deepEqual(overdue(m, 0), []);
+  assert.equal(overdue(m, 5)[0].queue, 'Held: changes what exists');
+});
+
+test('overdue: only what waits for a maintainer, not what waits for the reporter, a dependency or nobody', () => {
+  for (const label of ['needs-info', 'backlog', 'dependency-required']) assert.deepEqual(overdue(waiting(30, [label]), 1), [], label);
+  assert.deepEqual(overdue(waiting(30, ['scope-review']), 7).map((i) => i.number), [1]);
+  assert.deepEqual(overdue(waiting(30, ['plan-approval-required']), 7).map((i) => i.number), [1]);
+});
+
+test('maintainersOf: users with the maintain or admin role, once each, by name, at most twenty', () => {
+  const c = (login, role_name, type = 'User') => ({ login, role_name, type });
+  assert.deepEqual(maintainersOf([c('zed', 'admin'), c('amy', 'maintain'), c('amy', 'maintain'), c('bo', 'write'), c('cy', 'triage'), c('di', 'read'), c('bot', 'admin', 'Bot')]), ['amy', 'zed']);
+  assert.deepEqual(maintainersOf([c('has space', 'admin'), c('@x', 'admin'), c('', 'admin'), c('a'.repeat(40), 'admin')]), [], 'a login must look like one');
+  assert.equal(maintainersOf(Array.from({ length: 30 }, (_, i) => c(`user${String(i).padStart(2, '0')}`, 'admin'))).length, MENTION_CAP);
+  assert.deepEqual(maintainersOf(null), []);
+});
+
+test('renderMention: the logins are the only mentions, the titles mention nobody, and a long list is cut', () => {
+  const items = Array.from({ length: 13 }, (_, i) => ({ number: i + 1, title: i === 0 ? 'Ping @everyone about #99 <b>x</b>' : `Item ${i + 1}`, since: NOW - (20 - i) * D, queue: 'Held: changes what exists' }));
+  const body = renderMention(['amy', 'zed'], items, 7, NOW);
+  assert.equal(body.split('\n')[0], MENTION_MARKER);
+  assert.equal(body.split('\n')[1], '@amy @zed');
+  assert.equal((body.match(/@/g) || []).length, 2, 'two logins and no other @');
+  assert.ok(!/(?<!&)#99|<b>/.test(body));
+  assert.match(body, /13 issues have waited for a maintainer for 7 days or more:/);
+  assert.match(body, /- #1 Ping &#64;everyone about &#35;99 &#60;b&#62;x&#60;\/b&#62; · held: changes what exists · waiting 20 d/);
+  assert.equal(body.split('\n').filter((l) => l.startsWith('- #')).length, 10);
+  assert.match(body, /- and 3 more, listed on this page/);
+  assert.match(body, /set `mention-after-days: 0` in `\.github\/agentic-workflows\/settings\.yml`/);
+  assert.match(renderMention(['amy'], items.slice(0, 1), 1, NOW), /^1 issue has waited for a maintainer for 1 day or more:/m);
+});
+
+test('planMention: one comment per period, the old one goes with the new one or when nothing waits, nobody to mention means silence', () => {
+  const some = [{ number: 1 }];
+  const previous = (daysAgo) => ({ id: 77, created_at: ago(daysAgo * D) });
+  const plan = (over) => planMention({ previous: null, items: some, logins: ['amy'], days: 7, now: NOW, ...over });
+  assert.deepEqual(plan({}), { post: true, remove: null, reason: '1 item waited 7 days or more' });
+  assert.deepEqual(plan({ previous: previous(8) }), { post: true, remove: 77, reason: '1 item waited 7 days or more' });
+  assert.deepEqual(plan({ previous: previous(2) }), { post: false, remove: null, reason: 'the last mention is newer than the period' });
+  assert.deepEqual(plan({ items: [], previous: previous(2) }), { post: false, remove: 77, reason: 'nothing has waited that long' });
+  assert.deepEqual(plan({ items: [] }), { post: false, remove: null, reason: 'nothing has waited that long' });
+  assert.deepEqual(plan({ logins: [], previous: previous(9) }), { post: false, remove: null, reason: 'nobody to mention: the collaborators could not be listed' });
+  assert.equal(plan({ previous: previous(7) }).post, true, 'exactly the period is enough');
+});
+
+const NUDGE = { ...SETTINGS, 'mention-after-days': 7 };
+const ctxWith = (over = {}) => fakeCtx({ issueComments: { 99: [] }, ...over });
+const botComment = (id, daysAgo, body = `${MENTION_MARKER}\n@amy\n\nold`) => ({ id, user: { login: 'github-actions[bot]' }, body, created_at: ago(daysAgo * D) });
+const written = (c, method) => c.calls.write.filter((w) => w.method === method);
+
+test('nudge: something waited a week, so the maintainers are mentioned once on the status issue', () => {
+  const ctx = ctxWith();
+  const log = nudge(ctx, REPO, 99, waiting(9), NUDGE, 'signal');
+  assert.match(log, /^mention: mentioned 2 people about 1 issue$/);
+  const [post] = written(ctx, 'POST');
+  assert.equal(post.path, 'repos/o/r/issues/99/comments');
+  assert.match(post.body.body, /^<!-- concierge:mention -->\n@alice @bob\n/);
+  assert.deepEqual(ctx.calls.collaboratorTokens, ['workflow'], 'the workflow token was enough');
+});
+
+test('nudge: when the workflow token may not list the collaborators the signal token is tried, and when neither may nobody is mentioned', () => {
+  const second = ctxWith({ collaboratorsFail: ['workflow'] });
+  assert.match(nudge(second, REPO, 99, waiting(9), NUDGE, 'signal'), /^mention: mentioned 2 people/);
+  assert.deepEqual(second.calls.collaboratorTokens, ['workflow', 'signal']);
+  const none = ctxWith({ collaboratorsFail: ['workflow', 'signal'] });
+  assert.equal(nudge(none, REPO, 99, waiting(9), NUDGE, 'signal'), 'mention: nobody to mention: the collaborators could not be listed');
+  assert.deepEqual(written(none, 'POST'), []);
+  const noToken = ctxWith({ collaboratorsFail: ['workflow'] });
+  assert.match(nudge(noToken, REPO, 99, waiting(9), NUDGE, ''), /nobody to mention/);
+  assert.deepEqual(noToken.calls.collaboratorTokens, ['workflow'], 'no token to fall back to');
+});
+
+test('nudge: a mention newer than the period is the only one, an older one is replaced, and none is left when nothing waits', () => {
+  const recent = ctxWith({ issueComments: { 99: [botComment(5, 2)] } });
+  assert.match(nudge(recent, REPO, 99, waiting(9), NUDGE, 's'), /the last mention is newer than the period/);
+  assert.deepEqual(recent.calls.write, []);
+
+  const old = ctxWith({ issueComments: { 99: [botComment(5, 9)] } });
+  nudge(old, REPO, 99, waiting(9), NUDGE, 's');
+  assert.deepEqual(old.calls.write.map((w) => [w.method, w.path]), [['DELETE', 'repos/o/r/issues/comments/5'], ['POST', 'repos/o/r/issues/99/comments']]);
+
+  const settled = ctxWith({ issueComments: { 99: [botComment(5, 2)] } });
+  assert.equal(nudge(settled, REPO, 99, waiting(3), NUDGE, 's'), 'mention: nothing has waited that long');
+  assert.deepEqual(settled.calls.write.map((w) => [w.method, w.path]), [['DELETE', 'repos/o/r/issues/comments/5']]);
+  assert.equal(settled.calls.collaboratorTokens, undefined, 'nobody is looked up when nothing waits');
+});
+
+test('nudge: only the bot\'s own mention comment is the previous one, and duplicates are cleaned up', () => {
+  const person = { id: 8, user: { login: 'a-person' }, body: `${MENTION_MARKER}\ntyped by hand`, created_at: ago(30 * D) };
+  const ctx = ctxWith({ issueComments: { 99: [person, botComment(5, 20), botComment(6, 10)] } });
+  nudge(ctx, REPO, 99, waiting(9), NUDGE, 's');
+  assert.deepEqual(written(ctx, 'DELETE').map((w) => w.path), ['repos/o/r/issues/comments/5', 'repos/o/r/issues/comments/6']);
+  assert.equal(written(ctx, 'POST').length, 1);
+});
+
+const mainEnv = { DRY_RUN: undefined };
+const overdueIssues = { issues: [issue(1, ['needs-decision'], { title: 'Remove the widgets command' })], events: { 1: labelled('needs-decision', ago(9 * D)) } };
+
+test('main: with mention-after-days set, an issue that has waited that long is mentioned on the status issue', () => {
+  const ctx = ctxWith({ ...overdueIssues, files: { '.github/agentic-workflows/settings.yml': 'mention-after-days: 7\n' } });
+  const { lines } = run(ctx);
+  assert.ok(lines.includes('mention: mentioned 2 people about 1 issue'));
+  assert.equal(written(ctx, 'POST').filter((w) => w.path.endsWith('/comments')).length, 1);
+});
+
+test('main: nothing is mentioned when the setting is 0, in a dry run, while paused, or with the status issue off', () => {
+  const comments = (ctx) => ctx.calls.list.filter((p) => /issues\/99\/comments$/.test(p) || p === 'repos/o/r/collaborators');
+  const settings = (text) => ({ ...overdueIssues, files: { '.github/agentic-workflows/settings.yml': text } });
+  const off = ctxWith(settings('mention-after-days: 0\n'));
+  run(off);
+  assert.deepEqual(comments(off), [], 'the default asks nothing of GitHub');
+  const dry = ctxWith(settings('mention-after-days: 7\n'));
+  run(dry, { DRY_RUN: 'true' });
+  assert.deepEqual(written(dry, 'POST'), []);
+  const paused = ctxWith(settings('mention-after-days: 7\n'));
+  const { lines } = run(paused, { CONCIERGE_PAUSED: 'true' });
+  assert.ok(!lines.some((l) => l.startsWith('mention:')));
+  assert.deepEqual(comments(paused), []);
+  const noPage = ctxWith({ ...settings('status-issue: false\nmention-after-days: 7\n'), botIssues: [] });
+  run(noPage);
+  assert.deepEqual(comments(noPage), []);
+});
+
+test('the mention is a comment of the status page and nothing else: the signal token only lists, and no mention is made by a model', () => {
+  const source = fs.readFileSync(path.join(HERE, 'status-issue.mjs'), 'utf8');
+  assert.ok(!/ctx\.write\([^\n]*(signalToken|SIGNAL_TOKEN)/.test(source), 'the comment is written with the workflow token');
+  assert.match(source, /ctx\.list\(`repos\/\$\{repo\}\/collaborators`, \{ token: signalToken \}\)/);
+  assert.match(source, /if \(settings\['mention-after-days'\] > 0 && result\.number && !raw\.paused\) \{/);
 });

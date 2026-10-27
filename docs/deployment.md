@@ -42,7 +42,7 @@ The files under `shared/` in the harness repository are templates. They are **no
 | `scope.md` | No | The project's purpose and explicit exclusions; turns on the scope check (see [multi-phase-design.md](multi-phase-design.md#scope-check)) |
 | `guard.md` | No | What the project protects and what it lets through freely; sharpens the change check, which holds every request that changes what exists with or without this file (see [multi-phase-design.md](multi-phase-design.md#a-change-to-what-exists)) |
 | `related-repos.md` | No | Enable linked-issue routing for split-repo projects |
-| `settings.yml` | No | What the Concierge does in this repository: the status issue, the comment commands and the role that may use them, and how far back it looks for reporter replies; every setting has a default (see [multi-phase-design.md](multi-phase-design.md#the-maintainers-view)) |
+| `settings.yml` | No | What the Concierge does in this repository: the status issue, the comment commands and the role that may use them, how far back it looks for reporter replies, and whether to mention the maintainers about what has waited too long; every setting has a default (see [multi-phase-design.md](multi-phase-design.md#the-maintainers-view)) |
 | `agents.md` | No | Template for `AGENTS.md` at the **repository root**, not for this folder: how coding agents and the plan and PR gates should work on the project (see [multi-phase-design.md](multi-phase-design.md#repository-guidance)) |
 | `decision-record.md` | No | Template and guide for decision records in `docs/decisions/` (or `decisions/`) of the **consuming repository**, not for this folder: the design decisions the plan and PR gates read, so that a decision is not made again by the next contributor or agent (see [multi-phase-design.md](multi-phase-design.md#decision-records)) |
 | `env-agent-contract.md` | No | Contract for an optional injectable environment agent |
@@ -428,7 +428,7 @@ A plain Actions workflow (no LLM) keeps one pinned issue, "Concierge status", up
 
 It imports `janitor.mjs` and `opt-out.mjs`, so install those too. It writes the issue with the workflow token (`Issues: write`, as `github-actions[bot]`), reads the runs (`Actions: read`) and uses `SIGNAL_TOKEN` for two things only: pinning the issue, and asking GitHub when that token expires. Without the secret the issue is still written, unpinned, and says so. The workflow is skipped for an issue that carries `no-auto-processing`, and the hourly run counts it.
 
-To turn it off, or to change how far back it looks for reporter replies, copy `shared/settings.yml` to `.github/agentic-workflows/settings.yml` and edit it; `status-issue: false` closes and unpins the issue. A repository can hold three pinned issues; if there are three already, the status issue is created unpinned and the page says why.
+To turn it off, to change how far back it looks for reporter replies, or to have the maintainers mentioned on the status issue about what has waited for them for a number of days (`mention-after-days`, off by default; it lists the collaborators with the workflow token and then with `SIGNAL_TOKEN`), copy `shared/settings.yml` to `.github/agentic-workflows/settings.yml` and edit it; `status-issue: false` closes and unpins the issue. A repository can hold three pinned issues; if there are three already, the status issue is created unpinned and the page says why.
 
 ### Commands
 

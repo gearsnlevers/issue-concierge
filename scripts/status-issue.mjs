@@ -210,6 +210,73 @@ export function normalise(body) {
   return String(body || '').replace(/^Last changed .*? · /m, 'Last changed X · ').replace(/"generatedAt": "[^"]*"/, '"generatedAt": "X"');
 }
 
+// ------------------------------------------------------------------ the nudge
+
+/** The hidden line the mention comment starts with. It is the bot's comment on the status issue, found by this line. */
+export const MENTION_MARKER = '<!-- concierge:mention -->';
+/** At most this many people are named in one comment. */
+export const MENTION_CAP = 20;
+/** Items listed in a mention comment; the rest is a count. */
+const MENTION_ITEMS = 10;
+
+/** The items that wait for a maintainer and have waited `days` days or more, oldest first. Nothing for 0. */
+export function overdue(model, days) {
+  if (!(days > 0)) return [];
+  const limit = days * 86400000;
+  return model.queues
+    .filter((q) => q.who === 'you')
+    .flatMap((q) => q.items.filter((i) => model.now - i.since >= limit).map((i) => ({ number: i.number, title: i.title, since: i.since, queue: q.title })))
+    .sort((a, b) => a.since - b.since);
+}
+
+/** The people to mention from the collaborators GitHub lists: users with the maintain or admin role, at most MENTION_CAP, by login. */
+export function maintainersOf(collaborators) {
+  return [...new Set((collaborators || []).filter((c) => c && c.type === 'User' && ['maintain', 'admin'].includes(c.role_name) && /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})$/.test(c.login || '')).map((c) => c.login))].sort((a, b) => a.localeCompare(b)).slice(0, MENTION_CAP);
+}
+
+/** The comment. The logins are the only mentions in it; the titles are written so that they mention nobody. */
+export function renderMention(logins, items, days, now) {
+  const L = [MENTION_MARKER, logins.map((l) => `@${l}`).join(' '), ''];
+  L.push(`${plural(items.length, 'issue')} ${items.length === 1 ? 'has' : 'have'} waited for a maintainer for ${plural(days, 'day')} or more:`, '');
+  for (const i of items.slice(0, MENTION_ITEMS)) L.push(`- #${i.number} ${safeText(i.title)} · ${i.queue.toLowerCase()} · waiting ${ago(now - i.since)}`);
+  if (items.length > MENTION_ITEMS) L.push(`- and ${items.length - MENTION_ITEMS} more, listed on this page`);
+  L.push('', 'The lists above say what each one needs. To stop these comments, set `mention-after-days: 0` in `.github/agentic-workflows/settings.yml`.');
+  return L.join('\n');
+}
+
+/**
+ * What to do about the nudge: { post, remove }. `previous` is the latest mention comment (id, created_at) or null.
+ * One comment per period at most; the old one goes when a new one is posted, and when nothing waits that long any more.
+ */
+export function planMention({ previous, items, logins, days, now }) {
+  const remove = previous ? previous.id : null;
+  if (items.length === 0) return { post: false, remove, reason: 'nothing has waited that long' };
+  if (logins.length === 0) return { post: false, remove: null, reason: 'nobody to mention: the collaborators could not be listed' };
+  if (previous && now - Date.parse(previous.created_at) < days * 86400000) return { post: false, remove: null, reason: 'the last mention is newer than the period' };
+  return { post: true, remove, reason: `${plural(items.length, 'item')} waited ${plural(days, 'day')} or more` };
+}
+
+/** Mention the maintainers on the status issue when something has waited too long. Returns the log line. */
+export function nudge(ctx, repo, number, model, settings, signalToken) {
+  const days = settings['mention-after-days'];
+  const items = overdue(model, days);
+  const comments = ctx.list(`repos/${repo}/issues/${number}/comments`) ?? [];
+  const mentions = comments.filter((c) => c.user && c.user.login === BOT && String(c.body || '').startsWith(MENTION_MARKER));
+  const previous = mentions.length ? mentions[mentions.length - 1] : null;
+  // Listing the collaborators needs more than the workflow token may have: try it first, then the signal token.
+  let listed = null;
+  if (items.length) {
+    listed = ctx.list(`repos/${repo}/collaborators`);
+    if (!listed && signalToken) listed = ctx.list(`repos/${repo}/collaborators`, { token: signalToken });
+  }
+  const logins = maintainersOf(listed);
+  const plan = planMention({ previous, items, logins, days, now: model.now });
+  for (const extra of mentions.slice(0, -1)) ctx.write('DELETE', `repos/${repo}/issues/comments/${extra.id}`);
+  if (plan.remove !== null) ctx.write('DELETE', `repos/${repo}/issues/comments/${plan.remove}`);
+  if (plan.post) ctx.write('POST', `repos/${repo}/issues/${number}/comments`, { body: renderMention(logins, items, days, model.now) });
+  return `mention: ${plan.post ? `mentioned ${plural(logins.length, 'person', 'people')} about ${plural(items.length, 'issue')}` : plan.reason}`;
+}
+
 // ------------------------------------------------------------------ GitHub
 
 const flag = (e) => String((e && (e.stderr || e.message)) || '').trim().split('\n')[0];
@@ -230,10 +297,10 @@ export function realContext(env = process.env) {
   return {
     now: Date.now(),
     get,
-    list(path, { maxPages = 20 } = {}) {
+    list(path, { maxPages = 20, token } = {}) {
       const all = [];
       for (let page = 1; page <= maxPages; page += 1) {
-        const res = get(`${path}${path.includes('?') ? '&' : '?'}per_page=100&page=${page}`);
+        const res = get(`${path}${path.includes('?') ? '&' : '?'}per_page=100&page=${page}`, token);
         if (res.status !== 200 || !Array.isArray(res.data)) return null;
         all.push(...res.data);
         if (res.data.length < 100) break;
@@ -263,8 +330,8 @@ export function realContext(env = process.env) {
       }
     },
     write(method, path, body, token = env.GH_TOKEN) {
-      const args = ['api', path, '--method', method, '--input', '-'];
-      return JSON.parse(execFileSync('gh', args, { env: { ...process.env, GH_TOKEN: token }, input: JSON.stringify(body), encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'], maxBuffer: MAX_BUFFER }) || 'null');
+      const args = ['api', path, '--method', method, ...(body ? ['--input', '-'] : [])];
+      return JSON.parse(execFileSync('gh', args, { env: { ...process.env, GH_TOKEN: token }, input: body ? JSON.stringify(body) : undefined, encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'], maxBuffer: MAX_BUFFER }) || 'null');
     },
     graphql(query, variables, token = env.GH_TOKEN) {
       const args = ['api', 'graphql', '-f', `query=${query}`];
@@ -405,6 +472,10 @@ export function main(env = process.env, ctx = realContext(env)) {
   }
   const result = reconcile(ctx, repo, settings, existing, build, signalToken);
   console.log(`status issue ${result.action}${result.number ? ` (#${result.number})` : ''}${result.pinned === false ? ', not pinned' : ''}`);
+  // The nudge: only when asked for, only on a status issue that exists, and never while the Concierge is paused.
+  if (settings['mention-after-days'] > 0 && result.number && !raw.paused) {
+    console.log(nudge(ctx, repo, result.number, summarize({ ...raw, pinNote: null }, settings, ctx.now), settings, signalToken));
+  }
   return 0;
 }
 
