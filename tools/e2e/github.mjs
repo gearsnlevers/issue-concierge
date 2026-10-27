@@ -4,7 +4,11 @@
 // `run(args, input)` is injectable so the tests can answer without a network.
 import { execFileSync } from 'node:child_process';
 
-const TRANSIENT = /HTTP 5\d\d|timed? ?out|ECONN|socket hang up|EAI_AGAIN|temporar|secondary rate limit/i;
+// "unexpected end of JSON input" is gh's own message when GitHub answered with an empty or cut-off body: two filings in
+// a row failed with it, six seconds apart, and the next scenario filed fine. A repeated POST could in theory file a
+// second issue if the first one went through; every issue the runner files carries the hold or the opt-out label, and
+// --cleanup-stale closes what is left, so a repeat is the lesser harm.
+const TRANSIENT = /HTTP 5\d\d|timed? ?out|ECONN|socket hang up|EAI_AGAIN|temporar|secondary rate limit|unexpected end of JSON|unexpected EOF/i;
 /** The hidden line scripts/status-issue.mjs puts first in the status issue (a test keeps the two equal). */
 export const STATUS_MARKER = '<!-- concierge:status -->';
 
