@@ -92,9 +92,9 @@ test('issue triage: the outcome comes before "not urgent" and "worth doing now",
 
 test('issue triage: a reply does not lift it, a maintainer does, and later-phase progress means someone already decided', () => {
   const s = section(triage, 'Internal labels (never mentioned to the reporter)');
-  assert.match(s, /If the issue already has `out-of-scope` or `needs-decision`, do nothing: it was declined or is waiting for a maintainer, and a reporter's reply does not change that\./);
+  assert.match(s, /If the issue already has `out-of-scope`, `needs-decision` or `declined`, do nothing: it was declined or is waiting for a maintainer, and a reporter's reply does not change that\./);
   assert.match(s, /the scope and change outcomes do not apply: a maintainer or an earlier run decided to plan it\./);
-  assert.match(s, /A maintainer overrides a scope or change decision by reopening the issue if needed, removing `out-of-scope`, `scope-review` or `needs-decision`, and adding `issue-triage-handoff`\./);
+  assert.match(s, /A maintainer overrides a scope or change decision by reopening the issue if needed, removing `out-of-scope`, `scope-review`, `needs-decision` or `declined`, and adding `issue-triage-handoff`\./);
   assert.match(s, /Do not emit `issue-triage-handoff` for `already-fixed`, `invalid`, `out-of-scope`, `scope-review` or `needs-decision`\./);
 });
 

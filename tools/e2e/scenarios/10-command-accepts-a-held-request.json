@@ -1,0 +1,56 @@
+{
+  "id": "command-accepts-a-held-request",
+  "title": "A held request carries an options comment that stays last, and /accept from a maintainer hands it to the plan worker",
+  "covers": [
+    "an issue held because it changes what exists gets one options comment, written by the bot, as its last comment",
+    "a later comment moves it to the end again, and there is still only one",
+    "/accept removes the hold on the request and starts the plan worker, and the options comment changes to match the plan that waits for approval"
+  ],
+  "profiles": ["public", "private"],
+  "repo": "lib",
+  "issue": {
+    "title": "Drop the widgets command, flattenTree covers it (accept)",
+    "body": "## Problem\n\nThe `widgets` command in the app and `listWidgets` in the library do what `flattenTree` plus a filter already do.\n\n## Proposal\n\nDelete `listWidgets` and the `widgets` command and point people at `flattenTree(root).filter(...)`.\n\n## Acceptance\n\n- `listWidgets` and the `widgets` command are gone.\n- The remaining tests pass.",
+    "labels": ["enhancement", "plan-approval-required"]
+  },
+  "steps": [
+    {
+      "wait": {
+        "timeoutMinutes": 25,
+        "checks": [
+          { "name": "held for a maintainer", "type": "labels", "include": ["needs-decision"] },
+          { "name": "the last comment is the options comment", "type": "lastComment", "match": "concierge:options kind=decision" },
+          { "name": "it offers /accept and /decline", "type": "lastComment", "match": "`/accept`[\\s\\S]*`/decline \\[reason\\]`" },
+          { "name": "nothing was planned", "type": "comments", "workflow": "plan-worker", "count": 0 },
+          { "name": "no run failed", "type": "noFailedRuns" },
+          { "name": "no failure issue was opened", "type": "noFailureIssues" }
+        ]
+      }
+    },
+    { "comment": "Thanks, I would like to understand what depends on it first." },
+    {
+      "wait": {
+        "timeoutMinutes": 8,
+        "checks": [
+          { "name": "the options comment moved to the end", "type": "lastComment", "match": "concierge:options kind=decision" },
+          { "name": "there is still only one", "type": "comments", "from": "bot", "match": "concierge:options", "count": 1 }
+        ]
+      }
+    },
+    { "comment": "/accept" },
+    {
+      "wait": {
+        "timeoutMinutes": 35,
+        "checks": [
+          { "name": "the hold on the request is gone", "type": "labels", "exclude": ["needs-decision", "issue-triage-handoff"] },
+          { "name": "the plan worker planned it", "type": "comments", "workflow": "plan-worker", "min": 1 },
+          { "name": "the plan is classified and still waits for approval", "type": "labels", "include": ["plan-approval-required"], "oneWithPrefix": ["complexity/", "risk/"], "exclude": ["plan-triage-handoff"] },
+          { "name": "the options comment now offers the plan's commands, as the last comment", "type": "lastComment", "match": "concierge:options kind=plan[\\s\\S]*`/approve`" },
+          { "name": "there is still only one options comment", "type": "comments", "from": "bot", "match": "concierge:options", "count": 1 },
+          { "name": "no run failed", "type": "noFailedRuns" }
+        ]
+      }
+    },
+    { "expect": { "checks": [{ "name": "nothing started coding", "type": "noPullRequest" }] } }
+  ]
+}

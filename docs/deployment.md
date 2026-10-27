@@ -42,7 +42,7 @@ The files under `shared/` in the harness repository are templates. They are **no
 | `scope.md` | No | The project's purpose and explicit exclusions; turns on the scope check (see [multi-phase-design.md](multi-phase-design.md#scope-check)) |
 | `guard.md` | No | What the project protects and what it lets through freely; sharpens the change check, which holds every request that changes what exists with or without this file (see [multi-phase-design.md](multi-phase-design.md#a-change-to-what-exists)) |
 | `related-repos.md` | No | Enable linked-issue routing for split-repo projects |
-| `settings.yml` | No | What the Concierge does in this repository: the status issue on or off and how far back it looks for reporter replies; every setting has a default (see [multi-phase-design.md](multi-phase-design.md#the-maintainers-view)) |
+| `settings.yml` | No | What the Concierge does in this repository: the status issue, the comment commands and the role that may use them, and how far back it looks for reporter replies; every setting has a default (see [multi-phase-design.md](multi-phase-design.md#the-maintainers-view)) |
 | `agents.md` | No | Template for `AGENTS.md` at the **repository root**, not for this folder: how coding agents and the plan and PR gates should work on the project (see [multi-phase-design.md](multi-phase-design.md#repository-guidance)) |
 | `decision-record.md` | No | Template and guide for decision records in `docs/decisions/` (or `decisions/`) of the **consuming repository**, not for this folder: the design decisions the plan and PR gates read, so that a decision is not made again by the next contributor or agent (see [multi-phase-design.md](multi-phase-design.md#decision-records)) |
 | `env-agent-contract.md` | No | Contract for an optional injectable environment agent |
@@ -430,6 +430,19 @@ It imports `janitor.mjs` and `opt-out.mjs`, so install those too. It writes the 
 
 To turn it off, or to change how far back it looks for reporter replies, copy `shared/settings.yml` to `.github/agentic-workflows/settings.yml` and edit it; `status-issue: false` closes and unpins the issue. A repository can hold three pinned issues; if there are three already, the status issue is created unpinned and the page says why.
 
+### Commands
+
+A maintainer decides what becomes of an issue that waits for them by commenting `/accept`, `/decline [reason]`, `/approve`, `/replan` or `/retry`, and the Concierge keeps one comment on such an issue that says which command does what. A plain Actions workflow (no LLM) does both. It is on by default; install it with the other plain workflows (the updater does it).
+
+| From this repository | To the consuming repository |
+|----------------------|-----------------------------|
+| `workflows/commands.yml` | `.github/workflows/commands.yml` |
+| `scripts/commands.mjs` | `.github/scripts/commands.mjs` |
+
+It imports `concierge-settings.mjs`, `concierge-state.mjs`, `plan-approval-resume.mjs`, `janitor.mjs` and `opt-out.mjs`, so install those too. It needs `SIGNAL_TOKEN` (Issues: Read and write): handing an issue on and closing it must start the next gate, which a change made with the workflow token does not. Comments, reactions and label removals use the workflow token (`Issues: write`).
+
+Who may use the commands is the setting `commands-need` in `.github/agentic-workflows/settings.yml` (template `shared/settings.yml`): `triage` by default, so that people who triage but do not write code can decide; `write`, `maintain` or `admin` narrow it. A personal repository has no triage role, so write is the lowest there. `commands: false` turns the commands and the options comment off. The new label `declined` (see [Create labels](#4-create-labels)) is what `/decline` adds.
+
 ## Deployment check
 
 `check-deployment` catches the configuration mistakes that otherwise surface as a failed run weeks later. It reads the compiled `.lock.yml` of the issue worker and the text of the related-repo closer's workflow (what actually runs) and compares them with `.github/agentic-workflows/related-repos.md`. For every related repository that names a `secret`, it requires that:
@@ -539,6 +552,7 @@ The workflows apply and react to specific labels. Create them once per repositor
 | `out-of-scope` | `e4e669` | Matches an explicit exclusion in the project's scope; closed as not planned |
 | `scope-review` | `fbca04` | May not fit the scope; a maintainer decides. To accept, remove it and add `issue-triage-handoff` |
 | `needs-decision` | `5319e7` | Changes what exists; a maintainer decides. To accept, remove it and add `issue-triage-handoff` |
+| `declined` | `f9d0c4` | Closed by a maintainer's decision (/decline); not planned |
 | `dependency-required` | `b60205` | Waiting for a dependency; the watcher removes it when the dependency is finished |
 | `dependency-satisfied` | `0e8a16` | Dependencies finished or cleared by a maintainer; issue triage lets the issue through |
 | `related-repo` | `fbca04` | Original issue; the work is tracked in a related repository |
@@ -678,6 +692,7 @@ git push
 - [ ] Spawn work items installed where there is a `related-repos.md` (`spawn-work-items.yml` and `spawn-work-items.mjs`; needs `SIGNAL_TOKEN`; the updater does it and writes the token of the related repository)
 - [ ] Stalled issue sweep installed (`stalled-issue-sweep.yml` and `stalled-issue-sweep.mjs`; needs `SIGNAL_TOKEN`; the updater does it)
 - [ ] Janitor installed (`janitor.yml` and `janitor.mjs`)
+- [ ] Commands installed (`commands.yml` and `commands.mjs`; needs `SIGNAL_TOKEN`; the updater does it); on an issue that carries `needs-decision` the last comment is the options comment, and `/accept` from a collaborator with the role hands the issue to the plan worker
 - [ ] Status issue installed (`status.yml`, `status-issue.mjs`, `concierge-settings.mjs` and `concierge-state.mjs`; the updater does it); after the first run the "Concierge status" issue exists, is pinned, and its counts match the open issues
 - [ ] PR ready signal installed (`pr-ready-signal.yml` and `pr-ready-signal.mjs`; needs `SIGNAL_TOKEN`)
 - [ ] Branch protection / ruleset configured (require PR, status checks, no force-push)

@@ -101,6 +101,14 @@ test('reporterReplies: only the latest comment of an issue counts, and it must b
   assert.equal(out[0].url, 'https://x/2#reporter');
 });
 
+test('reporterReplies: the options comment is the last comment of an issue that waits, and a reply under it is still a reply', () => {
+  const menuComment = { ...reply(1, 'github-actions[bot]', '2026-10-27T11:00:00Z', 'NONE', { type: 'Bot' }), body: '<!-- concierge:options kind=decision -->\nwords' };
+  const out = reporterReplies([reply(1, 'reporter', '2026-10-27T10:00:00Z'), menuComment], { now: NOW, days: 14, openNumbers: open });
+  assert.deepEqual(out.map((r) => [r.number, r.login]), [[1, 'reporter']]);
+  const answered = reporterReplies([reply(1, 'reporter', '2026-10-27T09:00:00Z'), reply(1, 'maintainer', '2026-10-27T10:00:00Z', 'OWNER'), menuComment], { now: NOW, days: 14, openNumbers: open });
+  assert.deepEqual(answered, [], 'a maintainer answered before the menu was posted again');
+});
+
 test('reporterReplies: a contributor or a first-time commenter is a reporter, a closed issue and an old reply are not listed, newest first', () => {
   const out = reporterReplies(
     [
