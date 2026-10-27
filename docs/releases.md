@@ -29,7 +29,7 @@ The Concierge does not configure Dependabot in a deployment and does not require
 
 ## Cutting a release
 
-The release workflow (`Actions > Release`) is modeled on the release workflows of the `vscheuber/*-action` repositories and uses the same actions:
+The release workflow (`Actions > Release`) is modeled on the release workflows of the `gearsnlevers/*-action` repositories and uses the same actions:
 
 1. `npm test` and a compile of every workflow definition with the pinned gh-aw (`tools/ci-compile-smoke.sh`).
 2. `version-bump-action`: next version from the release type. With no tags yet it bootstraps from `package.json` (`0.0.0`): `major` gives `v1.0.0`, `premajor` gives `v1.0.0-1`.

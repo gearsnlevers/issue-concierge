@@ -9,8 +9,8 @@ applies-to:
   - .github/workflows/e2e.yml
   - docs/e2e.md
 issues:
-  - vscheuber/repo-concierge#60
-  - vscheuber/repo-concierge#61
+  - gearsnlevers/issue-concierge#60
+  - gearsnlevers/issue-concierge#61
 ---
 
 # The Concierge is tested end to end in a sandbox of its own

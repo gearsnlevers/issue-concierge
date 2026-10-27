@@ -576,7 +576,7 @@ test('link notice: works for the body the worker really wrote on frodo-lib#806',
 });
 
 // An issue that carries no-auto-processing, or whose original does, gets no notice: a person handles it
-// (https://github.com/vscheuber/repo-concierge/blob/main/docs/decisions/0028-an-item-labelled-no-auto-processing-is-never-touched.md).
+// (https://github.com/gearsnlevers/issue-concierge/blob/main/docs/decisions/0028-an-item-labelled-no-auto-processing-is-never-touched.md).
 test('no request notice for an opted-out issue, and no read at all; the control is notified', () => {
   const w = world();
   const r = notify(issue({ labels: [{ name: 'needs-info' }, { name: 'no-auto-processing' }] }), w.ctx);

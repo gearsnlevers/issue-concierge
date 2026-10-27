@@ -30,12 +30,12 @@ Recurring work is written down as agent skills in `.claude/skills/`, which Claud
 gh extension install github/gh-aw
 
 # Install core workflows (pin to a released tag in production, for example @v1.0.0)
-gh aw add vscheuber/repo-concierge/issue-worker@main
-gh aw add vscheuber/repo-concierge/issue-triage@main
-gh aw add vscheuber/repo-concierge/plan-worker@main
-gh aw add vscheuber/repo-concierge/plan-triage@main
-gh aw add vscheuber/repo-concierge/pr-worker@main
-gh aw add vscheuber/repo-concierge/pr-triage@main
+gh aw add gearsnlevers/issue-concierge/issue-worker@main
+gh aw add gearsnlevers/issue-concierge/issue-triage@main
+gh aw add gearsnlevers/issue-concierge/plan-worker@main
+gh aw add gearsnlevers/issue-concierge/plan-triage@main
+gh aw add gearsnlevers/issue-concierge/pr-worker@main
+gh aw add gearsnlevers/issue-concierge/pr-triage@main
 
 # Compile and commit the generated lock files
 gh aw compile
@@ -85,7 +85,7 @@ A repository can also keep its design decisions as records in `docs/decisions/` 
 
 The harness only processes work from people. `issue-worker`, `issue-triage`, `plan-worker`, `plan-triage`, `pr-worker`, `related-repo-closer` and `waiting-for-release` skip issues authored by a bot (for example the `[aw] ... failed` issues gh-aw files about its own failures), and `issue-worker` also skips bot comments and comments on pull requests. The check is an activation condition, so a skipped event costs no AI credits. To process a bot-authored issue on purpose, run **Issue Worker** from the Actions tab with its issue number.
 
-To keep an item out of the harness entirely, a maintainer adds the label `no-auto-processing`. Nothing starts for an issue that carries it (not a comment, an edit or a reopen), no gate, workflow or script labels, comments on or closes it, and a closed issue gets no "Fixed in" or "Included in" comment. Removing the label hands the issue over: the issue worker starts once. A repository that adopts the Concierge with issues of its own labels them once. The rule is [an item labelled no-auto-processing is never touched](https://github.com/vscheuber/repo-concierge/blob/main/docs/decisions/0028-an-item-labelled-no-auto-processing-is-never-touched.md); how it works and where each workflow checks it is in [docs/multi-phase-design.md](docs/multi-phase-design.md#opting-an-item-out).
+To keep an item out of the harness entirely, a maintainer adds the label `no-auto-processing`. Nothing starts for an issue that carries it (not a comment, an edit or a reopen), no gate, workflow or script labels, comments on or closes it, and a closed issue gets no "Fixed in" or "Included in" comment. Removing the label hands the issue over: the issue worker starts once. A repository that adopts the Concierge with issues of its own labels them once. The rule is [an item labelled no-auto-processing is never touched](https://github.com/gearsnlevers/issue-concierge/blob/main/docs/decisions/0028-an-item-labelled-no-auto-processing-is-never-touched.md); how it works and where each workflow checks it is in [docs/multi-phase-design.md](docs/multi-phase-design.md#opting-an-item-out).
 
 An issue that declares `Depends on:` an unfinished issue or pull request receives `dependency-required` and stops at the issue gate. `dependency-watch` resolves it deterministically (no LLM) and resumes the issue, within a minute of a same-repository dependency merging or closing. For split-repo projects, a library dependency counts only when it is merged, released, installable, and pinned by the consuming repository. See [shared/dependencies.md](shared/dependencies.md).
 

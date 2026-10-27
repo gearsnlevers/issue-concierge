@@ -100,7 +100,7 @@ export function buildManifest({ root, version, tag, commit }) {
   });
   return {
     schema: 1,
-    name: 'repo-concierge',
+    name: 'issue-concierge',
     version,
     tag: tag || `v${version}`,
     commit: commit || null,

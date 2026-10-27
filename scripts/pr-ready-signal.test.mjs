@@ -151,7 +151,7 @@ test('the label goes on with the signal token, which is how PR triage starts', (
 });
 
 // A pull request that carries no-auto-processing is not signalled for PR triage, on any path
-// (https://github.com/vscheuber/repo-concierge/blob/main/docs/decisions/0028-an-item-labelled-no-auto-processing-is-never-touched.md).
+// (https://github.com/gearsnlevers/issue-concierge/blob/main/docs/decisions/0028-an-item-labelled-no-auto-processing-is-never-touched.md).
 const OPT_PR = pr({ labels: [{ name: 'no-auto-processing' }] });
 
 test('an opted-out pull request is not signalled by a direct trigger or by the sweep rule', () => {

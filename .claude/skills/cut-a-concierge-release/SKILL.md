@@ -21,19 +21,19 @@ Read first: [docs/releases.md](../../../docs/releases.md) (what a release contai
 for owner in <owner> [<another-owner> ...]; do
   for r in $(gh repo list "$owner" --no-archived --source -L 200 --json nameWithOwner -q '.[].nameWithOwner'); do
     gh api -H 'Accept: application/vnd.github.raw+json' "repos/$r/contents/.github/concierge.yml" 2>/dev/null \
-      | grep -q '^source: vscheuber/repo-concierge' && echo "$r"
+      | grep -qE '^source: (gearsnlevers/issue-concierge|vscheuber/repo-concierge)' && echo "$r"
   done
 done
 ```
 
-Compare the result with the maintainer's list. A deployment missing from one of them is a question to ask, not to settle yourself. GitHub code search does not index these files, so do not rely on it.
+A deployment that has not yet followed the move of the Concierge still names its old home (`vscheuber/repo-concierge`), which redirects; the pattern above finds both. Compare the result with the maintainer's list. A deployment missing from one of them is a question to ask, not to settle yourself. GitHub code search does not index these files, so do not rely on it.
 
 ## 1. Check main
 
 ```bash
 git fetch origin --tags && git checkout main && git pull --ff-only
 git log --oneline "$(git describe --tags --abbrev=0)"..origin/main   # exactly the changes the maintainer named
-gh run list -R vscheuber/repo-concierge --branch main -L 3 --json workflowName,conclusion,headSha,status
+gh run list -R gearsnlevers/issue-concierge --branch main -L 3 --json workflowName,conclusion,headSha,status
 npm test
 XDG_DATA_HOME="$(mktemp -d)" bash tools/ci-compile-smoke.sh
 ```
@@ -46,10 +46,10 @@ XDG_DATA_HOME="$(mktemp -d)" bash tools/ci-compile-smoke.sh
 Run the Release workflow from `main`. A dry run first is cheap when anything is unclear; it commits, tags and publishes nothing and shows the version it would cut.
 
 ```bash
-gh workflow run release.yml -R vscheuber/repo-concierge --ref main -f release-type=patch -f dry-run=true   # optional
-gh workflow run release.yml -R vscheuber/repo-concierge --ref main -f release-type=patch
-gh run list -R vscheuber/repo-concierge --workflow release.yml -L 1 --json databaseId,status,conclusion
-gh run watch <databaseId> -R vscheuber/repo-concierge --exit-status
+gh workflow run release.yml -R gearsnlevers/issue-concierge --ref main -f release-type=patch -f dry-run=true   # optional
+gh workflow run release.yml -R gearsnlevers/issue-concierge --ref main -f release-type=patch
+gh run list -R gearsnlevers/issue-concierge --workflow release.yml -L 1 --json databaseId,status,conclusion
+gh run watch <databaseId> -R gearsnlevers/issue-concierge --exit-status
 ```
 
 - Dispatch it once. Runs are serialized by a concurrency group, and a second dispatch only queues behind the first.

@@ -67,7 +67,7 @@ export function previousStableTag(repo, tag) {
 
 /** `<tag> [--previous <tag>] [--repo <owner/name>]` */
 export function parseArgs(args) {
-  const out = { repo: 'vscheuber/repo-concierge' };
+  const out = { repo: 'gearsnlevers/issue-concierge' };
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '--previous') out.previous = args[++i];
     else if (args[i] === '--repo') out.repo = args[++i];

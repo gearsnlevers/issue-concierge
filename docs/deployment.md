@@ -18,12 +18,12 @@ Step-by-step instructions for installing Repo Concierge in a consuming repositor
 From a clone of the target repository:
 
 ```bash
-gh aw add vscheuber/repo-concierge/issue-worker@main \
-         vscheuber/repo-concierge/issue-triage@main \
-         vscheuber/repo-concierge/plan-worker@main \
-         vscheuber/repo-concierge/plan-triage@main \
-         vscheuber/repo-concierge/pr-worker@main \
-         vscheuber/repo-concierge/pr-triage@main
+gh aw add gearsnlevers/issue-concierge/issue-worker@main \
+         gearsnlevers/issue-concierge/issue-triage@main \
+         gearsnlevers/issue-concierge/plan-worker@main \
+         gearsnlevers/issue-concierge/plan-triage@main \
+         gearsnlevers/issue-concierge/pr-worker@main \
+         gearsnlevers/issue-concierge/pr-triage@main
 ```
 
 Alternatively, copy the seven `.md` files from `workflows/` in this repository into `.github/workflows/` of the target.
@@ -326,7 +326,7 @@ When a maintainer removes `plan-approval-required` from an issue plan triage has
 
 ### Waiting for Release and the resolution
 
-When an issue is closed because a pull request merged, a plain Actions workflow (no LLM) tells the reporter how it was resolved and marks the issue as waiting for the release that will contain the fix. The text is the `## Resolution` section of the pull request's description, which a maintainer read before merging; code copies it, so no model reads or writes it ([record 0029](https://github.com/vscheuber/repo-concierge/blob/main/docs/decisions/0029-the-reporter-is-told-how-an-issue-was-resolved.md)).
+When an issue is closed because a pull request merged, a plain Actions workflow (no LLM) tells the reporter how it was resolved and marks the issue as waiting for the release that will contain the fix. The text is the `## Resolution` section of the pull request's description, which a maintainer read before merging; code copies it, so no model reads or writes it ([record 0029](https://github.com/gearsnlevers/issue-concierge/blob/main/docs/decisions/0029-the-reporter-is-told-how-an-issue-was-resolved.md)).
 
 | From this repository | To the consuming repository |
 |----------------------|-----------------------------|
@@ -588,7 +588,7 @@ gh label create "complexity/low" --color 0e8a16 --description "Mechanical or min
 
 ### Keeping an item out of the Concierge (`no-auto-processing`)
 
-An issue or pull request with the label `no-auto-processing` is never touched by the Concierge ([the decision record](https://github.com/vscheuber/repo-concierge/blob/main/docs/decisions/0028-an-item-labelled-no-auto-processing-is-never-touched.md)). Create it with the other labels (it is in the table above). A maintainer adds it by hand to anything they handle themselves; removing it from an open issue starts intake once.
+An issue or pull request with the label `no-auto-processing` is never touched by the Concierge ([the decision record](https://github.com/gearsnlevers/issue-concierge/blob/main/docs/decisions/0028-an-item-labelled-no-auto-processing-is-never-touched.md)). Create it with the other labels (it is in the table above). A maintainer adds it by hand to anything they handle themselves; removing it from an open issue starts intake once.
 
 A repository that adopts the Concierge with issues of its own should label them once, because a comment on an old issue starts the issue worker like a new one. Label every issue created before the adoption date, open and closed (a reopened old issue would otherwise start intake), in small batches:
 
@@ -651,7 +651,7 @@ Overwrite the workflow files on the PR branch and push:
 ```bash
 git checkout add-agentic-workflows   # or whatever branch the PR uses
 for wf in issue-worker issue-triage plan-worker plan-triage pr-worker pr-triage; do
-  curl -fsSL "https://raw.githubusercontent.com/vscheuber/repo-concierge/main/workflows/${wf}.md" \
+  curl -fsSL "https://raw.githubusercontent.com/gearsnlevers/issue-concierge/main/workflows/${wf}.md" \
     -o ".github/workflows/${wf}.md"
 done
 git add .github/workflows/*.md

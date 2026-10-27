@@ -578,7 +578,7 @@ test('main: the issue number and the repository are required', () => {
 });
 
 // An opted-out canonical issue, or an original that carries the label, is left alone: no comment, no label, no close
-// (https://github.com/vscheuber/repo-concierge/blob/main/docs/decisions/0028-an-item-labelled-no-auto-processing-is-never-touched.md).
+// (https://github.com/gearsnlevers/issue-concierge/blob/main/docs/decisions/0028-an-item-labelled-no-auto-processing-is-never-touched.md).
 test('a canonical issue that carries no-auto-processing is skipped before anything is read', () => {
   const gh = github();
   const verdict = decide(canonical({ labels: [{ name: LABEL_CANONICAL }, { name: 'no-auto-processing' }] }), ctxFor(gh));
