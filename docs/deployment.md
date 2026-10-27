@@ -431,7 +431,6 @@ It imports `janitor.mjs` and `opt-out.mjs`, so install those too. It writes the 
 To turn it off, or to change how far back it looks for reporter replies, copy `shared/settings.yml` to `.github/agentic-workflows/settings.yml` and edit it; `status-issue: false` closes and unpins the issue. A repository can hold three pinned issues; if there are three already, the status issue is created unpinned and the page says why.
 
 ## Deployment check
-## Deployment check
 
 `check-deployment` catches the configuration mistakes that otherwise surface as a failed run weeks later. It reads the compiled `.lock.yml` of the issue worker and the text of the related-repo closer's workflow (what actually runs) and compares them with `.github/agentic-workflows/related-repos.md`. For every related repository that names a `secret`, it requires that:
 

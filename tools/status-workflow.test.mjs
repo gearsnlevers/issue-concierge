@@ -96,3 +96,12 @@ test('the docs, the record and the checklist say the same', () => {
   assert.match(read('docs/decisions/README.md'), /\| 0035 \| \[Each repository has a status view of its own\]\(0035-each-repository-has-a-status-view-of-its-own\.md\) \| proposed \|/);
   assert.match(read('docs/decisions/0035-each-repository-has-a-status-view-of-its-own.md'), /^status: proposed$/m);
 });
+
+test('no heading in the docs is written twice in a row (an insertion once repeated the one it was placed before)', () => {
+  for (const file of ['README.md', 'docs/deployment.md', 'docs/multi-phase-design.md', 'docs/e2e.md']) {
+    const lines = read(file).split('\n').filter((l) => l.trim() !== '');
+    lines.forEach((line, i) => {
+      if (/^#{1,6} /.test(line)) assert.notEqual(line, lines[i + 1], `${file}: "${line}" twice in a row`);
+    });
+  }
+});
