@@ -26,10 +26,10 @@ test('manifestProblems: the manifest is for this tag and names the tag commit', 
 });
 
 test('arguments: a tag, optional --previous and --repo; anything else is an error', () => {
-  assert.deepEqual(parseArgs(['v1.0.18']), { repo: 'vscheuber/repo-concierge', tag: 'v1.0.18' });
+  assert.deepEqual(parseArgs(['v1.0.18']), { repo: 'gearsnlevers/issue-concierge', tag: 'v1.0.18' });
   assert.deepEqual(parseArgs(['v1.0.18', '--previous', 'v1.0.16', '--repo', 'o/r']), { repo: 'o/r', tag: 'v1.0.18', previous: 'v1.0.16' });
   assert.ok(parseArgs(['v1', 'v2']).error);
-  assert.deepEqual(parseRolloutArgs(['v1.0.18', 'a/b', 'c/d']), { repos: ['a/b', 'c/d'], source: 'vscheuber/repo-concierge', tag: 'v1.0.18' });
+  assert.deepEqual(parseRolloutArgs(['v1.0.18', 'a/b', 'c/d']), { repos: ['a/b', 'c/d'], source: 'gearsnlevers/issue-concierge', tag: 'v1.0.18' });
   assert.ok(parseRolloutArgs(['v1.0.18', '--bogus']).error);
 });
 

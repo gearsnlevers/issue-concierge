@@ -43,7 +43,7 @@ function harness() {
       const entries = Object.entries(files).sort(([a], [b]) => a.localeCompare(b));
       manifests.set(tag, {
         schema: 1,
-        name: 'repo-concierge',
+        name: 'issue-concierge',
         version: tag.replace(/^v/, ''),
         tag: opts.manifestTag || tag,
         commit: opts.manifestCommit || commit,

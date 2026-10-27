@@ -24,6 +24,8 @@ Everything the manifest installs: the gh-aw definitions (`.github/workflows/*.md
 
 To customize, use the places that are yours: `.github/agentic-workflows/` (complexity, risk and completeness definitions, `related-repos.md`) and `.github/concierge.yml` (`channel`).
 
+**When the Concierge moves.** The pin's `source:` names the repository the updater reads. The Concierge moved from `vscheuber/repo-concierge` to `gearsnlevers/issue-concierge` (transferred, then renamed). GitHub redirects a transferred and renamed repository by its identity, for the API, git and the web, so a deployment that still names the old source keeps working: its updater reads releases, tags and files through the redirect. Change the `source:` line by hand once, in a pull request that touches that line only; the version, the commit and the channel stay as they are, and the updater reads the new source from then on. Never create a repository at the old name: that ends the redirect.
+
 ## Cross-repository settings come from `related-repos.md`
 
 Two workflows write to another repository: the issue worker (`create-issue`) and the related-repo closer.
@@ -59,9 +61,9 @@ export GH_TOKEN="$(gh auth token)"   # the updater reads GitHub unauthenticated 
 git checkout -b concierge/first-adoption
 mkdir -p .github/scripts
 for f in concierge-updater dependency-watch opt-out; do
-  gh api "repos/vscheuber/repo-concierge/contents/scripts/$f.mjs?ref=v1.0.0" --jq .content | base64 -d > ".github/scripts/$f.mjs"
+  gh api "repos/gearsnlevers/issue-concierge/contents/scripts/$f.mjs?ref=v1.0.0" --jq .content | base64 -d > ".github/scripts/$f.mjs"
 done
-node .github/scripts/concierge-updater.mjs --local --source vscheuber/repo-concierge --target v1.0.0
+node .github/scripts/concierge-updater.mjs --local --source gearsnlevers/issue-concierge --target v1.0.0
 git add -A .github .gitattributes && git commit -m "chore: adopt Repo Concierge v1.0.0" && git push -u origin HEAD
 ```
 

@@ -7,7 +7,7 @@ import fs from 'node:fs';
 // An item that carries `no-auto-processing` is never touched by the Concierge. Why it exists: a maintainer's own
 // comment on frodo-cli#518, an issue from before the Concierge, started the issue worker, then triage, then a plan
 // with a hold label and three bot comments (2026-10-25), though the maintainer wanted to handle it by hand. The rule is
-// https://github.com/vscheuber/repo-concierge/blob/main/docs/decisions/0028-an-item-labelled-no-auto-processing-is-never-touched.md
+// https://github.com/gearsnlevers/issue-concierge/blob/main/docs/decisions/0028-an-item-labelled-no-auto-processing-is-never-touched.md
 // (the decision: the label is a hard stop for every workflow and script, removing it hands the issue over, a manual
 // dispatch of the issue worker still works) and docs/multi-phase-design.md, "Opting an item out".
 //

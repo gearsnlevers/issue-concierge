@@ -1,4 +1,4 @@
-# repo-concierge: instructions for coding agents
+# issue-concierge: instructions for coding agents
 
 Repo Concierge is an issue-to-release harness for GitHub, built on GitHub Agentic Workflows (`gh-aw`): gated triage, planning and tiered fixing, dependency gating and release tracking. Repositories ("deployments") pin a released version and an updater workflow keeps them on it. This repository holds the sources of the gates, the plain workflows and scripts that support them, the release pipeline and its tests. Read [README.md](README.md) first, then [docs/multi-phase-design.md](docs/multi-phase-design.md) (the gates, labels and the incidents behind each rule).
 

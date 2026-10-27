@@ -76,7 +76,7 @@ test('the workflow, its script and everything the script imports are installed t
 test('the script never decides by a model: no network call but the GitHub API, no process but gh', () => {
   for (const file of ['scripts/resolution.mjs', 'scripts/related-repo-closer.mjs']) {
     const script = read(file);
-    assert.doesNotMatch(script, /\bfetch\(|https?:\/\/(?!github\.com\/vscheuber\/repo-concierge)|copilot|openai|anthropic/i, file);
+    assert.doesNotMatch(script, /\bfetch\(|https?:\/\/(?!github\.com\/gearsnlevers\/issue-concierge)|copilot|openai|anthropic/i, file);
     assert.deepEqual([...new Set([...script.matchAll(/execFileSync\('([^']+)'/g)].map((m) => m[1]))], ['gh'], file);
   }
 });

@@ -216,7 +216,7 @@ test('the compare lookup asks for the status only (the full payload can exceed 1
 });
 
 // The watcher never evaluates, comments on or relabels an issue that carries no-auto-processing, whatever it waits for
-// (https://github.com/vscheuber/repo-concierge/blob/main/docs/decisions/0028-an-item-labelled-no-auto-processing-is-never-touched.md).
+// (https://github.com/gearsnlevers/issue-concierge/blob/main/docs/decisions/0028-an-item-labelled-no-auto-processing-is-never-touched.md).
 // The whole script runs against a fake `gh` that answers the list and records every call.
 const WATCH = path.resolve(import.meta.dirname, 'dependency-watch.mjs');
 

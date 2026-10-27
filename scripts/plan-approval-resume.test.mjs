@@ -210,7 +210,7 @@ test('resume hands a high-risk issue off exactly once, and does nothing for a bo
 });
 
 // An issue that carries no-auto-processing is never handed to the PR gate, whoever removes the hold
-// (https://github.com/vscheuber/repo-concierge/blob/main/docs/decisions/0028-an-item-labelled-no-auto-processing-is-never-touched.md).
+// (https://github.com/gearsnlevers/issue-concierge/blob/main/docs/decisions/0028-an-item-labelled-no-auto-processing-is-never-touched.md).
 test('an opted-out issue is not handed off, and nothing is written to it', () => {
   const labelled = issue(['complexity/high', 'risk/high', 'no-auto-processing']);
   const v = decide(labelled, 'plan-approval-required', 'a-maintainer');

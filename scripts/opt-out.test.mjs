@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { LABEL_OPT_OUT, labelNames, isOptedOut, optedOutReason } from './opt-out.mjs';
 
 // The label module every script uses to leave an opted-out item alone. The decision and why it exists:
-// https://github.com/vscheuber/repo-concierge/blob/main/docs/decisions/0028-an-item-labelled-no-auto-processing-is-never-touched.md
+// https://github.com/gearsnlevers/issue-concierge/blob/main/docs/decisions/0028-an-item-labelled-no-auto-processing-is-never-touched.md
 // What each script does with it is pinned next to the script; tools/opt-out.test.mjs pins the workflows.
 
 test('the label is no-auto-processing, a name no gate label can be mistaken for', () => {

@@ -67,7 +67,7 @@ async function verifyRepo(repo, tag, manifest, previous) {
       if (text === null) return note(false, `${f.dest} is missing`);
       if (sha256(text) === f.sha256) return;
       if (f.kind === 'definition' || f.kind === 'workflow') {
-        const source = await readFile(manifest.source ?? 'vscheuber/repo-concierge', f.path, manifest.commit);
+        const source = await readFile(manifest.source ?? 'gearsnlevers/issue-concierge', f.path, manifest.commit);
         if (source !== null && withoutCrossRepo(source) === withoutCrossRepo(text)) return;
       }
       note(false, `${f.dest} differs from the release`);
@@ -91,7 +91,7 @@ async function verifyRepo(repo, tag, manifest, previous) {
 }
 
 export function parseArgs(args) {
-  const out = { repos: [], source: 'vscheuber/repo-concierge' };
+  const out = { repos: [], source: 'gearsnlevers/issue-concierge' };
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '--source') out.source = args[++i];
     else if (args[i].startsWith('--')) return { ...out, error: `unexpected option ${args[i]}` };
