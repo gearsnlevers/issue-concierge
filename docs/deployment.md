@@ -42,6 +42,7 @@ The files under `shared/` in the harness repository are templates. They are **no
 | `scope.md` | No | The project's purpose and explicit exclusions; turns on the scope check (see [multi-phase-design.md](multi-phase-design.md#scope-check)) |
 | `guard.md` | No | What the project protects and what it lets through freely; sharpens the change check, which holds every request that changes what exists with or without this file (see [multi-phase-design.md](multi-phase-design.md#a-change-to-what-exists)) |
 | `related-repos.md` | No | Enable linked-issue routing for split-repo projects |
+| `settings.yml` | No | What the Concierge does in this repository: the status issue on or off and how far back it looks for reporter replies; every setting has a default (see [multi-phase-design.md](multi-phase-design.md#the-maintainers-view)) |
 | `agents.md` | No | Template for `AGENTS.md` at the **repository root**, not for this folder: how coding agents and the plan and PR gates should work on the project (see [multi-phase-design.md](multi-phase-design.md#repository-guidance)) |
 | `decision-record.md` | No | Template and guide for decision records in `docs/decisions/` (or `decisions/`) of the **consuming repository**, not for this folder: the design decisions the plan and PR gates read, so that a decision is not made again by the next contributor or agent (see [multi-phase-design.md](multi-phase-design.md#decision-records)) |
 | `env-agent-contract.md` | No | Contract for an optional injectable environment agent |
@@ -414,6 +415,21 @@ Requirements:
 
 Run it on demand from the Actions tab, optionally with an issue number.
 
+### Status issue
+
+A plain Actions workflow (no LLM) keeps one pinned issue, "Concierge status", up to date: what waits for a maintainer, the reporter replies nobody has answered, which issues the Concierge manages and which it does not, the health of the gates and what they cost. It is on by default. Install it with the other plain workflows (the updater does it).
+
+| From this repository | To the consuming repository |
+|----------------------|-----------------------------|
+| `workflows/status.yml` | `.github/workflows/status.yml` |
+| `scripts/status-issue.mjs` | `.github/scripts/status-issue.mjs` |
+| `scripts/concierge-settings.mjs` | `.github/scripts/concierge-settings.mjs` |
+| `scripts/concierge-state.mjs` | `.github/scripts/concierge-state.mjs` |
+
+It imports `janitor.mjs` and `opt-out.mjs`, so install those too. It writes the issue with the workflow token (`Issues: write`, as `github-actions[bot]`), reads the runs (`Actions: read`) and uses `SIGNAL_TOKEN` for two things only: pinning the issue, and asking GitHub when that token expires. Without the secret the issue is still written, unpinned, and says so. The workflow is skipped for an issue that carries `no-auto-processing`, and the hourly run counts it.
+
+To turn it off, or to change how far back it looks for reporter replies, copy `shared/settings.yml` to `.github/agentic-workflows/settings.yml` and edit it; `status-issue: false` closes and unpins the issue. A repository can hold three pinned issues; if there are three already, the status issue is created unpinned and the page says why.
+
 ## Deployment check
 
 `check-deployment` catches the configuration mistakes that otherwise surface as a failed run weeks later. It reads the compiled `.lock.yml` of the issue worker and the text of the related-repo closer's workflow (what actually runs) and compares them with `.github/agentic-workflows/related-repos.md`. For every related repository that names a `secret`, it requires that:
@@ -662,6 +678,7 @@ git push
 - [ ] Spawn work items installed where there is a `related-repos.md` (`spawn-work-items.yml` and `spawn-work-items.mjs`; needs `SIGNAL_TOKEN`; the updater does it and writes the token of the related repository)
 - [ ] Stalled issue sweep installed (`stalled-issue-sweep.yml` and `stalled-issue-sweep.mjs`; needs `SIGNAL_TOKEN`; the updater does it)
 - [ ] Janitor installed (`janitor.yml` and `janitor.mjs`)
+- [ ] Status issue installed (`status.yml`, `status-issue.mjs`, `concierge-settings.mjs` and `concierge-state.mjs`; the updater does it); after the first run the "Concierge status" issue exists, is pinned, and its counts match the open issues
 - [ ] PR ready signal installed (`pr-ready-signal.yml` and `pr-ready-signal.mjs`; needs `SIGNAL_TOKEN`)
 - [ ] Branch protection / ruleset configured (require PR, status checks, no force-push)
 - [ ] Auto-merge enabled (if low/low unattended merge is desired)

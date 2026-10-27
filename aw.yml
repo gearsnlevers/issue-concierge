@@ -22,7 +22,11 @@ files:
   - workflows/reporter-notify.yml
   - scripts/reporter-notify.mjs
   - workflows/stalled-issue-sweep.yml
+  - workflows/status.yml
   - scripts/stalled-issue-sweep.mjs
+  - scripts/status-issue.mjs
+  - scripts/concierge-settings.mjs
+  - scripts/concierge-state.mjs
   - workflows/related-repo-closer.yml
   - scripts/related-repo-closer.mjs
   - workflows/route-back.yml
@@ -45,6 +49,7 @@ files:
   - shared/related-repos.md
   - shared/scope.md
   - shared/guard.md
+  - shared/settings.yml
   - shared/agents.md
   - shared/decision-record.md
   - docs/multi-phase-design.md

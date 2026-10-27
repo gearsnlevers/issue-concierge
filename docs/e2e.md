@@ -60,6 +60,7 @@ How a run goes: each scenario files its issue(s) with a tag in the title and a h
 | `opt-out-then-hand-over` | An issue with `no-auto-processing` gets nothing; removing the label starts intake once | both |
 | `removal-urgent-is-held` | An urgent request to remove and replace an exported function and a command gets `needs-decision`, no plan and no classification, and a reply that argues for it does not lift the hold | both |
 | `removal-casual-is-held` | The same kind of request worded as a tidy-up with no rush is held too, not parked as `backlog` | both |
+| `status-issue-lists-the-held-issue` | The status issue appears by itself (the first label event starts the status workflow), lists the held issue under "Needs you", counts it among the managed issues and carries the numbers for a dashboard; creating it opens no failure issue | both |
 | `bug-fix-passes` | A crash in an exported function is analysed, planned once and classified like before, with no `needs-decision` and no "Breaking change:" line | both |
 
 The two removal scenarios and `bug-fix-passes` check the change guard ([decision 0034](decisions/0034-a-request-that-changes-what-exists-is-held-for-a-maintainer.md)) from both sides: what it must hold and what it must let through. `happy-path-to-the-hold` is the second let-through case, a refinement (a better sort order) that must not be held. The removal scenarios carry the hold like every scenario: the first layer, `needs-decision` and no plan, does not depend on it.

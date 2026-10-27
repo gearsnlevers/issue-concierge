@@ -54,6 +54,7 @@ The Actions sidebar sorts workflows by display name, so the names carry the orde
 | `Concierge 4d Release Closer` | a release is published |
 | `Concierge 4e ▸ Updater` | daily, and on demand |
 | `Concierge 4f ▸ Check Deployment` | on pull requests, and on demand |
+| `Concierge 5a ▸ Status` | when a label that matters changes, on a comment, hourly, and on demand; a plain workflow, no model |
 
 The ordering holds whether the sidebar counts punctuation or ignores it, because the code is unique and sits before the marker. Names stay within about 40 characters (the longest is 35); longer ones truncate in the sidebar.
 
@@ -264,6 +265,31 @@ The issue worker can end without signalling. Its run can reach the turn limit be
 - **By hand**, `workflow_dispatch` takes an `issue_number` (it then ignores how recent the last sign of life is) and a `dry_run` that only says what it would do.
 
 What it does not heal: a stall at a later gate (a plan worker that failed, a plan triage that did not classify) and an issue the worker never commented on, whose failure the `[aw]` issue of the failed run reports. Not seen live yet: a real stalled issue given the label again by the schedule.
+
+## The maintainer's view
+
+The labels say where one issue is. A maintainer asks other questions: what waits for me, has anyone answered, is the Concierge working, what does it cost. Each repository that uses the Concierge gets the answers in one place, delivered with the Concierge and derived from that repository's own state ([decision 0035](decisions/0035-each-repository-has-a-status-view-of-its-own.md)). Nothing outside the repository is needed: a project board needs an owner's access and a token, Pages needs a plan, and a deployment cannot assume access to the repositories next to it.
+
+### The status issue
+
+`Concierge 5a ▸ Status` (plain Actions, no model) keeps one pinned issue, "Concierge status". The bot opens it, it carries `no-auto-processing`, and every gate skips both, so the Concierge never acts on it. The workflow runs when a label that matters changes, when someone comments, every hour and by hand, one run behind the other, and it edits the page only when its content changed. The page, in order:
+
+- **Needs you.** The issues whose next move is a maintainer's, each queue with a count, the oldest waiting first and how long: held because the request changes what exists (`needs-decision`), held because it may not fit the scope (`scope-review`), and a plan waiting for approval (`plan-approval-required`). Whose move it is comes from the labels, in one place (`scripts/concierge-state.mjs`).
+- **Reporter replies waiting.** An open issue whose latest comment is from someone who is not a maintainer (`OWNER`, `MEMBER`, `COLLABORATOR`) and not a bot, from the last `reporter-replies-days` days. It includes opted-out issues, marked as such, because nobody else is watching them. It shows the login and a link and never the text of the comment.
+- **In flight.** Issues that carry a gate label, and which of them have been there for more than an hour: a whole pass through the three gates takes about a quarter of that.
+- **Everything else.** Waiting for the reporter, for a dependency, parked, with the coding agent, tracked in another repository, settled.
+- **Which issues the Concierge manages.** "87 open = 31 managed · 49 opted out · 3 opened by bots · 4 not yet picked up", so that every other number has a denominator. An issue is managed when it carries a label only the Concierge applies or the issue worker has commented on it; it is opted out when it carries `no-auto-processing`; bots' issues (the `[aw]` failure issues) are counted apart; the rest has not been picked up yet.
+- **Health.** The last good run of each gate, the failed runs of the last seven days, the pinned version against the latest release of its channel, and `SIGNAL_TOKEN`: GitHub puts the expiry of a token on every answer (`github-authentication-token-expiration`), so the page can say "expires in 9 days" or "is rejected" before the gates stop handing issues on without a word.
+- **Spend.** The AIC the gates' comments report for the last seven days. A run that posts no comment is not in it.
+- **Settings**, with any line of `settings.yml` that could not be used, and the same numbers as JSON in a collapsed block, for a dashboard that reads several repositories.
+
+What comes from outside is made safe: a title or a login goes into the page with its `@`, `#`, markup and HTML as entities, so that writing the page mentions nobody and links this issue into no other. If the repository already has three pinned issues, GitHub's limit, or the signal token may not pin, the issue is created unpinned and the page says why.
+
+### Settings
+
+`.github/agentic-workflows/settings.yml` (template `shared/settings.yml`) belongs to the repository, like `scope.md`: reviewed by pull request, read from the default branch, every setting with a default. A line that cannot be used is reported by `check-deployment` and on the page, and the default stays. `status-issue` is on by default; set to `false`, the issue is closed and unpinned, never deleted. The format is flat `key: value` lines, which a short parser reads without a dependency (`scripts/concierge-settings.mjs`).
+
+Not seen live yet: the first run in a sandbox, whether the fine-grained `SIGNAL_TOKEN` may pin, and the pinned issue as the bot creates it. `tools/status-workflow.test.mjs` and the tests beside the scripts pin the rest.
 
 ## Opting an item out
 

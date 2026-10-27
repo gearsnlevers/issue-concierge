@@ -5,6 +5,8 @@
 import { execFileSync } from 'node:child_process';
 
 const TRANSIENT = /HTTP 5\d\d|timed? ?out|ECONN|socket hang up|EAI_AGAIN|temporar|secondary rate limit/i;
+/** The hidden line scripts/status-issue.mjs puts first in the status issue (a test keeps the two equal). */
+export const STATUS_MARKER = '<!-- concierge:status -->';
 
 export function ghRunner(env = process.env) {
   return (args, input) =>
@@ -69,10 +71,18 @@ export function createGitHub({ run = ghRunner(), sleep = (ms) => new Promise((r)
     timeline: (repo, n) => api('GET', `/repos/${repo}/issues/${n}/timeline?per_page=100`, undefined, { paginate: true }),
     listRuns: (repo, since) =>
       cached(`runs ${repo} ${since}`, () => api('GET', `/repos/${repo}/actions/runs?created=${enc(`>=${since}`)}&per_page=100`, undefined, { paginate: true })),
+    // The gates open an issue when a run fails. The status issue is the bot's too, and is not a failure.
     listBotIssues: (repo, since) =>
       cached(`bot ${repo} ${since}`, async () => {
         const issues = await api('GET', `/repos/${repo}/issues?state=all&creator=${enc('github-actions[bot]')}&since=${enc(since)}&per_page=100`, undefined, { paginate: true });
-        return issues.filter((i) => !i.pull_request && i.created_at >= since);
+        return issues.filter((i) => !i.pull_request && i.created_at >= since && !(i.body ?? '').includes(STATUS_MARKER));
+      }),
+    /** The status issue the Concierge keeps pinned, or null before its first run. */
+    findStatusIssue: (repo) =>
+      cached(`status ${repo}`, async () => {
+        const issues = await api('GET', `/repos/${repo}/issues?state=all&creator=${enc('github-actions[bot]')}&per_page=100`, undefined, { paginate: true });
+        const found = issues.find((i) => !i.pull_request && (i.body ?? '').includes(STATUS_MARKER));
+        return found ? { number: found.number, body: found.body } : null;
       }),
     listOpenIssues: (repo) => api('GET', `/repos/${repo}/issues?state=open&per_page=100`, undefined, { paginate: true }).then((all) => all.filter((i) => !i.pull_request)),
     dispatch: (repo, workflow, inputs = {}) => api('POST', `/repos/${repo}/actions/workflows/${workflow}/dispatches`, { ref: 'main', inputs }),

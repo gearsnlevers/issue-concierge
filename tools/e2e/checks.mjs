@@ -4,7 +4,7 @@
 //
 // A snapshot: { repo, issue: { state, state_reason, labels: [name], assignees: [login] },
 //   comments: [{ author, authorType, body }], pullRequests: [number], runs: [{ name, conclusion, status }],
-//   botIssues: [{ number, title }], runner: login }
+//   botIssues: [{ number, title }], statusIssue: { number, body } or null, runner: login }
 const FAILED_CONCLUSIONS = new Set(['failure', 'timed_out', 'startup_failure']);
 const BOT = 'github-actions[bot]';
 
@@ -82,6 +82,16 @@ const TYPES = {
   // The gates open an issue when a run fails; none was opened in the repositories of the pair.
   noFailureIssues(_check, s) {
     return { ok: s.botIssues.length === 0, detail: s.botIssues.length ? `opened by the bot: ${s.botIssues.map((i) => `${i.repo ?? s.repo}#${i.number} ${i.title}`).join('; ')}` : 'no issue opened by the bot' };
+  },
+
+  // match: a regular expression the status issue, the page the Concierge keeps pinned, must match; with absent: true it
+  // must not. The page is read from the repository of the scenario's issue, and exists after the first run of the status workflow.
+  statusIssue(check, s) {
+    const page = s.statusIssue?.body;
+    if (!page) return { ok: false, detail: 'there is no status issue yet' };
+    const found = new RegExp(check.match, 'im').test(page);
+    const ok = check.absent ? !found : found;
+    return { ok, detail: `status issue #${s.statusIssue.number} ${found ? 'matches' : 'does not match'} /${check.match}/${ok ? '' : check.absent ? ', which it must not' : ', which it must'}` };
   },
 
   noBotComments(_check, s) {
