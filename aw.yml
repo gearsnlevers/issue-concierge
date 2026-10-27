@@ -23,10 +23,12 @@ files:
   - scripts/reporter-notify.mjs
   - workflows/stalled-issue-sweep.yml
   - workflows/status.yml
+  - workflows/commands.yml
   - scripts/stalled-issue-sweep.mjs
   - scripts/status-issue.mjs
   - scripts/concierge-settings.mjs
   - scripts/concierge-state.mjs
+  - scripts/commands.mjs
   - workflows/related-repo-closer.yml
   - scripts/related-repo-closer.mjs
   - workflows/route-back.yml

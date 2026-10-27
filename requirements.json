@@ -70,6 +70,11 @@
       "description": "Changes what exists; a maintainer decides. To accept, remove it and add `issue-triage-handoff`"
     },
     {
+      "name": "declined",
+      "color": "f9d0c4",
+      "description": "Closed by a maintainer's decision (/decline); not planned"
+    },
+    {
       "name": "dependency-required",
       "color": "b60205",
       "description": "Waiting for a dependency; the watcher removes it when the dependency is finished"

@@ -16,6 +16,8 @@ export const SETTINGS_PATH = '.github/agentic-workflows/settings.yml';
 /** Every setting, its type and its default. A setting is added here in the change that gives it an effect. */
 export const SCHEMA = {
   'status-issue': { type: 'boolean', default: true },
+  commands: { type: 'boolean', default: true },
+  'commands-need': { type: 'enum', values: ['triage', 'write', 'maintain', 'admin'], default: 'triage' },
   'reporter-replies-days': { type: 'integer', min: 1, max: 90, default: 14 },
 };
 

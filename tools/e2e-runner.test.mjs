@@ -541,6 +541,15 @@ test('the runner and the status script mark the page with the same line', () => 
   assert.equal(STATUS_MARKER, PAGE_MARKER);
 });
 
+test('lastComment: the last comment of the issue must match, or must not', () => {
+  const s = (...bodies) => ({ repo: 'o/lib', runner: 'runner', issue: { state: 'open', state_reason: null, labels: [], assignees: [] }, comments: bodies.map((body, i) => ({ author: i % 2 ? BOT : 'runner', authorType: 'User', body })), pullRequests: [], runs: [], botIssues: [] });
+  assert.equal(evaluateCheck({ type: 'lastComment', match: 'concierge:options kind=decision' }, s('hello', '<!-- concierge:options kind=decision -->')).ok, true);
+  assert.equal(evaluateCheck({ type: 'lastComment', match: 'concierge:options' }, s('<!-- concierge:options -->', 'a reply')).ok, false, 'it is not last');
+  assert.equal(evaluateCheck({ type: 'lastComment', match: 'concierge:options', absent: true }, s('<!-- concierge:options -->', 'a reply')).ok, true);
+  assert.equal(evaluateCheck({ type: 'lastComment', match: 'x' }, s()).ok, false);
+  assert.match(evaluateCheck({ type: 'lastComment', match: 'x' }, s('hello')).detail, /the last comment \(by runner\) does not match \/x\/, which it must/);
+});
+
 test('statusIssue: the page must match, or must not, and a repository without one fails the check', () => {
   const page = { number: 7, body: `${STATUS_MARKER}\n## Needs you (1)\n- #12 Remove the widgets command · waiting under 1 h\n` };
   const snap2 = (statusIssue) => ({ repo: 'o/lib', runner: 'runner', issue: { state: 'open', state_reason: null, labels: [], assignees: [] }, comments: [], pullRequests: [], runs: [], botIssues: [], statusIssue });

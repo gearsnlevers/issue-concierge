@@ -55,6 +55,7 @@ The Actions sidebar sorts workflows by display name, so the names carry the orde
 | `Concierge 4e ▸ Updater` | daily, and on demand |
 | `Concierge 4f ▸ Check Deployment` | on pull requests, and on demand |
 | `Concierge 5a ▸ Status` | when a label that matters changes, on a comment, hourly, and on demand; a plain workflow, no model |
+| `Concierge 5b ▸ Commands` | a comment, a label that changes what waits for a maintainer, an issue closing or reopening, hourly, and on demand for one issue; a plain workflow, no model |
 
 The ordering holds whether the sidebar counts punctuation or ignores it, because the code is unique and sits before the marker. Names stay within about 40 characters (the longest is 35); longer ones truncate in the sidebar.
 
@@ -285,9 +286,41 @@ The labels say where one issue is. A maintainer asks other questions: what waits
 
 What comes from outside is made safe: a title or a login goes into the page with its `@`, `#`, markup and HTML as entities, so that writing the page mentions nobody and links this issue into no other. If the repository already has three pinned issues, GitHub's limit, or the signal token may not pin, the issue is created unpinned and the page says why.
 
+### Commands and the options comment
+
+An issue that waits for a maintainer carries the command a maintainer needs next, in the issue itself ([decision 0036](decisions/0036-a-maintainer-decides-by-command-from-the-issue.md)). `Concierge 5b ▸ Commands` (plain Actions, no model) does two things.
+
+**The options comment.** One comment on an issue that waits, written by the bot, derived from the labels alone (`scripts/commands.mjs`, the same state as the status issue): a sentence in plain words for whoever reads the issue (no label, command or workflow in it), then the commands for that situation in a collapsed block, and the role they need. It appears only while a maintainer has to act:
+
+| The issue waits because | Commands |
+|---|---|
+| the request changes what exists (`needs-decision`) | `/accept`, `/decline [reason]` |
+| it may not fit the scope (`scope-review`) | `/accept`, `/decline [reason]` |
+| a classified plan waits for approval (`plan-approval-required` with a complexity and a risk label) | `/approve`, `/replan [what to change]`, `/decline [reason]` |
+| a gate label has not moved for an hour | `/retry` |
+
+A parked issue (`backlog`) or one that waits for the reporter (`needs-info`) needs no command and gets no comment; `/accept` still works on both. For a plan, the sentence follows the lines the plan worker wrote for plan triage ("Wrong layer", "Work item", "Conflicts with", "Breaking change"), and a work item points at the **Spawn Work Items** workflow.
+
+The comment is always the last one. When anyone comments, it is deleted and posted again at the end; when what is waited for changes (a decision becomes a plan), it is posted again, so that people who follow the issue are told; when only the words change, it is edited in place; when nothing waits any more, or the issue closes, it is deleted. The status issue skips it when it looks for reporter replies, or it would hide every reply under it.
+
+**The commands.** The first line of a comment decides (a command in a quote, a code block or a sentence does nothing), and the rest of that line is a reason:
+
+- `/accept` removes what stops the issue at the first gate (`needs-decision`, `scope-review`, `backlog`, `out-of-scope`, `declined`, `needs-info`), reopens it if it was declined, and gives `issue-triage-handoff`, which starts the plan worker.
+- `/decline [reason]` adds `declined`, tells the reporter in plain words with the reason, and closes the issue as not planned.
+- `/approve` lifts the hold of a classified plan and hands the issue to implementation with `plan-triage-handoff`. It asks the plan approval resume script whether the issue may be handed on (classified, no dependency, not already handed on) and posts the same approval comment, naming the person who gave the command: removing the label with the signal token would have named the owner of the token.
+- `/replan [what to change]` gives `issue-triage-handoff` again for a plan that waits for approval; the plan worker reads the comment as the request for a new plan.
+- `/retry` gives the gate label that is on the issue again, as the stalled-issue sweep does.
+- `/help` lists them.
+
+A command does what the role can already do by hand, and no more. The role is read from GitHub for the person who commented (`commands-need`, triage by default; a personal repository has no triage role, so write is the floor); the issue acted on is the issue of the event; the text of a comment is never passed to a shell or a model, and a reason is echoed with its mentions made harmless. A collaborator below the role gets one reply saying so, a stranger gets nothing, and a refused command gets a confused face and a reply that says why. A label removal uses the workflow token and starts nothing; the label that hands an issue on, and a close, use `SIGNAL_TOKEN`, because those are what start the next gate. The Concierge still never lifts a hold by itself: a person gives the command, and the comment names the person. An issue that carries `no-auto-processing` refuses every command.
+
+What the design cannot do, and what covers it: a label removed by hand starts nothing here (only the issue worker and the plan approval resume may start on a removal), so a menu that is left over is removed by the hourly run or by the next event on the issue; and the gates post their comments with the workflow token, which fires no event, so a label event waits half a minute before it looks at the comments, and a menu that still ends up above a gate's comment is moved by the next event or the hourly run. `workflow_run` would close that gap, but it adds a skipped run to the Actions tab for every label event.
+
+Not seen live yet: the commands in Actions, whether the workflow token may read a collaborator's permission, and the ordering after a gate's comment. `scripts/commands.test.mjs` and `tools/commands-workflow.test.mjs` pin the rest, and scenarios 10 and 11 prove the path in the sandbox.
+
 ### Settings
 
-`.github/agentic-workflows/settings.yml` (template `shared/settings.yml`) belongs to the repository, like `scope.md`: reviewed by pull request, read from the default branch, every setting with a default. A line that cannot be used is reported by `check-deployment` and on the page, and the default stays. `status-issue` is on by default; set to `false`, the issue is closed and unpinned, never deleted. The format is flat `key: value` lines, which a short parser reads without a dependency (`scripts/concierge-settings.mjs`).
+`.github/agentic-workflows/settings.yml` (template `shared/settings.yml`) belongs to the repository, like `scope.md`: reviewed by pull request, read from the default branch, every setting with a default. A line that cannot be used is reported by `check-deployment` and on the page, and the default stays. `status-issue` is on by default; set to `false`, the issue is closed and unpinned, never deleted. `commands` (on) and `commands-need` (`triage`) switch the commands and the options comment and set the role that may use them. The format is flat `key: value` lines, which a short parser reads without a dependency (`scripts/concierge-settings.mjs`).
 
 Not seen live yet: the first run in a sandbox, whether the fine-grained `SIGNAL_TOKEN` may pin, and the pinned issue as the bot creates it. `tools/status-workflow.test.mjs` and the tests beside the scripts pin the rest.
 

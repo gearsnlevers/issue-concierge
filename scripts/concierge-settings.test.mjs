@@ -12,12 +12,12 @@ test('a missing file, an empty file and a file of comments all mean the defaults
   for (const text of [undefined, null, '', '\n\n', '# only a comment\n   # and another\n']) {
     assert.deepEqual(parseSettings(text), { settings: DEFAULTS, problems: [] });
   }
-  assert.deepEqual(DEFAULTS, { 'status-issue': true, 'reporter-replies-days': 14 });
+  assert.deepEqual(DEFAULTS, { 'status-issue': true, commands: true, 'commands-need': 'triage', 'reporter-replies-days': 14 });
 });
 
 test('values are read as the type the setting has, in any case for words, with comments and quotes allowed', () => {
-  const { settings, problems } = parseSettings(['# the status issue', 'status-issue: FALSE   # off for now', '', "reporter-replies-days: '30'"].join('\n'));
-  assert.deepEqual(settings, { 'status-issue': false, 'reporter-replies-days': 30 });
+  const { settings, problems } = parseSettings(['# the status issue', 'status-issue: FALSE   # off for now', '', "reporter-replies-days: '30'", 'commands: False', 'commands-need: MAINTAIN'].join('\n'));
+  assert.deepEqual(settings, { 'status-issue': false, commands: false, 'commands-need': 'maintain', 'reporter-replies-days': 30 });
   assert.deepEqual(problems, []);
 });
 
@@ -32,6 +32,15 @@ test('a value that cannot be used is reported and the default stays', () => {
   }
   assert.equal(bad('reporter-replies-days: 1').settings['reporter-replies-days'], 1);
   assert.equal(bad('reporter-replies-days: 90').settings['reporter-replies-days'], 90);
+});
+
+test('the role must be one that can use commands: read and made-up roles are reported, and triage stays the default', () => {
+  for (const value of ['read', 'owner', 'everyone', '3']) {
+    const out = parseSettings(`commands-need: ${value}`);
+    assert.equal(out.settings['commands-need'], 'triage', value);
+    assert.match(out.problems[0], /commands-need must be one of triage, write, maintain, admin, not/, value);
+  }
+  for (const value of ['triage', 'write', 'maintain', 'admin']) assert.equal(parseSettings(`commands-need: ${value}`).settings['commands-need'], value);
 });
 
 test('an unknown setting, a repeated one and a line that is not "key: value" are each reported, and nothing else changes', () => {

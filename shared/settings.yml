@@ -19,6 +19,24 @@
 #   false: the issue is closed and unpinned, never deleted, and nothing updates it. true again reopens it.
 status-issue: true
 
+# commands: true | false                                           default: true
+#   The comment commands (/accept, /decline, /approve, /replan, /retry, /help) and the "options" comment that the
+#   Concierge keeps as the last comment of an issue that waits for a maintainer: it says what is needed and
+#   which command does what. It appears only while a maintainer has to act (a request held because it changes
+#   what exists, a request held for the scope, a plan waiting for approval, a gate that has not moved for an
+#   hour), moves to the end whenever someone comments, and is deleted when nothing is waiting any more.
+#   false: no command is read and no options comment is posted. Labels still work by hand.
+commands: true
+
+# commands-need: triage | write | maintain | admin                 default: triage
+#   The lowest repository role that may use the commands. Triage can already label and close issues by hand;
+#   the commands are those same steps in one, with the person who gave them named in the thread. The roles
+#   triage and maintain exist only in organisation repositories. In a personal repository the lowest role is
+#   write, and a lower setting counts as write. A person below the role gets one reply saying so, if they are a
+#   collaborator, and nothing at all if they are not. Approving the workflow runs of the coding agent, and
+#   merging, need write access whatever this says.
+commands-need: triage
+
 # reporter-replies-days: 1 to 90                                   default: 14
 #   How far back the status issue looks for reporter replies that wait for an answer: an open issue whose
 #   latest comment is from someone who is not a maintainer (owner, member or collaborator) and not a bot,

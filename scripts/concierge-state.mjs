@@ -30,7 +30,7 @@ export const GATE_LABELS = [...GATE.issue, ...GATE.pr];
 /** The labels that only the Concierge applies. A label a repository may use for itself (`duplicate`, `spam`) proves nothing. */
 const OTHER_CONCIERGE_LABELS = [
   'plan-approval-required', 'needs-decision', 'scope-review', 'out-of-scope', 'dependency-required', 'dependency-satisfied',
-  'needs-info', 'backlog', 'low-hanging-fruit', 'related-repo', 'original-in-related-repo', 'waiting-for-release', 'released',
+  'needs-info', 'backlog', 'low-hanging-fruit', 'related-repo', 'original-in-related-repo', 'waiting-for-release', 'released', 'declined',
 ];
 
 export const CONCIERGE_LABELS = [...GATE_LABELS, ...OTHER_CONCIERGE_LABELS];
@@ -77,6 +77,10 @@ export function labelledAt(events, label) {
   return times.length ? Math.max(...times) : null;
 }
 
+/** The hidden line the options comment starts with (scripts/commands.mjs). It is the bot's, and not anybody's reply. */
+export const OPTIONS_MARKER = '<!-- concierge:options';
+export const isOptionsComment = (comment) => Boolean(comment.user && comment.user.login === BOT && String(comment.body || '').includes(OPTIONS_MARKER));
+
 /**
  * Reporter replies nobody has answered: the latest comment of an open issue is from a person who is not a maintainer
  * and not a bot, and is newer than `days`. comments: [{ issueNumber, id, created_at, user, author_association, html_url }].
@@ -85,7 +89,8 @@ export function labelledAt(events, label) {
 export function reporterReplies(comments, { now, days, openNumbers }) {
   const latest = new Map();
   for (const c of comments) {
-    if (!openNumbers.has(c.issueNumber)) continue;
+    // The options comment is always the last one, so it must not hide a reporter's reply under it.
+    if (!openNumbers.has(c.issueNumber) || isOptionsComment(c)) continue;
     const seen = latest.get(c.issueNumber);
     if (!seen || Date.parse(c.created_at) > Date.parse(seen.created_at) || (c.created_at === seen.created_at && c.id > seen.id)) latest.set(c.issueNumber, c);
   }

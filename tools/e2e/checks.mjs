@@ -84,6 +84,16 @@ const TYPES = {
     return { ok: s.botIssues.length === 0, detail: s.botIssues.length ? `opened by the bot: ${s.botIssues.map((i) => `${i.repo ?? s.repo}#${i.number} ${i.title}`).join('; ')}` : 'no issue opened by the bot' };
   },
 
+  // match: a regular expression the LAST comment of the issue must match (the options comment is always the last one); with
+  // absent: true it must not.
+  lastComment(check, s) {
+    const last = s.comments[s.comments.length - 1];
+    if (!last) return { ok: false, detail: 'the issue has no comment' };
+    const found = new RegExp(check.match, 'im').test(last.body);
+    const ok = check.absent ? !found : found;
+    return { ok, detail: `the last comment (by ${last.author || 'nobody'}) ${found ? 'matches' : 'does not match'} /${check.match}/${ok ? '' : check.absent ? ', which it must not' : ', which it must'}` };
+  },
+
   // match: a regular expression the status issue, the page the Concierge keeps pinned, must match; with absent: true it
   // must not. The page is read from the repository of the scenario's issue, and exists after the first run of the status workflow.
   statusIssue(check, s) {
