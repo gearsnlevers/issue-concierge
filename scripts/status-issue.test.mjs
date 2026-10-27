@@ -209,6 +209,38 @@ test('spend and settings are on the page, and so is every settings line that cou
   assert.match(render(summarize({ ...fixture(), pinNote: 'a repository holds at most three pinned issues' }, SETTINGS, NOW)), /> ⚠ This issue is not pinned: a repository holds at most three pinned issues/);
 });
 
+test('a paused Concierge says so at the top of the page, since when, and how to resume', () => {
+  const body = render(summarize({ ...fixture(), paused: { since: '2026-10-27T09:30:00Z' } }, SETTINGS, NOW));
+  const banner = body.split('\n').find((l) => l.startsWith('> ⏸'));
+  assert.match(banner, /^> ⏸ \*\*Paused\*\* since 2026-10-27 09:30 UTC\. No gate, sweep, closer or notifier touches an issue or a pull request, and runs that are already in flight finish\./);
+  assert.match(banner, /delete the repository variable `CONCIERGE_PAUSED` or set it to anything but `true`: \[Settings › Variables\]\(https:\/\/github\.com\/o\/r\/settings\/variables\/actions\)/);
+  assert.match(banner, /may need `\/retry` afterwards/);
+  assert.ok(body.indexOf('> ⏸') < body.indexOf('## Needs you'), 'before the first section');
+  assert.match(render(summarize({ ...fixture(), paused: { since: null } }, SETTINGS, NOW)), /> ⏸ \*\*Paused\*\*\. No gate/, 'without a date when the variable cannot be read');
+  assert.ok(!render(summarize(fixture(), SETTINGS, NOW)).includes('Paused'), 'and not a word when it is not paused');
+  const json = (m) => JSON.parse(render(m).split('```json\n')[1].split('\n```')[0]).paused;
+  assert.equal(json(summarize({ ...fixture(), paused: { since: null } }, SETTINGS, NOW)), true);
+  assert.equal(json(summarize(fixture(), SETTINGS, NOW)), false);
+});
+
+test('collect reads the date of the variable only when the Concierge is paused, and goes on without it when it cannot', () => {
+  const idle = fakeCtx({ issues: [] });
+  assert.equal(collect(idle, REPO, SETTINGS, 't').paused, null);
+  assert.equal(idle.calls.variableRead, undefined);
+  const paused = fakeCtx({ issues: [] });
+  assert.deepEqual(collect(paused, REPO, SETTINGS, 't', true).paused, { since: '2026-10-27T09:30:00Z' });
+  const denied = fakeCtx({ issues: [], variable: { status: 403, data: null } });
+  assert.deepEqual(collect(denied, REPO, SETTINGS, 't', true).paused, { since: null });
+});
+
+test('main: the variable reaches the page through the environment', () => {
+  const ctx = fakeCtx({ issues: [] });
+  const { lines } = run(ctx, { DRY_RUN: 'true', CONCIERGE_PAUSED: 'true' });
+  assert.ok(lines.some((l) => l.includes('> ⏸ **Paused** since 2026-10-27 09:30 UTC')));
+  const other = run(fakeCtx({ issues: [] }), { DRY_RUN: 'true', CONCIERGE_PAUSED: 'false' });
+  assert.ok(!other.lines.some((l) => l.includes('Paused')));
+});
+
 test('an empty repository gets a page that says so, not a blank one', () => {
   const body = render(summarize(raw(), SETTINGS, NOW));
   assert.match(body, /Nothing is waiting for a maintainer\./);
@@ -227,7 +259,7 @@ test('normalise ignores the time of the last change and nothing else', () => {
 // ---------------------------------------------------------------- GitHub
 
 /** A fake GitHub: routes the calls of the script to canned answers and records every write. */
-function fakeCtx({ issues = [], botIssues = [], comments = [], issueComments = {}, events = {}, runs = [], files = {}, releases = [{ tag_name: 'v1.8.0', prerelease: false }], probe = { state: 'ok', expiresAt: null }, pinned = false, pinFails = null } = {}) {
+function fakeCtx({ variable = { status: 200, data: { value: 'true', updated_at: '2026-10-27T09:30:00Z' } }, issues = [], botIssues = [], comments = [], issueComments = {}, events = {}, runs = [], files = {}, releases = [{ tag_name: 'v1.8.0', prerelease: false }], probe = { state: 'ok', expiresAt: null }, pinned = false, pinFails = null } = {}) {
   const calls = { list: [], write: [], graphql: [] };
   let isPinned = pinned;
   return {
@@ -246,6 +278,7 @@ function fakeCtx({ issues = [], botIssues = [], comments = [], issueComments = {
     },
     get(p) {
       if (p.startsWith('repos/o/concierge/releases')) return { status: 200, data: releases };
+      if (p === 'repos/o/r/actions/variables/CONCIERGE_PAUSED') { calls.variableRead = (calls.variableRead ?? 0) + 1; return variable; }
       throw new Error(`unexpected get ${p}`);
     },
     runs: () => runs,

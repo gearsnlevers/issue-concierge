@@ -8,6 +8,15 @@
 # use (an unknown name, a value out of range) is reported by check-deployment and shown on the status issue,
 # and the default stays; the Concierge never stops because of this file.
 
+# NOT HERE: the pause switch. A gate must be able to check it without starting a run, and only a repository
+# variable can be read that way. To pause the Concierge, create the repository variable CONCIERGE_PAUSED with the
+# value true (Settings > Secrets and variables > Actions > Variables > New repository variable). To resume, delete
+# the variable or set it to anything else. In an organisation repository anyone with write access can do this.
+# While it is paused, no gate, sweep, closer or notifier touches an issue or a pull request, the status issue shows
+# a PAUSED banner, and a command that would hand an issue on is refused (declining and /help still work). Runs
+# that are already in flight finish, and a run started by hand still works. An issue that was in a gate while the
+# Concierge was paused may need /retry afterwards; the status issue shows it as stuck after an hour.
+
 # status-issue: true | false                                       default: true
 #   One pinned issue, "Concierge status", created and kept up to date by the bot. It shows what waits for a
 #   maintainer, reporter replies that nobody has answered, which issues the Concierge manages and which it

@@ -3,7 +3,7 @@
 //
 // Supported: string, number, true, false and null literals; property paths with `.*` (an object filter over an
 // array, as in `github.event.issue.labels.*.name`); `!`, `==`, `!=`, `&&`, `||`, parentheses; and the functions
-// contains(), startsWith(), endsWith() and fromJSON(). Anything else throws, so a condition that grows a feature
+// contains(), startsWith(), endsWith() and fromJSON(), and cancelled() (false unless the context sets `cancelled`). Anything else throws, so a condition that grows a feature
 // this file does not know fails loudly instead of being evaluated wrongly.
 //
 // The semantics follow GitHub's: a missing property is null, strings compare without regard to case, null equals
@@ -144,6 +144,8 @@ export function evaluate(expression, context) {
           }
         }
         take(')');
+        // cancelled() asks whether the workflow run was cancelled, which no event this evaluates has done: false unless the context says so.
+        if (t.v === 'cancelled' && args.length === 0) return Boolean(context.cancelled);
         const fn = FUNCTIONS[t.v];
         if (!fn) throw new Error(`unsupported function ${t.v}`);
         return fn(...args);

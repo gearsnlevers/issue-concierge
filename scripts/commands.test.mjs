@@ -258,6 +258,32 @@ test('every command is refused on an issue that is kept out of the Concierge', (
   }
 });
 
+test('while the Concierge is paused a command that would hand an issue on is refused and changes nothing, and declining and listing still work', () => {
+  for (const [name, labels] of [['accept', ['needs-decision']], ['approve', classifiedHold], ['replan', classifiedHold], ['retry', ['plan-worker-ready']]]) {
+    const api = fakeApi();
+    const result = runCommand({ name, argument: '' }, { issue: issue(labels), actor: 'maint', api, paused: true });
+    assert.equal(result.ok, false, name);
+    assert.match(result.reason, /The Concierge is paused \(the repository variable `CONCIERGE_PAUSED` is `true`\), so nothing would start\. Resume it first/, name);
+    assert.deepEqual(api.calls, [], name);
+  }
+  for (const name of ['decline', 'help']) {
+    const api = fakeApi();
+    assert.equal(runCommand({ name, argument: 'no' }, { issue: issue(['needs-decision']), actor: 'maint', api, paused: true }).ok, true, name);
+    assert.ok(api.calls.length > 0, name);
+  }
+});
+
+test('main: the variable reaches the commands through the environment', () => {
+  const { env } = eventEnv('issue_comment', commentEvent('/accept'));
+  const api = fakeApi({ ...held, roles: { maint: 'admin' } });
+  assert.equal(main({ ...env, CONCIERGE_PAUSED: 'true' }, api, () => {}), 0);
+  assert.ok(!api.calls.some((c) => c[0] === 'removeLabel' || c[0] === 'addLabelSignal'));
+  assert.match(api.calls.find((c) => c[0] === 'reply')[2], /The Concierge is paused/);
+  const running = fakeApi({ ...held, roles: { maint: 'admin' } });
+  main({ ...env, CONCIERGE_PAUSED: '' }, running, () => {});
+  assert.ok(running.calls.some((c) => c[0] === 'removeLabel'));
+});
+
 test('/accept removes what stops the issue with the workflow token and hands it on with the signal token', () => {
   const { result, api } = run('accept', issue(['needs-decision', 'enhancement', 'plan-approval-required']));
   assert.equal(result.ok, true);

@@ -3,7 +3,7 @@ name: "Concierge 2a Plan Worker"
 description: |
   Plan gate worker. Produces a short, cheap, rough plan used only for classification.
   The plan comment is identified by the gh-aw-workflow-call-id marker that gh-aw appends to it.
-if: ${{ github.event.issue.state == 'open' && github.event.issue.user.type != 'Bot' && !contains(github.event.issue.labels.*.name, 'no-auto-processing') }}
+if: ${{ (vars.CONCIERGE_PAUSED != 'true' || github.event_name == 'workflow_dispatch') && github.event.issue.state == 'open' && github.event.issue.user.type != 'Bot' && !contains(github.event.issue.labels.*.name, 'no-auto-processing') }}
 on:
   issues:
     types: [labeled]

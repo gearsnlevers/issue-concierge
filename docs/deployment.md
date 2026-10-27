@@ -443,6 +443,12 @@ It imports `concierge-settings.mjs`, `concierge-state.mjs`, `plan-approval-resum
 
 Who may use the commands is the setting `commands-need` in `.github/agentic-workflows/settings.yml` (template `shared/settings.yml`): `triage` by default, so that people who triage but do not write code can decide; `write`, `maintain` or `admin` narrow it. A personal repository has no triage role, so write is the lowest there. `commands: false` turns the commands and the options comment off. The new label `declined` (see [Create labels](#4-create-labels)) is what `/decline` adds.
 
+### Pause
+
+To stop the Concierge in a repository, create the repository variable `CONCIERGE_PAUSED` with the value `true`: Settings › Secrets and variables › Actions › Variables › New repository variable, or `gh variable set CONCIERGE_PAUSED --body true`. To resume, delete it (`gh variable delete CONCIERGE_PAUSED`) or set it to anything but `true`. In an organisation repository write access is enough. Nothing needs installing: the updater delivers the conditions with the workflows.
+
+While it is set, no gate, sweep, closer or notifier touches an issue or a pull request: each run is skipped by its own condition, which costs nothing and uses no AI credits. The status issue shows a banner, a command that would hand an issue on is refused, and a run started by hand from the Actions tab still works. Runs already in flight finish. After resuming, an issue that was in a gate meanwhile may need `/retry`.
+
 ## Deployment check
 
 `check-deployment` catches the configuration mistakes that otherwise surface as a failed run weeks later. It reads the compiled `.lock.yml` of the issue worker and the text of the related-repo closer's workflow (what actually runs) and compares them with `.github/agentic-workflows/related-repos.md`. For every related repository that names a `secret`, it requires that:
@@ -692,6 +698,7 @@ git push
 - [ ] Spawn work items installed where there is a `related-repos.md` (`spawn-work-items.yml` and `spawn-work-items.mjs`; needs `SIGNAL_TOKEN`; the updater does it and writes the token of the related repository)
 - [ ] Stalled issue sweep installed (`stalled-issue-sweep.yml` and `stalled-issue-sweep.mjs`; needs `SIGNAL_TOKEN`; the updater does it)
 - [ ] Janitor installed (`janitor.yml` and `janitor.mjs`)
+- [ ] Pause tried: with the repository variable `CONCIERGE_PAUSED` set to `true`, a new comment starts no gate (the runs are skipped), the status issue shows the banner after its next run, and deleting the variable ends it
 - [ ] Commands installed (`commands.yml` and `commands.mjs`; needs `SIGNAL_TOKEN`; the updater does it); on an issue that carries `needs-decision` the last comment is the options comment, and `/accept` from a collaborator with the role hands the issue to the plan worker
 - [ ] Status issue installed (`status.yml`, `status-issue.mjs`, `concierge-settings.mjs` and `concierge-state.mjs`; the updater does it); after the first run the "Concierge status" issue exists, is pinned, and its counts match the open issues
 - [ ] PR ready signal installed (`pr-ready-signal.yml` and `pr-ready-signal.mjs`; needs `SIGNAL_TOKEN`)

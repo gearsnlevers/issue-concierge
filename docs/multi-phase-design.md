@@ -318,6 +318,20 @@ What the design cannot do, and what covers it: a label removed by hand starts no
 
 Not seen live yet: the commands in Actions, whether the workflow token may read a collaborator's permission, and the ordering after a gate's comment. `scripts/commands.test.mjs` and `tools/commands-workflow.test.mjs` pin the rest, and scenarios 10 and 11 prove the path in the sandbox.
 
+### Pausing the Concierge
+
+A maintainer can stop the Concierge in a repository without touching a workflow: create the repository variable `CONCIERGE_PAUSED` with the value `true` (Settings › Secrets and variables › Actions › Variables). To resume, delete it or set it to anything else. In an organisation repository write access is enough to edit a variable, in a personal repository collaborator access ([decision 0037](decisions/0037-the-concierge-is-paused-by-a-repository-variable.md)).
+
+**Why a variable.** A gate has to be stopped before it starts: a run that starts costs a runner and, for a gate with a model, credits. The only repository-wide value that an `if:` can read is a repository variable. A label on another issue, a file or a comment cannot be read without a job, and a job for every event is what pausing is meant to avoid. A run skipped by its `if:` costs nothing and uses no AIC.
+
+**What stops.** Every gate (issue worker, issue triage, plan worker, plan triage, PR worker, PR triage, release closer) and every plain workflow that acts on an issue or a pull request (janitor, dependency watch, plan approval resume, PR ready signal, related repo closer, reporter notify, waiting for release, stalled issue sweep). Each reads the variable in its own `if:`. The two with a deterministic step before the agent that writes read it there too: the PR worker takes a void hand-off label away, and the release closer swaps labels and posts a comment. `tools/pause.test.mjs` evaluates every real condition with the variable on and off, and the compile smoke reads the term in every compiled gate and in those two steps.
+
+**What keeps running.** The status issue (it shows a PAUSED banner, since when, and how to resume), the commands (a command that would hand an issue on is refused with a reply, because no gate would start; `/decline` and `/help` still work), the updater and the deployment check (they touch no issue), and anything started by hand: a run of a workflow with `workflow_dispatch` is an override and works. Runs already in flight finish.
+
+**After resuming.** Nothing is replayed. A label event that came while the Concierge was paused started nothing, so an issue that was in a gate then stays there; the status issue lists it as stuck after an hour, the options comment offers `/retry`, and the stalled-issue sweep heals an issue the issue worker had analysed.
+
+Not seen live yet: the variable in a real repository, and whether the workflow token may read the date it was set (the banner then says "Paused" without a date).
+
 ### Settings
 
 `.github/agentic-workflows/settings.yml` (template `shared/settings.yml`) belongs to the repository, like `scope.md`: reviewed by pull request, read from the default branch, every setting with a default. A line that cannot be used is reported by `check-deployment` and on the page, and the default stays. `status-issue` is on by default; set to `false`, the issue is closed and unpinned, never deleted. `commands` (on) and `commands-need` (`triage`) switch the commands and the options comment and set the role that may use them. The format is flat `key: value` lines, which a short parser reads without a dependency (`scripts/concierge-settings.mjs`).
