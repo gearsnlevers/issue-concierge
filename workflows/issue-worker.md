@@ -141,7 +141,7 @@ Read `.github/agentic-workflows/scope.md` if it exists. If it does not exist, sk
 
 Judge the request against the file as written. Do not invent boundaries. Decide one of three things:
 - **In scope**: continue as usual.
-- **Out of scope**: the request matches an item under "Out of scope", or a plain statement that the project does not do this. Say so in the analysis comment: that this is not something the project will take on, a short reason in the file's own terms, and where to go instead if the file names a place. Say nothing about work being planned.
+- **Out of scope**: the request matches an item under "Out of scope", or a plain statement that the project does not do this. Say so in the analysis comment: that this is not something the project will take on, a short reason in the file's own terms, and where to go instead if the file names a place. Say nothing about work being planned. The label `issue-worker-ready` still goes on (see "Signaling"): issue triage reads this comment, labels the issue `out-of-scope` and closes it, and without the label nothing does.
 - **Unclear**: the request is not on the exclusion list, but it matches an item under "Needs a maintainer", or you doubt that it fits the Purpose. Say that a maintainer will take a look. Do not decline it.
 
 When you hesitate between out of scope and unclear, choose unclear. Never call a request out of scope because it is large, hard, risky or unusual; only because the file excludes it. A bug in something the project already does is always in scope.
@@ -208,7 +208,7 @@ If the repository defines an environment agent and a quick reproduction check wo
 A `Depends on:`, `Blocked by:`, or `Requires:` line is not a reason to withhold `issue-worker-ready`, to say work is on hold, or to promise a later update. Waiting for a dependency is handled after this step: issue triage applies the gate and a watcher resumes the issue. Analyze the issue as usual. Do not mention the dependency as a reason that no work is planned or that the issue is not urgent.
 
 ## Signaling (internal)
-- If the issue stays here: add `issue-worker-ready`, even when it declares a dependency that is not finished yet.
+- If the issue stays here: add `issue-worker-ready`, even when it declares a dependency that is not finished yet. It goes on whatever your analysis concludes: the request is complete, it needs more details, it is out of scope, it duplicates another issue or it is already fixed. Issue triage reads your comment and decides what becomes of the issue (`needs-info`, `out-of-scope` and the close, `duplicate`, `already-fixed`); without the label it never runs, and the issue stays open with nothing on it. "The work is not to be done here" is a reason to say so in the comment, never a reason to withhold the label.
 - If an open pull request already closes the issue (see "A fix is already in review"): add no label at all, not even `issue-worker-ready`.
 - If you created or confirmed a linked canonical issue: add `related-repo` and do **not** add `issue-worker-ready`.
 
