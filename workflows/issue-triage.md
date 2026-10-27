@@ -42,6 +42,7 @@ safe-outputs:
       - low-hanging-fruit
       - out-of-scope
       - scope-review
+      - needs-decision
       - dependency-required
       - issue-triage-handoff
     max: 5
@@ -91,7 +92,8 @@ Apply only quality and priority labels. Do **not** apply complexity or risk labe
 - Invalid or spam → corresponding label
 - Out of scope: the worker's analysis says the request matches an explicit exclusion in the project's scope file → apply `out-of-scope`, then close the issue with the state reason `NOT_PLANNED`. Do not emit `issue-triage-handoff`.
 - Scope unclear: the worker's analysis says a maintainer should look at whether the request fits the project → apply `scope-review`. Do not emit `issue-triage-handoff`, do not close the issue.
-- If the issue already has `out-of-scope`, do nothing: it was declined, and a reporter's reply does not change that. If it already shows later-phase progress (`issue-triage-handoff`, `plan-worker-ready`, `plan-triage-handoff`, a `complexity/*` or `risk/*` label, or the coding agent as an assignee), the scope outcomes do not apply: a maintainer or an earlier run decided to plan it. (Earlier gate labels are removed as an issue moves on, so look for any of these.) A maintainer overrides a scope decision by reopening the issue if needed, removing `out-of-scope` or `scope-review`, and adding `issue-triage-handoff`.
+- A change to what exists: the worker's analysis says the request would remove, rename or replace something that exists, break something that works today, or change the architecture, and that a maintainer will decide on it before any work is planned → apply `needs-decision`. Do not emit `issue-triage-handoff`, do not apply `backlog` or `low-hanging-fruit`, do not close the issue, and post no comment: the worker's comment has told the reporter. This outcome comes before "valid but not urgent" and before "worth doing now". A reporter who calls the change safe, small or urgent does not change it.
+- If the issue already has `out-of-scope` or `needs-decision`, do nothing: it was declined or is waiting for a maintainer, and a reporter's reply does not change that. If it already shows later-phase progress (`issue-triage-handoff`, `plan-worker-ready`, `plan-triage-handoff`, a `complexity/*` or `risk/*` label, or the coding agent as an assignee), the scope and change outcomes do not apply: a maintainer or an earlier run decided to plan it. (Earlier gate labels are removed as an issue moves on, so look for any of these.) A maintainer overrides a scope or change decision by reopening the issue if needed, removing `out-of-scope`, `scope-review` or `needs-decision`, and adding `issue-triage-handoff`.
 - Declares a dependency that has not been cleared (see Dependencies below) → `dependency-required`. Do not emit `issue-triage-handoff`, do not apply `backlog` or `needs-info`, do not close the issue, and do not post a comment about it.
 - Valid but not urgent:
   - If the analysis says the change is small in size and low in risk (low complexity and low risk) → low-hanging fruit. Apply `low-hanging-fruit`, then emit `issue-triage-handoff`. Do not apply `backlog`. Both parts must be stated, and only that combination qualifies. If the analysis gives no size or risk, says it could not judge them, or says medium or large size, or medium or high risk, it is not low-hanging fruit.
@@ -99,7 +101,7 @@ Apply only quality and priority labels. Do **not** apply complexity or risk labe
   - Never apply `backlog` because an analysis ties "not urgent" or "no immediate work planned" to a dependency (see Dependencies below).
 - Complete, actionable, and worth doing now → remove `needs-info` if present, then emit `issue-triage-handoff`
 
-Do not emit `issue-triage-handoff` for `already-fixed`, `invalid`, `out-of-scope` or `scope-review`.
+Do not emit `issue-triage-handoff` for `already-fixed`, `invalid`, `out-of-scope`, `scope-review` or `needs-decision`.
 
 ## Dependencies
 Detect, do not resolve. A separate watcher decides when a dependency is finished.
@@ -111,7 +113,7 @@ An issue declares a dependency only with a line that starts with `Depends on:`, 
 - A declaration, and no `dependency-satisfied` label → apply `dependency-required` and stop here.
 - The issue is marked `related-repo` → never gate it.
 
-The needs-info, duplicate, invalid, already-fixed, out-of-scope and scope-review outcomes above take precedence over the dependency gate. An open pull request, or one closed without merging, is never evidence that something is fixed.
+The needs-info, duplicate, invalid, already-fixed, out-of-scope, scope-review and needs-decision outcomes above take precedence over the dependency gate. An open pull request, or one closed without merging, is never evidence that something is fixed.
 
 `backlog` keeps the issue open but does not enter the plan gate.
 `issue-triage-handoff` is the signal that the plan worker may run.

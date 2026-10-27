@@ -209,7 +209,7 @@ test('plan triage: a "Wrong layer" plan adds the human hold and no hand-off, lik
   assert.match(wrong, /"The plan found that the fix belongs in another repository\. A maintainer has to move or re-route this issue\. Remove the plan-approval-required label to resume\."/);
   assert.match(wrong, /then post no comment, as under "A hold that is already there"/);
   assert.match(wrong, /You never lift this hold yourself/);
-  assert.match(section(triage, '## Approval gate'), /or the plan reports a wrong layer \(see "A wrong layer"\), emit `plan-triage-handoff`/);
+  assert.match(section(triage, '## Approval gate'), /or the plan reports a wrong layer \(see "A wrong layer"\) or a breaking change \(see "A breaking change"\), emit `plan-triage-handoff`/);
 });
 
 test('none of the new text is an HTML comment (gh-aw removes those from a prompt)', () => {

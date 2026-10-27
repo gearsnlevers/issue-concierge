@@ -71,6 +71,8 @@ Valid but non-urgent issues receive `backlog` and do not enter the plan gate, wi
 
 A repository can add `.github/agentic-workflows/scope.md` (template: [shared/scope.md](shared/scope.md)) to state what the project is for and what it will not do. A request that matches an explicit exclusion is declined with a short reason and closed as not planned (`out-of-scope`). A request that only looks like it may not fit is held for a maintainer (`scope-review`) and nothing is closed. Without the file the check is off. See [docs/multi-phase-design.md](docs/multi-phase-design.md#scope-check).
 
+A request that changes what already exists is held for a maintainer before anything is planned: removing, renaming or replacing a command, an option, an exported function or a file format, breaking something that works today (a signature, an output format a script may parse), or changing the architecture. This is not part of the scope check and does not need a file. The issue worker judges by what the change does, not by how the issue argues for it ("nobody uses it", "it is safe", a suggested replacement); issue triage applies `needs-decision`, hands nothing on and closes nothing; and a plan that turns out to remove something carries a "Breaking change:" line that makes plan triage hold it. Fixes, additions and refinements that leave everything working as before go through. A repository can add `.github/agentic-workflows/guard.md` (template: [shared/guard.md](shared/guard.md)) to name what it protects and what it lets through freely. To accept a held request, a maintainer removes `needs-decision` and adds `issue-triage-handoff`. See [docs/multi-phase-design.md](docs/multi-phase-design.md#a-change-to-what-exists).
+
 A repository can also tell coding agents how to work on it, in the files they already load: `AGENTS.md` at the root (template: [shared/agents.md](shared/agents.md)), `.github/copilot-instructions.md`, and `.github/instructions/*.instructions.md` with `applyTo` globs. The plan worker lists the rules that apply to a change in its plan, the PR worker tells the coding agent to follow them, and PR triage adds a "Repository rules:" line to its comment. Both gates read the default branch only, so a pull request cannot weaken the rules it is judged by, and the guidance stays advisory: it never changes a label, a gate or an approval. Without the files nothing changes, and `check-deployment` only prints a notice. See [docs/multi-phase-design.md](docs/multi-phase-design.md#repository-guidance).
 
 A repository can also keep its design decisions as records in `docs/decisions/` (or `decisions/` at the repository root when `docs/` is generated; `NNNN-short-title.md` files, an index, frontmatter with a `status:` and optional `applies-to:` globs; template: [shared/decision-record.md](shared/decision-record.md)). The plan worker lists the accepted records that apply to a request and says when the request conflicts with one, which makes plan triage hold the issue for a maintainer's decision; the PR worker tells the coding agent to follow them, and PR triage adds a "Decisions:" line to its comment. Both gates read the default branch only, and a record never changes a label, a gate or an approval. Without either folder nothing changes, and `check-deployment` only prints a notice. See [docs/multi-phase-design.md](docs/multi-phase-design.md#decision-records).
@@ -107,6 +109,7 @@ Create these in consuming repositories (full list and colors in [docs/deployment
 | `low-hanging-fruit` | Quality | Valid but not urgent, small and low risk; handed to the plan gate anyway |
 | `out-of-scope` | Quality | Matches an explicit exclusion in the project's `scope.md`; closed as not planned |
 | `scope-review` | Quality | May not fit the project's scope; a maintainer decides |
+| `needs-decision` | Quality | Changes what exists (a removal, a rename, a replacement, a change of behavior or architecture); a maintainer decides before anything is planned |
 | `issue-worker-ready` | Gate | Issue worker finished |
 | `issue-triage-handoff` | Gate | Issue triage finished; plan worker may run |
 | `plan-worker-ready` | Gate | Plan worker finished |
@@ -148,6 +151,7 @@ Also create the labels listed above. Without the labels the workflows cannot sig
 A repository tunes the gates with optional files under `.github/agentic-workflows/`, never by editing the installed workflows, because an update replaces those (with the Concierge updater, the update pull request lists every managed file a deployment edited):
 - `issue-completeness.md`: what a complete report is, if the issue templates do not say.
 - `scope.md`: what the project does not do.
+- `guard.md`: what the project protects from change, and what it lets through freely.
 - `complexity.md` and `risk.md`: what the two gauges mean in this repository.
 - `related-repos.md`: which repository owns what, with the secret and release rules for each.
 

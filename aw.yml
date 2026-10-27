@@ -44,6 +44,7 @@ files:
   - shared/issue-completeness.md
   - shared/related-repos.md
   - shared/scope.md
+  - shared/guard.md
   - shared/agents.md
   - shared/decision-record.md
   - docs/multi-phase-design.md
