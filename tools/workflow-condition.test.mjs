@@ -42,6 +42,12 @@ test('fromJSON feeds contains, and ${{ }} around an expression is accepted', () 
   assert.equal(holds("contains(fromJSON('[\"a\",\"b\"]'), 'c')", {}), false);
 });
 
+test('cancelled() is false unless the run was cancelled', () => {
+  assert.equal(holds('!cancelled()', {}), true);
+  assert.equal(holds('!cancelled()', { cancelled: true }), false);
+  assert.throws(() => evaluate('cancelled(1)', {}), /unsupported function cancelled/, 'only the form without arguments');
+});
+
 test('a feature the evaluator does not know throws instead of guessing', () => {
   assert.throws(() => evaluate("format('{0}', 1)", {}), /unsupported function/);
   assert.throws(() => evaluate('a ?? b', {}));
@@ -54,6 +60,6 @@ test('the extraction helpers read single-line and folded conditions of the real 
   const prWorker = frontmatterIf(read('workflows/pr-worker.md'));
   assert.match(prWorker, /existing_fix_result != 'failure'/, 'folded block, joined into one line');
   assert.match(jobIf(read('workflows/janitor.yml'), 'clean'), /github\.event\.action != 'labeled'/);
-  assert.match(stepIf(read('workflows/pr-worker.md'), 'existing_fix'), /^github\.event\.label\.name == 'plan-triage-handoff'/);
+  assert.match(stepIf(read('workflows/pr-worker.md'), 'existing_fix'), /^\(vars\.CONCIERGE_PAUSED != 'true' \|\| github\.event_name == 'workflow_dispatch'\) && github\.event\.label\.name == 'plan-triage-handoff'/);
   assert.throws(() => jobIf(read('workflows/janitor.yml'), 'nope'), /no job/);
 });

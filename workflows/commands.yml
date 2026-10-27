@@ -68,4 +68,6 @@ jobs:
           # Hands an issue on and closes it with this token, which is what starts the next gate.
           SIGNAL_TOKEN: ${{ secrets.SIGNAL_TOKEN }}
           ISSUE_NUMBER: ${{ inputs.issue_number }}
+          # When it is 'true' a command that would hand an issue on is refused, because no gate would start.
+          CONCIERGE_PAUSED: ${{ vars.CONCIERGE_PAUSED }}
         run: node .github/scripts/commands.mjs

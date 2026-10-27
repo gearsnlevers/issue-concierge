@@ -59,3 +59,4 @@ Copy `template.md` to `NNNN-short-title.md` (the next number, starting at 0001),
 | 0034 | [A request that changes what exists is held for a maintainer](0034-a-request-that-changes-what-exists-is-held-for-a-maintainer.md) | proposed |
 | 0035 | [Each repository has a status view of its own](0035-each-repository-has-a-status-view-of-its-own.md) | proposed |
 | 0036 | [A maintainer decides by command, from the issue](0036-a-maintainer-decides-by-command-from-the-issue.md) | proposed |
+| 0037 | [The Concierge is paused by a repository variable](0037-the-concierge-is-paused-by-a-repository-variable.md) | proposed |

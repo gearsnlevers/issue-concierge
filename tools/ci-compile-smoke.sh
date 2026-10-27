@@ -101,6 +101,23 @@ for name in issue-worker issue-triage plan-worker plan-triage pr-worker pr-triag
     exit 1
   fi
 done
+# The pause switch (docs/multi-phase-design.md, "The maintainer's view"): while the repository variable CONCIERGE_PAUSED is
+# 'true' no gate starts, so every gate must read it in its compiled ACTIVATION condition, where it stops a run before it
+# starts. The two gates with a deterministic pre-activation step that writes (the PR worker takes a void label away, the
+# release closer swaps labels and comments) must read it in that step too, or a paused repository would still be written to.
+# Flatten the whitespace first: gh-aw wraps the condition.
+for name in issue-worker issue-triage plan-worker plan-triage pr-worker pr-triage release-closer; do
+  if ! activation_if "$tmp/.github/workflows/$name.lock.yml" | tr '\n' ' ' | tr -s ' ' | grep -qF "vars.CONCIERGE_PAUSED != 'true'"; then
+    echo "::error::$name does not stop at CONCIERGE_PAUSED in its compiled activation condition"
+    exit 1
+  fi
+done
+for name in pr-worker release-closer; do
+  if [ "$(grep -cF "vars.CONCIERGE_PAUSED != 'true'" "$tmp/.github/workflows/$name.lock.yml")" -lt 2 ]; then
+    echo "::error::$name does not stop at CONCIERGE_PAUSED in its deterministic pre-activation step"
+    exit 1
+  fi
+done
 if ! tr '\n' ' ' < "$tmp/.github/workflows/issue-worker.lock.yml" | tr -s ' ' | grep -qE "issues:( +types:)? +- opened +- reopened +- edited +- unlabeled"; then
   echo "::error::the issue worker does not start on a label being removed in its compiled lock"
   exit 1
