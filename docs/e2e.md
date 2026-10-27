@@ -87,6 +87,18 @@ A scenario is a JSON file in `tools/e2e/scenarios/`. `node tools/e2e/run.mjs --l
 - **Placeholders:** `{{lib}}`, `{{app}}` (the repositories of the pair) and `{{id.number}}` of an issue filed earlier (`issue` for the main one).
 - Assert facts the design promises, not words. End at the hold or at an early outcome.
 
+## What the first runs found
+
+The first runs (2026-10-27, Concierge v1.8.0, both pairs) found five things. Each is pinned by a test where the fix lives.
+
+- An out-of-scope request was declined in a comment but never labelled or closed: the issue worker withheld `issue-worker-ready` ("the work is not to be done here"), so issue triage never ran. A prompt fix (`tools/issue-worker-signal.test.mjs`).
+- A reporter's "Thanks, this is what I meant." under a plan made a second plan, about 15 AIC, in three runs out of three. A prompt fix (`tools/plan-worker-already-planned.test.mjs`).
+- On one cycle of six, issue triage ended in a `noop` on an issue filed with the hold, reading the hold and a missing trigger label as "moved past triage". A prompt fix (`tools/issue-triage-hold.test.mjs`).
+- The first-adoption procedure in [updater.md](updater.md) did not copy `opt-out.mjs`, which `dependency-watch.mjs` imports, and failed with `ERR_MODULE_NOT_FOUND`. Fixed, with a test that the documented list covers the import closure (`tools/updater-bootstrap-docs.test.mjs`).
+- A wrong assumption of the runner: gh-aw titles a run with the workflow name, not the issue, so a run cannot be attributed to an issue by title. The runner attributes by start time and runs the scenarios of a pair one at a time.
+
+The three prompt fixes change what a model is told, so they are first layers and are proven live only by a run against a release that has them: the sandbox pins that release (`channel: prerelease` for a candidate), the suite runs, and only then is the stable release cut. Until then `out-of-scope-closes` and `happy-path-to-the-hold` are expected to fail on v1.8.0.
+
 ## What it does not do
 
 It does not judge the code a coding agent writes: nothing is ever assigned. It does not test a reporter without write access (the runner is a collaborator). It does not run on every pull request: it takes tens of minutes and spends model credits, and a model's answers vary.
