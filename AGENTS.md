@@ -7,7 +7,7 @@ Repo Concierge is an issue-to-release harness for GitHub, built on GitHub Agenti
 - `workflows/`: the sources a deployment installs. `*.md` are gh-aw definitions (frontmatter, then the prompt); `*.yml` are plain workflows. **This repository holds no lock files**: a deployment compiles the definitions itself, with the gh-aw version in `requirements.json`.
 - `scripts/`: Node scripts behind the plain workflows (`concierge-updater`, `janitor`, `dependency-watch`, ...), each with its test beside it. `shared/`: prompt fragments the gates read.
 - `aw.yml`: the list of files a deployment installs. `requirements.json`: the labels and secrets a release needs, and the gh-aw version.
-- `tools/`: tests for the workflows and prompts, `build-release-manifest.mjs`, `ci-compile-smoke.sh`, `check-currency.mjs`, `validate-decision-records.mjs`.
+- `tools/`: tests for the workflows and prompts, `build-release-manifest.mjs`, `ci-compile-smoke.sh`, `check-currency.mjs`, `validate-decision-records.mjs`. `tools/e2e/` is the end-to-end runner, its scenarios and the sandbox template ([docs/e2e.md](docs/e2e.md)); it is not delivered to deployments and costs model credits when run with `--yes`, so run it only when a maintainer asks.
 - `.github/workflows/`: this repository's own `ci.yml`, `release.yml` and `currency-check.yml`. They are not delivered to deployments.
 - `docs/`: `deployment.md` and `multi-phase-design.md` are delivered; `releases.md`, `updater.md` and `decisions/` are not.
 

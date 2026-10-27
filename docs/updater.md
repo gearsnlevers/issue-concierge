@@ -58,7 +58,7 @@ A marker takes effect one release late. The update that first installs a marker 
 export GH_TOKEN="$(gh auth token)"   # the updater reads GitHub unauthenticated (60 requests/hour) without one
 git checkout -b concierge/first-adoption
 mkdir -p .github/scripts
-for f in concierge-updater dependency-watch; do
+for f in concierge-updater dependency-watch opt-out; do
   gh api "repos/vscheuber/repo-concierge/contents/scripts/$f.mjs?ref=v1.0.0" --jq .content | base64 -d > ".github/scripts/$f.mjs"
 done
 node .github/scripts/concierge-updater.mjs --local --source vscheuber/repo-concierge --target v1.0.0

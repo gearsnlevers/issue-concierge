@@ -55,3 +55,4 @@ Copy `template.md` to `NNNN-short-title.md` (the next number, starting at 0001),
 | 0030 | [A stalled issue is given the gate label again by code](0030-a-stalled-issue-is-given-the-gate-label-again-by-code.md) | proposed |
 | 0031 | [The work of a link is routed back by one explicit act](0031-the-work-of-a-link-is-routed-back-by-one-explicit-act.md) | proposed |
 | 0032 | [A fix that needs two repositories is split from its plan by a maintainer](0032-a-fix-that-needs-two-repositories-is-split-from-its-plan-by-a-maintainer.md) | proposed |
+| 0033 | [The Concierge is tested end to end in a sandbox of its own](0033-the-concierge-is-tested-end-to-end-in-a-sandbox-of-its-own.md) | proposed |

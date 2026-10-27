@@ -1,0 +1,51 @@
+{
+  "id": "dependency-then-satisfied",
+  "title": "An issue that depends on another waits for it, and is let through when the other is closed",
+  "covers": [
+    "a Depends on line gets dependency-required and the issue is not planned",
+    "the dependency watcher clears the gate when the other issue is closed as completed, and the pipeline continues"
+  ],
+  "profiles": ["public", "private"],
+  "repo": "lib",
+  "files": [
+    {
+      "id": "dep",
+      "title": "Define the order in which siblings are listed",
+      "body": "Decide whether `flattenTree` lists the children of a node in the order they are given or sorted by id. This issue exists to be depended on and is never processed.",
+      "labels": ["enhancement", "no-auto-processing"]
+    }
+  ],
+  "issue": {
+    "title": "flattenTree: stop at a maximum depth",
+    "body": "## Proposal\n\nAdd an optional `maxDepth` argument to `flattenTree`. With `maxDepth: 1` it lists the root and its direct children only. Without it, nothing changes.\n\nThe order of siblings has to be decided first.\n\nDepends on: {{lib}}#{{dep.number}}",
+    "labels": ["enhancement", "plan-approval-required"]
+  },
+  "steps": [
+    {
+      "wait": {
+        "timeoutMinutes": 20,
+        "checks": [
+          { "name": "the issue waits for its dependency", "type": "labels", "include": ["dependency-required"], "exclude": ["issue-triage-handoff", "plan-worker-ready"] },
+          { "name": "not planned while it waits", "type": "comments", "workflow": "plan-worker", "count": 0 },
+          { "name": "the gates ran", "type": "runs", "min": 1 },
+          { "name": "no run failed", "type": "noFailedRuns" }
+        ]
+      }
+    },
+    { "close": "completed", "issue": "dep" },
+    { "dispatch": { "workflow": "dependency-watch.yml", "inputs": { "issue_number": "{{issue.number}}" } } },
+    {
+      "wait": {
+        "timeoutMinutes": 45,
+        "checks": [
+          { "name": "the gate was cleared", "type": "labels", "exclude": ["dependency-required"] },
+          { "name": "the plan worker left one plan", "type": "comments", "workflow": "plan-worker", "count": 1 },
+          { "name": "the hold stayed", "type": "labels", "include": ["plan-approval-required"] },
+          { "name": "no run failed", "type": "noFailedRuns" },
+          { "name": "no failure issue was opened", "type": "noFailureIssues" }
+        ]
+      }
+    },
+    { "expect": { "checks": [{ "name": "nothing started coding", "type": "noPullRequest" }] } }
+  ]
+}

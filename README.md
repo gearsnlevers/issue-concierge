@@ -19,6 +19,8 @@ Deployments pin a released version, not `main`. Each release carries notes and a
 
 ## Procedures
 
+What the gates do with a real issue, and what GitHub does with a label or a run, is checked end to end in a sandbox of four tiny repositories: scenarios file mock enhancements, the real gates run on them, and the runner asserts what the design promises ([docs/e2e.md](docs/e2e.md)).
+
 Recurring work is written down as agent skills in `.claude/skills/`, which Claude Code and GitHub's Copilot coding agent both load on demand: [`change-a-gate-workflow`](.claude/skills/change-a-gate-workflow/SKILL.md) for editing a gate safely (source, prompt hazards, tests, mutation checks, docs) and [`cut-a-concierge-release`](.claude/skills/cut-a-concierge-release/SKILL.md) for releasing and rolling out to the deployments (maintainers only). A skill says how; the documents in [docs/](docs/) say what the harness does and why. `tools/validate-skills.mjs` keeps the skills honest in `npm test`.
 
 ## Quick Start (Consuming Repo)
