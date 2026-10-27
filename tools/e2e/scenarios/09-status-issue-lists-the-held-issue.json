@@ -1,0 +1,32 @@
+{
+  "id": "status-issue-lists-the-held-issue",
+  "title": "The status issue appears by itself, lists an issue that waits for a maintainer, and counts it among the issues the Concierge manages",
+  "covers": [
+    "the status workflow creates its issue without being asked and keeps it current as labels change",
+    "an issue held for a maintainer is listed under 'Needs you', and the page counts managed issues next to the others",
+    "writing the page is not mistaken for a failure issue of a gate"
+  ],
+  "profiles": ["public", "private"],
+  "repo": "lib",
+  "issue": {
+    "title": "Drop the widgets command, flattenTree covers it",
+    "body": "## Problem\n\nThe `widgets` command in the app and `listWidgets` in the library do what `flattenTree` plus a filter already do.\n\n## Proposal\n\nDelete `listWidgets` and the `widgets` command and point people at `flattenTree(root).filter(...)`.\n\n## Acceptance\n\n- `listWidgets` and the `widgets` command are gone.\n- The remaining tests pass.",
+    "labels": ["enhancement", "plan-approval-required"]
+  },
+  "steps": [
+    {
+      "wait": {
+        "timeoutMinutes": 20,
+        "checks": [
+          { "name": "the status issue lists the issue under Needs you", "type": "statusIssue", "match": "## Needs you \\(\\d+\\)(?:(?!\\n## )[\\s\\S])*\\n- #{{issue.number}} " },
+          { "name": "the page counts the managed issues next to the others", "type": "statusIssue", "match": "\\d+ open issues? = \\*\\*\\d+ managed\\*\\* · \\d+ opted out" },
+          { "name": "the page carries the numbers for a dashboard", "type": "statusIssue", "match": "\"schema\": 1" },
+          { "name": "the gates ran", "type": "runs", "min": 1 },
+          { "name": "no run failed", "type": "noFailedRuns" },
+          { "name": "writing the page opened no failure issue", "type": "noFailureIssues" }
+        ]
+      }
+    },
+    { "expect": { "checks": [{ "name": "nothing started coding", "type": "noPullRequest" }] } }
+  ]
+}

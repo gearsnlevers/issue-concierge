@@ -139,13 +139,14 @@ async function runAttempt(scenario, profileName, ctx, attempt) {
 
   async function snapshot(id = 'issue') {
     const t = target(id);
-    const [issue, comments, timeline, runs, botHere, botThere] = await Promise.all([
+    const [issue, comments, timeline, runs, botHere, botThere, statusIssue] = await Promise.all([
       gh.getIssue(t.repo, t.number),
       gh.listComments(t.repo, t.number),
       gh.timeline(t.repo, t.number),
       gh.listRuns(t.repo, ctx.suiteSince),
       gh.listBotIssues(t.repo, ctx.suiteSince),
       gh.listBotIssues(t.other, ctx.suiteSince),
+      gh.findStatusIssue(t.repo),
     ]);
     // Nothing ties a gate's run to an issue: a gh-aw run is titled with the workflow, not with the issue, and a failure issue
     // names only the run that failed. So a run, or a failure issue, belongs to the scenario when it started after the
@@ -160,6 +161,7 @@ async function runAttempt(scenario, profileName, ctx, attempt) {
       pullRequests: [...new Set(timeline.filter((e) => e.event === 'cross-referenced' && e.source?.issue?.pull_request).map((e) => e.source.issue.number))],
       runs: mine.map((r) => ({ id: r.id, name: r.name, status: r.status, conclusion: r.conclusion })),
       botIssues: failureIssues.map((i) => ({ number: i.number, title: i.title, repo: i.repo })),
+      statusIssue,
     };
   }
 

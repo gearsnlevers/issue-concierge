@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createGitHub } from './e2e/github.mjs';
+import { createGitHub, STATUS_MARKER } from './e2e/github.mjs';
+import { MARKER as PAGE_MARKER } from '../scripts/status-issue.mjs';
 import { evaluateCheck, describeSnapshot, CHECK_TYPES } from './e2e/checks.mjs';
 import { cleanupStale, expand, loadConfig, loadScenarios, main, renderSummary, runScenario, runSuite, validateScenario } from './e2e/run.mjs';
 
@@ -29,6 +30,7 @@ function world({ failCreateAfter } = {}) {
     timeline: async (repo, n) => find(repo, n).timeline,
     listRuns: async () => w.runs,
     listBotIssues: async (repo) => w.bot.filter((b) => b.repo === repo),
+    findStatusIssue: async (repo) => w.status?.[repo] ?? null,
     comment: async (repo, n, body) => {
       find(repo, n).comments.push({ author: 'runner', body });
       w.onComment(find(repo, n), body);
@@ -513,7 +515,7 @@ test('lists are flattened from pages, and the shared lists are asked for once in
     calls.push(args[3]);
     flags.push(args.includes('--paginate') && args.includes('--slurp'));
     if (args[3].includes('/actions/runs')) return JSON.stringify([{ workflow_runs: [{ id: 1 }] }, { workflow_runs: [{ id: 2 }] }]);
-    if (args[3].includes('creator=')) return JSON.stringify([[{ number: 1, created_at: '2026-10-27T10:05:00Z' }, { number: 2, created_at: '2026-10-27T10:05:00Z', pull_request: {} }, { number: 3, created_at: '2026-10-27T08:00:00Z' }]]);
+    if (args[3].includes('creator=')) return JSON.stringify([[{ number: 1, created_at: '2026-10-27T10:05:00Z' }, { number: 2, created_at: '2026-10-27T10:05:00Z', pull_request: {} }, { number: 3, created_at: '2026-10-27T08:00:00Z' }, { number: 4, created_at: '2026-10-27T10:06:00Z', body: `${STATUS_MARKER}\n# Concierge status` }, { number: 5, created_at: '2026-10-01T10:06:00Z', body: `${STATUS_MARKER}\npage` }]]);
     return JSON.stringify([[{ id: 5 }], [{ id: 6 }]]);
   };
   const gh = createGitHub({ run, sleep: async () => {}, now: () => clock, cacheMs: 20000 });
@@ -527,7 +529,27 @@ test('lists are flattened from pages, and the shared lists are asked for once in
   clock += 20000;
   await gh.listRuns('o/r', '2026-10-27T10:00:00Z');
   assert.equal(calls.filter((c) => c.includes('/actions/runs')).length, 2, 'asked again after the cache expired');
-  assert.deepEqual((await gh.listBotIssues('o/r', '2026-10-27T10:00:00Z')).map((i) => i.number), [1], 'pull requests and older issues are dropped');
+  assert.deepEqual((await gh.listBotIssues('o/r', '2026-10-27T10:00:00Z')).map((i) => i.number), [1], 'pull requests, older issues and the status issue are dropped');
+  assert.deepEqual(await gh.findStatusIssue('o/r'), { number: 4, body: `${STATUS_MARKER}\n# Concierge status` }, 'the status issue is found by its marker');
   assert.match(calls.find((c) => c.includes('/actions/runs')), /created=%3E%3D2026-10-27T10%3A00%3A00Z/);
   assert.match(calls.find((c) => c.includes('creator=')), /creator=github-actions%5Bbot%5D/);
+});
+
+// ------------------------------------------------------------------ the status issue
+
+test('the runner and the status script mark the page with the same line', () => {
+  assert.equal(STATUS_MARKER, PAGE_MARKER);
+});
+
+test('statusIssue: the page must match, or must not, and a repository without one fails the check', () => {
+  const page = { number: 7, body: `${STATUS_MARKER}\n## Needs you (1)\n- #12 Remove the widgets command · waiting under 1 h\n` };
+  const snap2 = (statusIssue) => ({ repo: 'o/lib', runner: 'runner', issue: { state: 'open', state_reason: null, labels: [], assignees: [] }, comments: [], pullRequests: [], runs: [], botIssues: [], statusIssue });
+  assert.equal(evaluateCheck({ type: 'statusIssue', match: '\\n- #12 ' }, snap2(page)).ok, true);
+  assert.equal(evaluateCheck({ type: 'statusIssue', match: '\\n- #13 ' }, snap2(page)).ok, false);
+  assert.equal(evaluateCheck({ type: 'statusIssue', match: '\\n- #13 ', absent: true }, snap2(page)).ok, true);
+  assert.equal(evaluateCheck({ type: 'statusIssue', match: '\\n- #12 ', absent: true }, snap2(page)).ok, false);
+  const none = evaluateCheck({ type: 'statusIssue', match: 'x' }, snap2(null));
+  assert.equal(none.ok, false);
+  assert.match(none.detail, /there is no status issue yet/);
+  assert.match(evaluateCheck({ type: 'statusIssue', match: '\\n- #13 ' }, snap2(page)).detail, /status issue #7 does not match .*, which it must/);
 });

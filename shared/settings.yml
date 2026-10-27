@@ -1,0 +1,27 @@
+# Repo Concierge settings for this repository.
+#
+# Copy this file to .github/agentic-workflows/settings.yml. It is optional: without it, or without a line,
+# the default shown below applies.
+#
+# The Concierge reads the file from the default branch, so a change takes effect when it is merged, and a pull
+# request cannot loosen the settings it is judged by. Only flat "key: value" lines are read. A line it cannot
+# use (an unknown name, a value out of range) is reported by check-deployment and shown on the status issue,
+# and the default stays; the Concierge never stops because of this file.
+
+# status-issue: true | false                                       default: true
+#   One pinned issue, "Concierge status", created and kept up to date by the bot. It shows what waits for a
+#   maintainer, reporter replies that nobody has answered, which issues the Concierge manages and which it
+#   does not (opted out with no-auto-processing, opened by a bot, not yet picked up), health (the last good
+#   run, failed runs, the pinned version against the latest release, the signal token's expiry) and the
+#   spend of the last seven days. The Concierge ignores this issue: it is opened by a bot and carries
+#   no-auto-processing. If the repository already has three pinned issues, GitHub's limit, the status issue
+#   is created unpinned and says so.
+#   false: the issue is closed and unpinned, never deleted, and nothing updates it. true again reopens it.
+status-issue: true
+
+# reporter-replies-days: 1 to 90                                   default: 14
+#   How far back the status issue looks for reporter replies that wait for an answer: an open issue whose
+#   latest comment is from someone who is not a maintainer (owner, member or collaborator) and not a bot,
+#   and is newer than this many days. Opted-out issues are included and marked, since nobody else watches
+#   them. The list shows the person's login and a link, never the text of the comment.
+reporter-replies-days: 14

@@ -73,6 +73,8 @@ A repository can add `.github/agentic-workflows/scope.md` (template: [shared/sco
 
 A request that changes what already exists is held for a maintainer before anything is planned: removing, renaming or replacing a command, an option, an exported function or a file format, breaking something that works today (a signature, an output format a script may parse), or changing the architecture. This is not part of the scope check and does not need a file. The issue worker judges by what the change does, not by how the issue argues for it ("nobody uses it", "it is safe", a suggested replacement); issue triage applies `needs-decision`, hands nothing on and closes nothing; and a plan that turns out to remove something carries a "Breaking change:" line that makes plan triage hold it. Fixes, additions and refinements that leave everything working as before go through. A repository can add `.github/agentic-workflows/guard.md` (template: [shared/guard.md](shared/guard.md)) to name what it protects and what it lets through freely. To accept a held request, a maintainer removes `needs-decision` and adds `issue-triage-handoff`. See [docs/multi-phase-design.md](docs/multi-phase-design.md#a-change-to-what-exists).
 
+Every repository that runs the Concierge gets a pinned issue, "Concierge status", written and kept current by a plain workflow (no model): what waits for a maintainer, the reporter replies nobody has answered, which issues the Concierge manages and which it does not (opted out, opened by bots, not yet picked up), whether the gates are healthy and what they cost. It is derived from the repository's own state, so it needs no access beyond the repository, and the Concierge never acts on it. `.github/agentic-workflows/settings.yml` (template: [shared/settings.yml](shared/settings.yml)) turns it off or changes how far back it looks for replies. See [docs/multi-phase-design.md](docs/multi-phase-design.md#the-maintainers-view).
+
 A repository can also tell coding agents how to work on it, in the files they already load: `AGENTS.md` at the root (template: [shared/agents.md](shared/agents.md)), `.github/copilot-instructions.md`, and `.github/instructions/*.instructions.md` with `applyTo` globs. The plan worker lists the rules that apply to a change in its plan, the PR worker tells the coding agent to follow them, and PR triage adds a "Repository rules:" line to its comment. Both gates read the default branch only, so a pull request cannot weaken the rules it is judged by, and the guidance stays advisory: it never changes a label, a gate or an approval. Without the files nothing changes, and `check-deployment` only prints a notice. See [docs/multi-phase-design.md](docs/multi-phase-design.md#repository-guidance).
 
 A repository can also keep its design decisions as records in `docs/decisions/` (or `decisions/` at the repository root when `docs/` is generated; `NNNN-short-title.md` files, an index, frontmatter with a `status:` and optional `applies-to:` globs; template: [shared/decision-record.md](shared/decision-record.md)). The plan worker lists the accepted records that apply to a request and says when the request conflicts with one, which makes plan triage hold the issue for a maintainer's decision; the PR worker tells the coding agent to follow them, and PR triage adds a "Decisions:" line to its comment. Both gates read the default branch only, and a record never changes a label, a gate or an approval. Without either folder nothing changes, and `check-deployment` only prints a notice. See [docs/multi-phase-design.md](docs/multi-phase-design.md#decision-records).
@@ -152,6 +154,7 @@ A repository tunes the gates with optional files under `.github/agentic-workflow
 - `issue-completeness.md`: what a complete report is, if the issue templates do not say.
 - `scope.md`: what the project does not do.
 - `guard.md`: what the project protects from change, and what it lets through freely.
+- `settings.yml`: what the Concierge does in this repository and what it does not: the status issue and how far it looks back for reporter replies.
 - `complexity.md` and `risk.md`: what the two gauges mean in this repository.
 - `related-repos.md`: which repository owns what, with the secret and release rules for each.
 
@@ -181,6 +184,7 @@ Templates are in `shared/`. A repository can also supply an environment agent (s
 │   ├── route-back.yml
 │   ├── spawn-work-items.yml
 │   ├── stalled-issue-sweep.yml
+│   ├── status.yml
 │   ├── janitor.yml
 │   ├── pr-ready-signal.yml
 │   └── check-deployment.yml
@@ -192,6 +196,9 @@ Templates are in `shared/`. A repository can also supply an environment agent (s
 │   ├── route-back.mjs
 │   ├── spawn-work-items.mjs
 │   ├── stalled-issue-sweep.mjs
+│   ├── status-issue.mjs
+│   ├── concierge-settings.mjs
+│   ├── concierge-state.mjs
 │   ├── janitor.mjs
 │   ├── opt-out.mjs
 │   ├── pr-ready-signal.mjs
