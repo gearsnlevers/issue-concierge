@@ -31,6 +31,7 @@ An issue the Concierge holds for a maintainer (a request that changes what exist
 - A new required label, `declined`, in every deployment: the next release is a major release, as it already is for `needs-decision`.
 - The options comment posts again whenever anyone comments on an issue that waits, which notifies those who follow it each time. That is the point of it.
 - A label removed by hand starts nothing here, because only the issue worker and the plan approval resume may start on a removal ([0028](0028-an-item-labelled-no-auto-processing-is-never-touched.md)). A left-over menu is removed by the next event or the hourly run.
+- A comment that starts with a command is not a reply from the reporter, so it starts no issue worker run, and issue triage counts a maintainer's `/accept` as the decision whatever labels show. The soak of the first candidate found the race this closes: a worker run started by a reply finished after the hand-over and put the hold back (docs/e2e.md).
 - Triage can start the coding agent with `/approve`, as it could by removing the label. Approving the agent's workflow runs and merging stay with write access ([0005](0005-a-maintainer-holds-the-levers-of-the-pipeline.md)).
 
 ## Alternatives considered

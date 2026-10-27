@@ -109,6 +109,14 @@ Two more probes the same evening (a request to remove a function and its command
 
 The prompt fixes change what a model is told, so they are first layers and are proven live only by a run against a release that has them: the sandbox pins that release (`channel: prerelease` for a candidate), the suite runs, and only then is the stable release cut. Until then `out-of-scope-closes`, `happy-path-to-the-hold`, `removal-urgent-is-held` and `removal-casual-is-held` are expected to fail on v1.8.0.
 
+## What the soak of v2.0.0-1 found
+
+The first full suite against a candidate (2026-10-27, 11 scenarios on both pairs, both pinned at the prerelease v2.0.0-1, about six hours): 19 of 22 runs passed, one of them only on the second attempt. Three things came out, and none was a model regression.
+
+- `needs-info-then-details` failed on both pairs, twice each, with `needs-decision` and no plan. The scenario's details asked for `flattenTree` to take a maximum depth as its second argument; the sandbox's second parameter is already `visited`. The issue worker saw it, said so in its comment, and the change guard held the request for a maintainer, which is what it is for. The scenario was wrong, not the guard: it now asks for an optional `maxDepth` and leaves the position open, and a test keeps every scenario from naming a position that collides with the sandbox code.
+- `command-accepts-a-held-request` failed once on the private pair and passed on the second attempt. A real race in the Concierge: a reporter's reply started an issue worker run (about 4 minutes); the maintainer wrote `/accept` 70 seconds later; the plan worker took over; when the worker run ended, issue triage read an issue with no gate label and applied `needs-decision` again. Two changes close it, see "A command is not a reply" in [multi-phase-design.md](multi-phase-design.md): a command comment starts no issue worker run, and issue triage honours a maintainer's `/accept` whatever labels show.
+- `command-declines-a-request` could not start on the public pair: filing the issue failed twice in six seconds with gh's own "unexpected end of JSON input", right after the pair's previous scenario, and no issue was created. The runner now repeats that answer like any other transient one.
+
 ## What it does not do
 
 It does not judge the code a coding agent writes: nothing is ever assigned. It does not test a reporter without write access (the runner is a collaborator). It does not run on every pull request: it takes tens of minutes and spends model credits, and a model's answers vary.

@@ -45,7 +45,9 @@ export function mayUse(role, need, { organisation = true } = {}) {
 
 // ------------------------------------------------------------------ reading a command
 
-const COMMAND = /^\/(accept|decline|approve|replan|retry|help)(?:[ \t]+(.*))?$/i;
+/** The commands. workflows/issue-worker.md skips a comment that starts with one of them; a test keeps the two lists equal. */
+export const COMMAND_NAMES = ['accept', 'decline', 'approve', 'replan', 'retry', 'help'];
+const COMMAND = new RegExp(`^/(${COMMAND_NAMES.join('|')})(?:[ \\t]+(.*))?$`, 'i');
 
 /**
  * The command a comment gives, or null. Only the first line counts, so a command in a quote, a code block or the middle
