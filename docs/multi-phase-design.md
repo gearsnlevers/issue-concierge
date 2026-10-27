@@ -284,6 +284,8 @@ The labels say where one issue is. A maintainer asks other questions: what waits
 - **Spend.** The AIC the gates' comments report for the last seven days. A run that posts no comment is not in it.
 - **Settings**, with any line of `settings.yml` that could not be used, and the same numbers as JSON in a collapsed block, for a dashboard that reads several repositories.
 
+**The nudge.** With `mention-after-days` above 0 (off by default), the same workflow mentions the people who have the maintain or admin role, listed from the repository's collaborators (at most twenty), in a comment on the status issue when something under "Needs you" has waited that many days. At most one such comment per period: the previous one is deleted when a new one is posted, and when nothing waits that long any more. Titles in it are written so that they mention nobody, and the logins are the only mentions. It is off by default because it is the one thing on the page that notifies people without anybody asking. Listing the collaborators needs more than the workflow token may have, so the signal token is tried next; if neither may, the comment is not posted and the log says why. Nothing is mentioned while the Concierge is paused.
+
 What comes from outside is made safe: a title or a login goes into the page with its `@`, `#`, markup and HTML as entities, so that writing the page mentions nobody and links this issue into no other. If the repository already has three pinned issues, GitHub's limit, or the signal token may not pin, the issue is created unpinned and the page says why.
 
 ### Commands and the options comment
@@ -334,7 +336,7 @@ Not seen live yet: the variable in a real repository, and whether the workflow t
 
 ### Settings
 
-`.github/agentic-workflows/settings.yml` (template `shared/settings.yml`) belongs to the repository, like `scope.md`: reviewed by pull request, read from the default branch, every setting with a default. A line that cannot be used is reported by `check-deployment` and on the page, and the default stays. `status-issue` is on by default; set to `false`, the issue is closed and unpinned, never deleted. `commands` (on) and `commands-need` (`triage`) switch the commands and the options comment and set the role that may use them. The format is flat `key: value` lines, which a short parser reads without a dependency (`scripts/concierge-settings.mjs`).
+`.github/agentic-workflows/settings.yml` (template `shared/settings.yml`) belongs to the repository, like `scope.md`: reviewed by pull request, read from the default branch, every setting with a default. A line that cannot be used is reported by `check-deployment` and on the page, and the default stays. `status-issue` is on by default; set to `false`, the issue is closed and unpinned, never deleted. `commands` (on) and `commands-need` (`triage`) switch the commands and the options comment and set the role that may use them. `mention-after-days` (0, never) is the nudge above. The format is flat `key: value` lines, which a short parser reads without a dependency (`scripts/concierge-settings.mjs`).
 
 Not seen live yet: the first run in a sandbox, whether the fine-grained `SIGNAL_TOKEN` may pin, and the pinned issue as the bot creates it. `tools/status-workflow.test.mjs` and the tests beside the scripts pin the rest.
 

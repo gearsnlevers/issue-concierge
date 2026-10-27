@@ -52,3 +52,14 @@ commands-need: triage
 #   and is newer than this many days. Opted-out issues are included and marked, since nobody else watches
 #   them. The list shows the person's login and a link, never the text of the comment.
 reporter-replies-days: 14
+
+# mention-after-days: 0 to 90                                      default: 0 (never)
+#   Mention the people who have the maintain or admin role in a comment on the status issue when something has
+#   waited for a maintainer this many days or more: a request held because it changes what exists, one held for
+#   the scope, or a plan waiting for approval. The options comment already notifies whoever follows an issue when
+#   it is posted; this is the nudge for what stays unanswered. At most one such comment per this many days, and the
+#   previous one is deleted when a new one is posted, or when nothing waits that long any more. It names at most
+#   twenty people, and titles in it are written so that they mention nobody. It needs a token that may list the
+#   repository's collaborators; if there is none, the status page says so and nobody is mentioned.
+#   0 turns it off. Nothing is mentioned while the Concierge is paused.
+mention-after-days: 0
