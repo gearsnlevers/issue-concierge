@@ -1,5 +1,17 @@
 # Changelog
 
+## [v2.0.0-1] - 2026-10-27
+
+### What's Changed
+* feat: test the Concierge end to end in a sandbox of its own by @vscheuber in https://github.com/gearsnlevers/issue-concierge/pull/62
+* fix: three gate prompt gaps found by the first end-to-end runs by @vscheuber in https://github.com/gearsnlevers/issue-concierge/pull/63
+* feat: hold a request that changes what exists for a maintainer before it is planned by @vscheuber in https://github.com/gearsnlevers/issue-concierge/pull/64
+* feat: a status issue for every repository, and a settings file of its own by @vscheuber in https://github.com/gearsnlevers/issue-concierge/pull/65
+* feat: a maintainer decides by command, and the issue says which one applies by @vscheuber in https://github.com/gearsnlevers/issue-concierge/pull/66
+* feat: the Concierge is paused by a repository variable by @vscheuber in https://github.com/gearsnlevers/issue-concierge/pull/67
+
+**Full Changelog**: https://github.com/gearsnlevers/issue-concierge/compare/v1.8.0...v2.0.0-1
+
 ## [v1.8.0] - 2026-10-26
 
 ### What's Changed
