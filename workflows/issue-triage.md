@@ -75,6 +75,11 @@ Read the latest analysis comment produced by the issue worker.
 If the issue already has the label `related-repo`, do nothing.
 It is a non-canonical pointer; planning happens only on the linked canonical issue.
 
+## A hold that is already there
+Read this before you decide that nothing is left to do. `plan-approval-required` is not a sign that triage is done. A maintainer may add it by hand before the issue is analysed, to read the plan before anything is built: the hold stops the issue after the plan, not before triage. Triage the issue as usual, apply the outcome labels, and emit `issue-triage-handoff` when it is complete and worth doing. Plan triage keeps the hold, and removing it is the maintainer's decision, not yours.
+
+When the issue carries the hold, the janitor takes `issue-worker-ready` away within seconds, so the label that started you may be gone when you read the issue. That is normal and no reason to stop either. Only the later-phase progress described under "Internal labels" shows that triage has already run.
+
 ## Internal labels (never mentioned to the reporter)
 Apply only quality and priority labels. Do **not** apply complexity or risk labels.
 
