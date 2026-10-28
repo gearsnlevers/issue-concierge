@@ -1,4 +1,4 @@
-// The status issue of Repo Concierge.
+// The status issue of Issue Concierge.
 //
 // Deterministic: no LLM. One pinned issue per repository, written and kept up to date by the bot, that shows the
 // maintainers of that repository what the Concierge is doing: what waits for them, which reporters have answered,
@@ -15,7 +15,7 @@ import fs from 'node:fs';
 import { SETTINGS_PATH, parseSettings, readSettingsText } from './issue-concierge-settings.mjs';
 import {
   BOT, QUEUES, STUCK_AFTER_MINUTES, GATE_LABELS, ago, classify, compareVersions, isAnalysis, labelledAt, latestRelease,
-  pausedBy, readPin, reporterReplies, runHealth, safeText, spend, tokenExpiry,
+  pausedBy, readPin, reporterReplies, runHealth, safeText, shortGateName, spend, tokenExpiry,
 } from './issue-concierge-state.mjs';
 import { LABEL_OPT_OUT, labelNames } from './opt-out.mjs';
 
@@ -161,11 +161,11 @@ export function render(m) {
 
   L.push('## Health', '');
   const last = m.health.lastGood;
-  L.push(last.length ? `- Last good run: ${last.map((g) => `${g.name.replace(/^Concierge /, '')} ${ago(m.now - g.at)} ago`).join(' · ')}` : '- No gate has run successfully in the runs GitHub lists.');
+  L.push(last.length ? `- Last good run: ${last.map((g) => `${shortGateName(g.name)} ${ago(m.now - g.at)} ago`).join(' · ')}` : '- No gate has run successfully in the runs GitHub lists.');
   if (m.health.failures.length === 0) L.push('- Failed runs in the last 7 days: none');
   else {
     L.push(`- Failed runs in the last 7 days: ${m.health.failures.length}`);
-    for (const f of m.health.failures.slice(0, 5)) L.push(`  - [${safeText(f.name.replace(/^Concierge /, ''))}](${f.url}) ${ago(m.now - f.at)} ago`);
+    for (const f of m.health.failures.slice(0, 5)) L.push(`  - [${safeText(shortGateName(f.name))}](${f.url}) ${ago(m.now - f.at)} ago`);
   }
   if (m.pin.version) {
     L.push(`- Pinned: \`${m.pin.version}\` (${m.pin.channel}) from \`${m.pin.source}\`${m.behind ? ` · ⚠ ${m.behind} is available, the updater opens a pull request` : m.latest ? ' · up to date' : ''}`);

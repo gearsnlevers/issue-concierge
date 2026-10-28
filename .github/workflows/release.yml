@@ -1,6 +1,6 @@
 name: Release
 
-# Cuts a Repo Concierge release: tests, next version, preflight, changelog,
+# Cuts a Issue Concierge release: tests, next version, preflight, changelog,
 # manifest, tag and GitHub release. Modeled on the release workflows of the
 # vscheuber action repositories. See docs/releases.md.
 #
@@ -173,7 +173,7 @@ jobs:
           if gh release list --json tagName,isDraft --jq '.[] | select(.isDraft) | .tagName' | grep -xF "${TAG}" >/dev/null; then
             gh release delete "${TAG}" --yes
           fi
-          args=(release create "${TAG}" release-manifest.json --draft --title "Repo Concierge ${TAG}" --notes-file RELEASE_NOTES.md)
+          args=(release create "${TAG}" release-manifest.json --draft --title "Issue Concierge ${TAG}" --notes-file RELEASE_NOTES.md)
           if [ "${IS_PRERELEASE}" = "true" ]; then args+=(--prerelease); fi
           gh "${args[@]}"
           gh release edit "${TAG}" --draft=false
@@ -197,7 +197,7 @@ jobs:
           BASE: ${{ steps.version.outputs.base }}
         run: |
           {
-            echo "## Repo Concierge release"
+            echo "## Issue Concierge release"
             echo
             echo "| | |"
             echo "|---|---|"

@@ -1,4 +1,4 @@
-# Concierge status. Plain GitHub Actions, no LLM. See docs/multi-phase-design.md, "The maintainer's view".
+# Issue Concierge status. Plain GitHub Actions, no LLM. See docs/multi-phase-design.md, "The maintainer's view".
 #
 # Keeps one pinned issue, "Concierge status", up to date: what waits for a maintainer, the reporter replies nobody
 # has answered, which issues the Concierge manages and which it does not, the health of the gates and what they
@@ -19,7 +19,7 @@
 # Needs SIGNAL_TOKEN to pin the issue and to report when that token expires; without it the issue is still written. With
 # `mention-after-days` set it also names the maintainers in a comment on the page when something has waited too long, and
 # lists the collaborators with the workflow token or, if that may not, with SIGNAL_TOKEN.
-name: "Concierge 5a ▸ Status"
+name: "Issue Concierge 5a ▸ Status"
 
 on:
   schedule:

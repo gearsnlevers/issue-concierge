@@ -1,4 +1,4 @@
-// Comment commands and the options comment of Repo Concierge.
+// Comment commands and the options comment of Issue Concierge.
 //
 // Deterministic: no LLM. A maintainer decides what becomes of an issue that waits for them by commenting a command
 // (`/accept`, `/decline`, `/approve`, `/replan`, `/retry`), and the Concierge keeps one comment on such an issue, the

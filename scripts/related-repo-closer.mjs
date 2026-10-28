@@ -1,4 +1,4 @@
-// Related-repo closer for Repo Concierge.
+// Related-repo closer for Issue Concierge.
 //
 // Deterministic: no LLM. A split-repo link has two issues: the ORIGINAL, which the reporter filed,
 // and the CANONICAL issue in the repository that holds the work (record 0019). When the canonical

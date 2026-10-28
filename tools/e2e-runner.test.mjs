@@ -70,12 +70,12 @@ function happyGates({ w, gate, run }) {
     if (issue.state !== 'open' || !issue.title.includes('listWidgets: sort numbers')) return;
     if (issue.ticks === 2) {
       gate(issue, 'issue-worker');
-      run(issue, 'Concierge 1a ▸ Issue Worker');
-      run(issue, 'Concierge 1b Issue Triage');
+      run(issue, 'Issue Concierge 1a ▸ Issue Worker');
+      run(issue, 'Issue Concierge 1b Issue Triage');
     }
     if (issue.ticks === 3) {
       gate(issue, 'plan-worker', '## Decisions that apply\n## Repository rules that apply');
-      run(issue, 'Concierge 2a Plan Worker');
+      run(issue, 'Issue Concierge 2a Plan Worker');
       issue.labels.push('complexity/low', 'risk/low');
     }
   };
@@ -252,7 +252,7 @@ test('a scenario that passes only on the second attempt is flaky, not failed', a
       Object.assign(issue, { state: 'closed', state_reason: 'not_planned' });
       issue.labels.push('out-of-scope');
       gateComment(issue);
-      wd.run(issue, 'Concierge 1a ▸ Issue Worker');
+      wd.run(issue, 'Issue Concierge 1a ▸ Issue Worker');
     }
   };
   const gateComment = (issue) => wd.gate(issue, 'issue-worker', 'Declined.');
@@ -267,7 +267,7 @@ test('a failed run stops the wait at once, without waiting for the deadline', as
   const wd = world();
   const started = wd.w.now;
   wd.w.onTick = (issue) => {
-    if (issue.ticks === 2) wd.run(issue, 'Concierge 1a ▸ Issue Worker', 'failure');
+    if (issue.ticks === 2) wd.run(issue, 'Issue Concierge 1a ▸ Issue Worker', 'failure');
   };
   const result = await runScenario({ ...byId('out-of-scope-closes'), retry: false }, 'public', wd.ctx);
   assert.equal(result.status, 'fail');
@@ -280,7 +280,7 @@ test('a failed run stops the wait at once, without waiting for the deadline', as
 test('a run, or a failure issue, from before the scenario started is not its business', async () => {
   const wd = world();
   happyGates(wd);
-  wd.w.runs.push({ id: 1, name: 'Concierge 1a ▸ Issue Worker', status: 'completed', conclusion: 'failure', created_at: '2026-10-27T09:30:00Z' });
+  wd.w.runs.push({ id: 1, name: 'Issue Concierge 1a ▸ Issue Worker', status: 'completed', conclusion: 'failure', created_at: '2026-10-27T09:30:00Z' });
   wd.w.bot.push({ repo: 'o/e2e-lib', number: 50, title: '[aw] earlier failure', created_at: '2026-10-27T09:30:00Z' });
   const result = await runScenario(byId('happy-path-to-the-hold'), 'public', wd.ctx);
   assert.equal(result.status, 'pass');
@@ -292,11 +292,11 @@ test('a gate run that fails while the scenario runs fails it, although the run s
   const inner = wd.w.onTick;
   wd.w.onTick = (issue, w) => {
     inner(issue, w);
-    if (issue.ticks === 2) wd.run(issue, 'Concierge 1a ▸ Issue Worker', 'failure');
+    if (issue.ticks === 2) wd.run(issue, 'Issue Concierge 1a ▸ Issue Worker', 'failure');
   };
   const failed = await runScenario({ ...byId('happy-path-to-the-hold'), retry: false }, 'public', wd.ctx);
   assert.equal(failed.status, 'fail');
-  assert.match(failed.attempts[0].checks.find((c) => c.name === 'no run failed').detail, /Concierge 1a ▸ Issue Worker \(failure\)/);
+  assert.match(failed.attempts[0].checks.find((c) => c.name === 'no run failed').detail, /Issue Concierge 1a ▸ Issue Worker \(failure\)/);
 });
 
 test('a failure issue the bot opens while the scenario runs, in either repository of the pair, fails it', async () => {
@@ -322,7 +322,7 @@ test('the next scenario starts only when the runs that closing the issue started
     inner(issue, w);
     if (issue.state === 'closed' && !w.closingRun) {
       w.closingRun = true;
-      wd.run(issue, 'Concierge 4a ▸ Janitor', null, 'in_progress');
+      wd.run(issue, 'Issue Concierge 4a ▸ Janitor', null, 'in_progress');
       w.closingRunTicks = 0;
     } else if (w.closingRun && wd.w.runs.at(-1).status !== 'completed' && ++w.closingRunTicks === 2) {
       Object.assign(wd.w.runs.at(-1), { status: 'completed', conclusion: 'success' });
@@ -348,7 +348,7 @@ test('the dependency scenario closes the other issue, then starts the watcher fo
     const dep = wd.w.issues.find((i) => i.title.includes('Define the order'));
     if (dep.state === 'open' && issue.ticks === 2) {
       issue.labels.push('dependency-required');
-      wd.run(issue, 'Concierge 1b Issue Triage');
+      wd.run(issue, 'Issue Concierge 1b Issue Triage');
     }
     if (dep.state === 'closed' && !issue.satisfied) {
       issue.satisfied = true;
@@ -373,7 +373,7 @@ test('the opt-out scenario adds the hold before it removes the opt-out label', a
   wd.w.onTick = (issue) => {
     if (issue.labels.includes('no-auto-processing') || issue.comments.length) return;
     wd.gate(issue, 'issue-worker', 'analysis');
-    wd.run(issue, 'Concierge 1a ▸ Issue Worker');
+    wd.run(issue, 'Issue Concierge 1a ▸ Issue Worker');
   };
   const result = await runScenario(byId('opt-out-then-hand-over'), 'public', wd.ctx);
   assert.equal(result.status, 'pass', JSON.stringify(result.attempts[0].checks.filter((c) => !c.ok)));
@@ -383,7 +383,7 @@ test('the opt-out scenario adds the hold before it removes the opt-out label', a
 test('the quiet period ends only when the runs of the issue have finished, so that a late failure is seen', async () => {
   const wd = world();
   wd.w.onTick = (issue) => {
-    if (issue.ticks === 1) wd.run(issue, 'Concierge 1a ▸ Issue Worker', null, 'in_progress'); // still running when the 6 quiet minutes are over
+    if (issue.ticks === 1) wd.run(issue, 'Issue Concierge 1a ▸ Issue Worker', null, 'in_progress'); // still running when the 6 quiet minutes are over
     if (issue.ticks === 3) Object.assign(wd.w.runs[0], { status: 'completed', conclusion: 'failure' });
   };
   const result = await runScenario({ ...byId('opt-out-then-hand-over'), retry: false }, 'public', wd.ctx);
@@ -416,7 +416,7 @@ test('the suite runs each scenario on each profile it names, the pairs side by s
       Object.assign(issue, { state: 'closed', state_reason: 'not_planned' });
       issue.labels.push('out-of-scope');
       wd.gate(issue, 'issue-worker', 'Declined.');
-      wd.run(issue, 'Concierge 1a ▸ Issue Worker');
+      wd.run(issue, 'Issue Concierge 1a ▸ Issue Worker');
     }
   };
   const single = { ...byId('out-of-scope-closes'), profiles: ['public', 'private'] };
@@ -434,7 +434,7 @@ test('the summary shows each result, the reason for each failure and what cleanu
     { id: 'b', profile: 'private', status: 'fail', flaky: false, attempts: [{ seconds: 5, issues: [], error: undefined, checks: [{ phase: 'step 1 wait', name: 'one analysis', ok: false, warn: false, detail: '0 issue-worker comments, wanted exactly 1' }], cleanupErrors: ['issue o/x#1: HTTP 403'] }] },
   ];
   const text = renderSummary(results, { runId: 'r9', owner: 'o', pins: { public: 'v1.8.0' } });
-  assert.match(text, /## Concierge end-to-end run r9/);
+  assert.match(text, /## Issue Concierge end-to-end run r9/);
   assert.match(text, /1 of 2 scenarios passed.*public pair pinned at v1\.8\.0/);
   assert.match(text, /\| a \| public \| pass \| 1 \| 61 s \| \[e2e-lib#3\]\(https:\/\/github.com\/o\/e2e-lib\/issues\/3\) \|/);
   assert.match(text, /### b \(private\): fail\n- step 1 wait: \*\*one analysis\*\*: 0 issue-worker comments, wanted exactly 1/);

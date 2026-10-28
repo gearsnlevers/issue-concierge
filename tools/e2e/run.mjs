@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// End-to-end tests of the Repo Concierge. Each scenario (tools/e2e/scenarios/*.json) files a mock enhancement in a
+// End-to-end tests of the Issue Concierge. Each scenario (tools/e2e/scenarios/*.json) files a mock enhancement in a
 // sandbox repository, lets the real gates run on it, and asserts what the design promises: the labels and comments the
 // gates leave, how the issue ends, that no run failed. Every scenario stops at a hold or at an early outcome, so no code
 // is ever written and no pull request merged. See docs/e2e.md.
@@ -328,7 +328,7 @@ export async function runSuite({ scenarios, profiles, ctx }) {
 export function renderSummary(results, meta) {
   const failed = results.filter((r) => r.status !== 'pass');
   const lines = [
-    `## Concierge end-to-end run ${meta.runId}`,
+    `## Issue Concierge end-to-end run ${meta.runId}`,
     '',
     `${results.length - failed.length} of ${results.length} scenarios passed${results.some((r) => r.flaky) ? ` (${results.filter((r) => r.flaky).length} only on a second attempt)` : ''}. Sandbox: ${meta.owner}. ${Object.entries(meta.pins ?? {}).map(([p, v]) => `${p} pair pinned at ${v}`).join('; ')}.`,
     '',

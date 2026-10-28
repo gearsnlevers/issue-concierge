@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Renders the end-to-end sandbox template (tools/e2e/sandbox/<role>) into a directory, so a sandbox repository can be
-// seeded, or reseeded, from the Repo Concierge itself. The template holds one half of a split project: `lib` computes,
+// seeded, or reseeded, from the Issue Concierge itself. The template holds one half of a split project: `lib` computes,
 // `app` calls it and prints. Placeholders are {{name}}, {{this}}, {{other}}, {{other_name}} and {{secret}}.
 // Files that are in the directory but not in the template are left alone; files that are in both are overwritten.
 // No dependencies. Usage:

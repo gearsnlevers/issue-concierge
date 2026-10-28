@@ -1,4 +1,4 @@
-// Reporter notify for Repo Concierge.
+// Reporter notify for Issue Concierge.
 //
 // Deterministic: no LLM. The person who reported the ORIGINAL issue is not a participant of the
 // linked (canonical) issue that the issue worker opens in a related repository, so GitHub never

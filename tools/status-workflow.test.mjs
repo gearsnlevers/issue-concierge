@@ -16,7 +16,7 @@ const code = workflow.split('\n').filter((l) => !/^\s*#/.test(l)).join('\n');
 const aw = read('aw.yml');
 
 test('it is the maintainer\'s view, named in the sidebar order, and can be started by hand', () => {
-  assert.match(code, /^name: "Concierge 5a ▸ Status"$/m);
+  assert.match(code, /^name: "Issue Concierge 5a ▸ Status"$/m);
   assert.match(code, /^  workflow_dispatch:\n    inputs:\n      dry_run:\n        description: 'Only print the page and write nothing'/m);
 });
 
@@ -87,7 +87,7 @@ test('the status issue is invisible to the gates: opened by the bot and marked w
 test('the docs, the record and the checklist say the same', () => {
   const design = read('docs/multi-phase-design.md');
   assert.match(design, /^## The maintainer's view$/m);
-  assert.match(design, /\| `Concierge 5a ▸ Status` \| when a label that matters changes, on a comment, hourly, and on demand; a plain workflow, no model \|/);
+  assert.match(design, /\| `Issue Concierge 5a ▸ Status` \| when a label that matters changes, on a comment, hourly, and on demand; a plain workflow, no model \|/);
   assert.match(read('docs/deployment.md'), /^### Status issue$/m);
   assert.match(read('docs/deployment.md'), /- \[ \] Status issue installed \(`status\.yml`, `status-issue\.mjs`, `issue-concierge-settings\.mjs` and `issue-concierge-state\.mjs`; the updater does it\)/);
   assert.match(read('docs/deployment.md'), /\| `settings\.yml` \| No \|/);

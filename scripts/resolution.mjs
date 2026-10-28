@@ -1,4 +1,4 @@
-// Resolution notice for Repo Concierge.
+// Resolution notice for Issue Concierge.
 //
 // Deterministic: no LLM. When an issue is closed because a pull request merged, the reporter should read how it
 // was resolved, in plain words, where they read: on the issue. A model used to post one fixed sentence ("Fixed in

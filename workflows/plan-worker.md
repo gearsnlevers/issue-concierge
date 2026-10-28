@@ -1,5 +1,5 @@
 ---
-name: "Concierge 2a Plan Worker"
+name: "Issue Concierge 2a Plan Worker"
 description: |
   Plan gate worker. Produces a short, cheap, rough plan used only for classification.
   The plan comment is identified by the gh-aw-workflow-call-id marker that gh-aw appends to it.

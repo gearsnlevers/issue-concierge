@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Weekly currency check for Repo Concierge itself (this file is not delivered to deployments).
+// Weekly currency check for Issue Concierge itself (this file is not delivered to deployments).
 //
 // Dependabot cannot see two things that decide what every deployment runs: the workflow files the
 // Concierge delivers (they live in workflows/, and Dependabot only reads .github/workflows/), and the
@@ -114,7 +114,7 @@ export function renderIssue({ behind, unknown }) {
   const rows = behind.map((b) => `| ${b.name} | ${b.current} | ${b.latest} | ${b.level} | ${b.files.map((f) => `\`${f}\``).join(', ')} |`);
   const lines = [
     MARKER,
-    'These pins in Repo Concierge are behind the latest release. The workflows in `workflows/` are delivered to every deployment, so a deployment that runs Dependabot will find the stale pins first and propose edits to files the Concierge owns. Bumping them here, testing and releasing is how they reach the deployments. A deployment decides for itself what to do with Dependabot; this repository does not configure it.',
+    'These pins in Issue Concierge are behind the latest release. The workflows in `workflows/` are delivered to every deployment, so a deployment that runs Dependabot will find the stale pins first and propose edits to files the Concierge owns. Bumping them here, testing and releasing is how they reach the deployments. A deployment decides for itself what to do with Dependabot; this repository does not configure it.',
     '',
     '| Pin | Current | Latest | Behind | Where |',
     '|---|---|---|---|---|',

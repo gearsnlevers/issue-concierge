@@ -1,4 +1,4 @@
-// Deployment check for Repo Concierge.
+// Deployment check for Issue Concierge.
 //
 // Deterministic: no LLM, no network. Verifies that the compiled workflows can
 // do what .github/issue-concierge/related-repos.md promises: for every
@@ -65,7 +65,7 @@ export const GUIDANCE_FILES = ['AGENTS.md', '.github/copilot-instructions.md'];
 export function checkGuidance(exists) {
   if (GUIDANCE_FILES.some((f) => exists(f))) return [];
   return [
-    'Coding agents get no repository guidance: neither AGENTS.md nor .github/copilot-instructions.md exists (template: shared/agents.md in the Repo Concierge repository; see docs/deployment.md)',
+    'Coding agents get no repository guidance: neither AGENTS.md nor .github/copilot-instructions.md exists (template: shared/agents.md in the Issue Concierge repository; see docs/deployment.md)',
   ];
 }
 
@@ -83,7 +83,7 @@ export const DECISIONS_DIRS = ['docs/decisions', 'decisions'];
 export function checkDecisions(isDirectory) {
   if (DECISIONS_DIRS.some((d) => isDirectory(d))) return [];
   return [
-    'Design decisions are not preserved for contributors and agents: docs/decisions/ (or decisions/ at the repository root when docs/ is generated) does not exist (template: shared/decision-record.md in the Repo Concierge repository; see docs/deployment.md)',
+    'Design decisions are not preserved for contributors and agents: docs/decisions/ (or decisions/ at the repository root when docs/ is generated) does not exist (template: shared/decision-record.md in the Issue Concierge repository; see docs/deployment.md)',
   ];
 }
 

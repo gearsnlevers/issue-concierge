@@ -21,7 +21,7 @@ const design = flat(read('docs/multi-phase-design.md'));
 const deployment = flat(read('docs/deployment.md'));
 
 test('workflow: starts hourly and by hand, and by nothing that happens to an issue', () => {
-  assert.match(code, /^name: "Concierge 1e ▸ Stalled Issue Sweep"$/m);
+  assert.match(code, /^name: "Issue Concierge 1e ▸ Stalled Issue Sweep"$/m);
   assert.match(code, /^ {2}schedule:\n {4}- cron: '47 \* \* \* \*'$/m);
   assert.match(code, /^ {2}workflow_dispatch:\n {4}inputs:\n {6}issue_number:/m);
   assert.match(code, /^ {6}dry_run:\n(?: {8}.*\n)*? {8}type: boolean/m);
@@ -65,7 +65,7 @@ test('installed by the updater and documented where an operator looks', () => {
   assert.match(deployment, /\| `workflows\/stalled-issue-sweep\.yml` \| `\.github\/workflows\/stalled-issue-sweep\.yml` \|/);
   assert.match(deployment, /\| `scripts\/stalled-issue-sweep\.mjs` \| `\.github\/scripts\/stalled-issue-sweep\.mjs` \|/);
   assert.match(deployment, /\[ \] Stalled issue sweep installed/);
-  assert.match(design, /\| `Concierge 1e ▸ Stalled Issue Sweep` \| hourly, and on demand for one issue or all of them \|/);
+  assert.match(design, /\| `Issue Concierge 1e ▸ Stalled Issue Sweep` \| hourly, and on demand for one issue or all of them \|/);
   assert.match(design, /## Stalled issues/);
 });
 

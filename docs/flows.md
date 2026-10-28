@@ -1,6 +1,6 @@
 # What the Concierge does: its flows and workflows
 
-This page lists everything Repo Concierge does for a repository that runs it. A **flow** is something that can happen to an issue or a pull request, from the first comment to the release. A **workflow** is one of the GitHub Actions workflows that carry the flows out. Both are numbered, so that "flow 4" here and "scenario 10" in [e2e.md](e2e.md), which tests some of the flows live, each mean one thing.
+This page lists everything Issue Concierge does for a repository that runs it. A **flow** is something that can happen to an issue or a pull request, from the first comment to the release. A **workflow** is one of the GitHub Actions workflows that carry the flows out. Both are numbered, so that "flow 4" here and "scenario 10" in [e2e.md](e2e.md), which tests some of the flows live, each mean one thing.
 
 How it fits together: every issue goes through three gates, issue, plan and pull request. Each gate has a worker that produces something and a triage that classifies it, and a label hands the issue from one to the next ([README](../README.md#architecture), [multi-phase-design.md](multi-phase-design.md)). The Concierge only processes work from people, never merges, and never lifts a hold on its own: a maintainer does, by command or by label.
 
@@ -34,7 +34,7 @@ A workflow is either **model** (a gh-aw agent that reads, decides and writes lab
 
 ## Workflows
 
-They are named `Concierge <code> [▸ ]<Name>` so that the Actions sidebar lists them in the order they run, and `▸` marks the ones that can also be started by hand ([naming](multi-phase-design.md#workflow-names)). Each flow above lists the codes of the workflows it uses.
+They are named `Issue Concierge <code> [▸ ]<Name>` so that the Actions sidebar lists them in the order they run, and `▸` marks the ones that can also be started by hand ([naming](multi-phase-design.md#workflow-names)). Each flow above lists the codes of the workflows it uses.
 
 | Code | Name | File | Kind | Starts when | Flows |
 | ---- | ---- | ---- | ---- | ----------- | ----- |
@@ -45,7 +45,7 @@ They are named `Concierge <code> [▸ ]<Name>` so that the Actions sidebar lists
 | 1e | Stalled Issue Sweep | `stalled-issue-sweep.yml` | plain | hourly, and by hand for one issue or all | 17 |
 | 2a | Plan Worker | `plan-worker.md` | model | `issue-triage-handoff` | 1, 12 |
 | 2b | Plan Triage | `plan-triage.md` | model | `plan-worker-ready` | 1, 4, 9, 12 |
-| 2c | Plan Approval Resume | `plan-approval-resume.yml` | plain | a maintainer removes `plan-approval-required`, and by hand | 9 |
+| 2c | Approval Resume | `plan-approval-resume.yml` | plain | a maintainer removes `plan-approval-required`, and by hand | 9 |
 | 2d | Spawn Work Items | `spawn-work-items.yml` | plain | by hand, for an issue whose plan lists work in the related repository | 12 |
 | 3a | PR Worker | `pr-worker.md` | model | `plan-triage-handoff` | 1 |
 | 3b | PR Ready Signal | `pr-ready-signal.yml` | plain | the coding agent finishes, and by hand for one pull request | 1 |

@@ -18,7 +18,7 @@ const deployment = flat(read('docs/deployment.md'));
 // The link notice (2026-10-24, frodo-lib#803 to #806): the workflow starts when a linked issue is
 // created, not only when it asks for information, and only for issues that have a Reported from line.
 test('workflow: runs for a linked issue when it is opened or gets one of three labels, or by hand', () => {
-  assert.match(code, /^name: "Concierge 1d ▸ Reporter Notify"$/m);
+  assert.match(code, /^name: "Issue Concierge 1d ▸ Reporter Notify"$/m);
   assert.match(code, /^  issues:\n    types: \[opened, labeled\]$/m);
   assert.match(code, /^  workflow_dispatch:\n    inputs:\n      issue_number:/m);
   const cond = code.match(/^    if: (.+)$/m);
@@ -83,7 +83,7 @@ test('manifest and docs list the workflow and its script', () => {
   assert.match(deployment, /\| `scripts\/reporter-notify\.mjs` \| `\.github\/scripts\/reporter-notify\.mjs` \|/);
   assert.match(deployment, /It imports `janitor\.mjs` and `opt-out\.mjs`, so install those too\. It needs no secret/);
   assert.match(deployment, /confirm that one comment on the linked issue mentions the reporter and points at the request/);
-  assert.match(design, /\| `Concierge 1d ▸ Reporter Notify` \| a linked issue is opened, or `plan-approval-required`, `issue-worker-ready` or `needs-info` is applied to it/);
+  assert.match(design, /\| `Issue Concierge 1d ▸ Reporter Notify` \| a linked issue is opened, or `plan-approval-required`, `issue-worker-ready` or `needs-info` is applied to it/);
 });
 
 test('design: why a workflow and not the model, and every rule that makes the mention safe', () => {

@@ -28,7 +28,7 @@ const design = flat(read('docs/multi-phase-design.md'));
 const deployment = flat(read('docs/deployment.md'));
 
 test('workflow: started by hand and by nothing else, for one open canonical issue, with a dry run', () => {
-  assert.match(code, /^name: "Concierge 4g ▸ Route Back"$/m);
+  assert.match(code, /^name: "Issue Concierge 4g ▸ Route Back"$/m);
   assert.match(code, /^on:\n {2}workflow_dispatch:\n {4}inputs:\n {6}issue_number:\n(?: {8}.*\n)*? {8}required: true\n/m);
   assert.match(code, / {6}dry_run:\n(?: {8}.*\n)*? {8}type: boolean\n {8}default: false\n/);
   const triggers = code.match(/^on:\n((?: {2,}.*\n|\n)+)/m)[1];
@@ -76,7 +76,7 @@ test('installed by the updater and documented where an operator looks', () => {
   assert.match(deployment, /\| `workflows\/route-back\.yml` \| `\.github\/workflows\/route-back\.yml` \|/);
   assert.match(deployment, /\| `scripts\/route-back\.mjs` \| `\.github\/scripts\/route-back\.mjs` \|/);
   assert.match(deployment, /\[ \] Route back installed where there is a `related-repos\.md`/);
-  assert.match(design, /\| `Concierge 4g ▸ Route Back` \|/);
+  assert.match(design, /\| `Issue Concierge 4g ▸ Route Back` \|/);
   assert.match(design, /## Routing back/);
   assert.match(design, /\*\*What travels with a link\.\*\*/);
 });

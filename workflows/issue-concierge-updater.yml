@@ -8,9 +8,9 @@
 #
 # The secret is ISSUE_CONCIERGE_TOKEN. It was called CONCIERGE_TOKEN, which still works.
 #
-# Install: this file is delivered by Repo Concierge itself. For the first
+# Install: this file is delivered by Issue Concierge itself. For the first
 # adoption follow docs/updater.md.
-name: "Concierge 4e ▸ Updater"
+name: "Issue Concierge 4e ▸ Updater"
 
 on:
   schedule:

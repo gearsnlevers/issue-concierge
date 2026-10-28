@@ -16,7 +16,7 @@
 # scripts/janitor.mjs to .github/scripts/janitor.mjs (it imports opt-out.mjs, so install that too). No secret is needed: removing a label
 # starts nothing, and deleting a run needs only `actions: write` on the default token (the sweep
 # also reads pull requests, hence `pull-requests: read` on its job only).
-name: "Concierge 4a ▸ Janitor"
+name: "Issue Concierge 4a ▸ Janitor"
 
 on:
   issues:
