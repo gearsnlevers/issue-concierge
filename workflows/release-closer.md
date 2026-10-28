@@ -1,5 +1,5 @@
 ---
-name: "Concierge 4d Release Closer"
+name: "Issue Concierge 4d Release Closer"
 description: |
   When a release is published, mark included issues as released.
 # The release notes are written for people and name only the changes they describe, so a fix that has no

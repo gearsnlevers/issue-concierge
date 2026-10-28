@@ -2,7 +2,7 @@
 
 ## Purpose
 
-{{name}} is a small sandbox library that computes data: it flattens a tree of nodes into a list and sorts a list of widgets. A command line app calls it. It exists to test the Repo Concierge and is not used for anything else.
+{{name}} is a small sandbox library that computes data: it flattens a tree of nodes into a list and sorts a list of widgets. A command line app calls it. It exists to test the Issue Concierge and is not used for anything else.
 
 ## In scope
 

@@ -1,5 +1,5 @@
 ---
-name: "Concierge 2b Plan Triage"
+name: "Issue Concierge 2b Plan Triage"
 description: |
   Plan gate triage. Assigns complexity and risk.
   Adds plan-approval-required for high complexity or high risk; does not hand off while that label is present.

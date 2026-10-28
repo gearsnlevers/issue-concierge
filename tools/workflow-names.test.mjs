@@ -5,13 +5,13 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 // The display names of the workflows are a convention, and the Actions sidebar sorts by them:
-//   Concierge <phase digit><step letter> [▸ ]<Name>
+//   Issue Concierge <phase digit><step letter> [▸ ]<Name>
 // The code decides the order (pipeline order), the marker says "can be run by hand" and must
 // not lie. See docs/multi-phase-design.md, "Workflow names".
 
 const DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'workflows');
 const MARKER = '▸';
-const MAX_LENGTH = 40; // the sidebar truncates long names; the longest today is 35
+const MAX_LENGTH = 40; // the sidebar truncates long names; three names reach 40 today, so a new one has to be shorter
 
 /** Parse a workflow definition: its display name and whether it has a manual trigger. */
 export function inspect(file) {
@@ -26,14 +26,14 @@ export function inspect(file) {
 
 const files = fs.readdirSync(DIR).filter((f) => /\.(yml|md)$/.test(f)).sort();
 const flows = files.map(inspect);
-const PATTERN = /^Concierge ([1-9])([a-z]) (▸ )?(\S.*)$/;
+const PATTERN = /^Issue Concierge ([1-9])([a-z]) (▸ )?(\S.*)$/;
 
 test('every workflow definition has a display name', () => {
   assert.ok(flows.length >= 15, `expected the harness workflows, found ${flows.length}`);
   for (const f of flows) assert.ok(f.name, `${f.file} has no name`);
 });
 
-test('every name follows "Concierge <code> [▸ ]<Name>" and stays short enough for the sidebar', () => {
+test('every name follows "Issue Concierge <code> [▸ ]<Name>" and stays short enough for the sidebar', () => {
   for (const f of flows) {
     assert.match(f.name, PATTERN, `${f.file}: "${f.name}"`);
     assert.ok(f.name.length <= MAX_LENGTH, `${f.file}: "${f.name}" is ${f.name.length} characters (maximum ${MAX_LENGTH})`);
@@ -77,11 +77,11 @@ test('step letters in each phase run a, b, c without gaps', () => {
 test('inspect reads quoted and unquoted names and ignores a commented-out trigger', () => {
   const dir = fs.mkdtempSync(path.join(fs.realpathSync(process.env.TMPDIR || '/tmp'), 'names-'));
   const write = (n, c) => fs.writeFileSync(path.join(dir, n), c);
-  write('a.yml', '# workflow_dispatch: mentioned only in a comment\nname: "Concierge 1a ▸ X"\non:\n  workflow_dispatch:\n');
-  write('b.yml', "# workflow_dispatch:\nname: 'Concierge 1b Y'\non:\n  issues:\n");
+  write('a.yml', '# workflow_dispatch: mentioned only in a comment\nname: "Issue Concierge 1a ▸ X"\non:\n  workflow_dispatch:\n');
+  write('b.yml', "# workflow_dispatch:\nname: 'Issue Concierge 1b Y'\non:\n  issues:\n");
   const real = DIR;
   // inspect() reads from DIR; point the check at the temp files through a relative path
   const rel = (n) => path.relative(real, path.join(dir, n));
-  assert.deepEqual(inspect(rel('a.yml')), { file: rel('a.yml'), name: 'Concierge 1a ▸ X', dispatchable: true });
-  assert.deepEqual(inspect(rel('b.yml')), { file: rel('b.yml'), name: 'Concierge 1b Y', dispatchable: false });
+  assert.deepEqual(inspect(rel('a.yml')), { file: rel('a.yml'), name: 'Issue Concierge 1a ▸ X', dispatchable: true });
+  assert.deepEqual(inspect(rel('b.yml')), { file: rel('b.yml'), name: 'Issue Concierge 1b Y', dispatchable: false });
 });

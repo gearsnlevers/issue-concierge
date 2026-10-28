@@ -1,4 +1,4 @@
-# Concierge commands. Plain GitHub Actions, no LLM. See docs/multi-phase-design.md, "The maintainer's view".
+# Issue Concierge commands. Plain GitHub Actions, no LLM. See docs/multi-phase-design.md, "The maintainer's view".
 #
 # A maintainer decides what becomes of an issue that waits for them by commenting a command: /accept, /decline,
 # /approve, /replan or /retry (/help lists them). The workflow also keeps one comment on such an issue, the options
@@ -22,7 +22,7 @@
 # install those too).
 # Needs SIGNAL_TOKEN: a label added or an issue closed with the workflow token starts no workflow, and handing an issue
 # on is what starts the next gate.
-name: "Concierge 5b ▸ Commands"
+name: "Issue Concierge 5b ▸ Commands"
 
 on:
   issue_comment:

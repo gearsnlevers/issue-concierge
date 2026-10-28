@@ -6,7 +6,7 @@
 # Install: copy this file to .github/workflows/plan-approval-resume.yml and
 # scripts/plan-approval-resume.mjs to .github/scripts/plan-approval-resume.mjs (it imports
 # janitor.mjs and opt-out.mjs, so install those too).
-name: "Concierge 2c ▸ Plan Approval Resume"
+name: "Issue Concierge 2c ▸ Approval Resume"
 
 on:
   issues:

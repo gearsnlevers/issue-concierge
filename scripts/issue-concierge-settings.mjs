@@ -1,4 +1,4 @@
-// The repository's own settings for Repo Concierge.
+// The repository's own settings for Issue Concierge.
 //
 // `.github/issue-concierge/settings.yml` is owned by the repository, like `scope.md`: reviewed by pull request,
 // read from the default branch, and every setting has a default, so a missing file or a missing line changes

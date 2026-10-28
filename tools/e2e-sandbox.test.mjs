@@ -56,7 +56,7 @@ for (const pair of PAIRS) {
       for (const heading of ['## Commands', '## Boundaries', '## Layers', '## Decisions', '## Component rules']) {
         assert.ok(text.includes(heading), `${dir} AGENTS.md lacks ${heading}`);
       }
-      assert.match(text, /Never edit the Repo Concierge's files/);
+      assert.match(text, /Never edit the Issue Concierge's files/);
     }
   });
 

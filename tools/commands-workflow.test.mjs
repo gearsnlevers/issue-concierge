@@ -16,7 +16,7 @@ const aw = read('aw.yml');
 const requirements = JSON.parse(read('requirements.json'));
 
 test('it is named in the sidebar order after the status workflow, and can be started by hand for one issue', () => {
-  assert.match(code, /^name: "Concierge 5b ▸ Commands"$/m);
+  assert.match(code, /^name: "Issue Concierge 5b ▸ Commands"$/m);
   assert.match(code, /^  workflow_dispatch:\n    inputs:\n      issue_number:\n        description: 'Bring the options comment of one issue up to date \(leave empty for every issue that waits\)'\n        required: false\n        type: string/m);
 });
 
@@ -95,7 +95,7 @@ test('issue triage leaves a declined issue alone, as it leaves a held one', () =
 test('the docs, the record and the checklist say the same', () => {
   const design = read('docs/multi-phase-design.md');
   assert.match(design, /^### Commands and the options comment$/m);
-  assert.match(design, /\| `Concierge 5b ▸ Commands` \| a comment, a label that changes what waits for a maintainer, an issue closing or reopening, hourly, and on demand for one issue; a plain workflow, no model \|/);
+  assert.match(design, /\| `Issue Concierge 5b ▸ Commands` \| a comment, a label that changes what waits for a maintainer, an issue closing or reopening, hourly, and on demand for one issue; a plain workflow, no model \|/);
   assert.match(design, /\| the request changes what exists \(`needs-decision`\) \| `\/accept`, `\/decline \[reason\]` \|/);
   assert.match(design, /\| a classified plan waits for approval \(`plan-approval-required` with a complexity and a risk label\) \| `\/approve`, `\/replan \[what to change\]`, `\/decline \[reason\]` \|/);
   assert.match(read('docs/deployment.md'), /^### Commands$/m);

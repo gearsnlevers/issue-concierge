@@ -1,6 +1,6 @@
-# Deploying Repo Concierge
+# Deploying Issue Concierge
 
-Step-by-step instructions for installing Repo Concierge in a consuming repository.
+Step-by-step instructions for installing Issue Concierge in a consuming repository.
 
 ## Prerequisites
 

@@ -1,6 +1,6 @@
 # issue-concierge: instructions for coding agents
 
-Repo Concierge is an issue-to-release harness for GitHub, built on GitHub Agentic Workflows (`gh-aw`): gated triage, planning and tiered fixing, dependency gating and release tracking. Repositories ("deployments") pin a released version and an updater workflow keeps them on it. This repository holds the sources of the gates, the plain workflows and scripts that support them, the release pipeline and its tests. Read [README.md](README.md) first, then [docs/multi-phase-design.md](docs/multi-phase-design.md) (the gates, labels and the incidents behind each rule).
+Issue Concierge is an issue-to-release harness for GitHub, built on GitHub Agentic Workflows (`gh-aw`): gated triage, planning and tiered fixing, dependency gating and release tracking. Repositories ("deployments") pin a released version and an updater workflow keeps them on it. This repository holds the sources of the gates, the plain workflows and scripts that support them, the release pipeline and its tests. Read [README.md](README.md) first, then [docs/multi-phase-design.md](docs/multi-phase-design.md) (the gates, labels and the incidents behind each rule).
 
 ## Layout
 
@@ -22,7 +22,7 @@ Repo Concierge is an issue-to-release harness for GitHub, built on GitHub Agenti
 
 - **Change a gate with the skill.** [change-a-gate-workflow](.claude/skills/change-a-gate-workflow/SKILL.md) is the procedure: edit the source, never a lock file or a deployment's copy; put a guarantee in an `if:` or a script, not in a prompt; pin the behaviour with a test and prove the test fails without the change; update the docs.
 - **Stop and ask a maintainer** before a change that lets a gate merge, approve a run or lift a hold; that makes a writing gate read untrusted text, enables a shell, adds `min-integrity: none` or widens a safe-output cap; that adds or changes `roles:`; or that needs a new required secret, label or setting in every deployment (that makes the next release a major).
-- **A new deployable file goes in `aw.yml`**, a new label in `requirements.json` and the table in `docs/deployment.md`, and a new workflow takes the next free `Concierge <phase><step>` name. Tests refuse each omission.
+- **A new deployable file goes in `aw.yml`**, a new label in `requirements.json` and the table in `docs/deployment.md`, and a new workflow takes the next free `Issue Concierge <phase><step>` name. Tests refuse each omission.
 - **Do not edit `CHANGELOG.md` or the version in `package.json`.** The release workflow writes both. Do not cut a release: [cut-an-issue-concierge-release](.claude/skills/cut-an-issue-concierge-release/SKILL.md) is for a maintainer.
 - **A maintainer reads every change to the release pipeline and the updater** (`.github/workflows/release.yml`, `workflows/issue-concierge-updater.yml`, `scripts/issue-concierge-updater.mjs`). Propose, do not decide.
 - **Never approve or delete a held run, remove a hold, or merge agent work.** A gate behaviour that has not run live is "not yet seen live" in a pull request, never "works".

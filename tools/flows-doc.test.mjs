@@ -59,7 +59,7 @@ test('every workflow file has one row, with its own code and name, its kind, and
   assert.deepEqual(workflows.map((w) => w.file).sort(), onDisk, 'the table lists exactly the files of workflows/');
   for (const w of workflows) {
     const name = read(`workflows/${w.file}`).match(/^name: "?(.*?)"?\s*$/m)[1];
-    assert.equal(`Concierge ${w.code} ${w.name}`.replace(' ▸ ', ' '), name.replace(' ▸ ', ' '), `${w.file}: code and name`);
+    assert.equal(`Issue Concierge ${w.code} ${w.name}`.replace(' ▸ ', ' '), name.replace(' ▸ ', ' '), `${w.file}: code and name`);
     assert.equal(name.includes('▸'), /by hand/.test(w.when), `${w.file}: "▸" in the name means that it can be started by hand, and the row must say so`);
     assert.equal(w.kind, w.file.endsWith('.md') ? 'model' : 'plain', `${w.file}: kind`);
   }

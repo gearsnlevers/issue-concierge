@@ -1,4 +1,4 @@
-# Repo Concierge's own workflow (not delivered to deployments). Weekly, and by hand.
+# Issue Concierge's own workflow (not delivered to deployments). Weekly, and by hand.
 # Compares the actions pinned in workflows/ and .github/workflows/ and the gh-aw version in
 # requirements.json with their latest releases, and keeps one issue listing what is behind.
 name: Currency check

@@ -1,5 +1,5 @@
 manifest-version: "1"
-name: Repo Concierge
+name: Issue Concierge
 description: Agentic issue-to-release harness for GitHub: gated triage, planning and tiered fixing, dependency gating and release tracking.
 emoji: "🤖"
 min-version: v0.40.0

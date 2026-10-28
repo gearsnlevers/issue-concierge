@@ -18,7 +18,7 @@
 # Install: copy this file to .github/workflows/reporter-notify.yml and
 # scripts/reporter-notify.mjs to .github/scripts/reporter-notify.mjs (it imports janitor.mjs
 # and opt-out.mjs, so install all three together).
-name: "Concierge 1d ▸ Reporter Notify"
+name: "Issue Concierge 1d ▸ Reporter Notify"
 
 on:
   issues:

@@ -27,37 +27,37 @@ Two independent axes are applied by the triage agents:
 
 ## Workflow names
 
-The Actions sidebar sorts workflows by display name, so the names carry the order. They are all in the form `Concierge <phase><step> [▸ ]<Name>`:
+The Actions sidebar sorts workflows by display name, so the names carry the order. They are all in the form `Issue Concierge <phase><step> [▸ ]<Name>`:
 
-- **`Concierge`** groups the harness together, ahead of the repository's own workflows.
+- **`Issue Concierge`** names the product, kind first, because a repository can run more than one kind of concierge: each would have its own prefix, and the workflows of each stay together in the sidebar. The prefix does not put the harness ahead of the repository's own workflows; it only keeps them side by side. Before the product took its name the prefix was `Concierge`, and runs from that time keep the old name in the run history.
 - **The code** (a digit for the phase, a letter for the step) puts the workflows in the order they run. Workers and triages come first in each phase; the helpers that serve a phase sit after them; phase 4 holds what is not tied to one gate.
 - **`▸`** marks a workflow that can be started by hand (it has `workflow_dispatch`). Workflows that run only on events carry no marker.
 
 | Name | Runs when |
 |------|-----------|
-| `Concierge 1a ▸ Issue Worker` | an issue is opened, edited or commented (and by hand for one issue) |
-| `Concierge 1b Issue Triage` | `issue-worker-ready` |
-| `Concierge 1c ▸ Dependency Watch` | hourly, on dependency events, and on demand |
-| `Concierge 1d ▸ Reporter Notify` | a linked issue is opened, or `plan-approval-required`, `issue-worker-ready` or `needs-info` is applied to it (and by hand for one issue) |
-| `Concierge 1e ▸ Stalled Issue Sweep` | hourly, and on demand for one issue or all of them |
-| `Concierge 2a Plan Worker` | `issue-triage-handoff` |
-| `Concierge 2b Plan Triage` | `plan-worker-ready` |
-| `Concierge 2c ▸ Plan Approval Resume` | a maintainer removes `plan-approval-required` (and by hand) |
-| `Concierge 2d ▸ Spawn Work Items` | by hand, for an issue whose plan lists work in the related repository; a plain workflow, no model |
-| `Concierge 3a PR Worker` | `plan-triage-handoff` |
-| `Concierge 3b ▸ PR Ready Signal` | the coding agent finishes (and by hand for one pull request) |
-| `Concierge 3c PR Triage` | `pr-worker-ready` |
-| `Concierge 4a ▸ Janitor` | after gate labels change, on assignment and on close, hourly, and on demand |
-| `Concierge 4b ▸ Related Repo Closer` | a canonical issue (it carries `original-in-related-repo`) closes, and by hand for one issue; a plain workflow, no model |
-| `Concierge 4c ▸ Waiting for Release` | an issue closes because a pull request merged, and by hand for one issue; a plain workflow, no model (an issue closed by hand, as not planned or as a duplicate gets nothing) |
-| `Concierge 4g ▸ Route Back` | by hand, for the canonical issue of a link whose work belongs in the original's repository after all; a plain workflow, no model |
-| `Concierge 4d Release Closer` | a release is published |
-| `Concierge 4e ▸ Updater` | daily, and on demand |
-| `Concierge 4f ▸ Check Deployment` | on pull requests, and on demand |
-| `Concierge 5a ▸ Status` | when a label that matters changes, on a comment, hourly, and on demand; a plain workflow, no model |
-| `Concierge 5b ▸ Commands` | a comment, a label that changes what waits for a maintainer, an issue closing or reopening, hourly, and on demand for one issue; a plain workflow, no model |
+| `Issue Concierge 1a ▸ Issue Worker` | an issue is opened, edited or commented (and by hand for one issue) |
+| `Issue Concierge 1b Issue Triage` | `issue-worker-ready` |
+| `Issue Concierge 1c ▸ Dependency Watch` | hourly, on dependency events, and on demand |
+| `Issue Concierge 1d ▸ Reporter Notify` | a linked issue is opened, or `plan-approval-required`, `issue-worker-ready` or `needs-info` is applied to it (and by hand for one issue) |
+| `Issue Concierge 1e ▸ Stalled Issue Sweep` | hourly, and on demand for one issue or all of them |
+| `Issue Concierge 2a Plan Worker` | `issue-triage-handoff` |
+| `Issue Concierge 2b Plan Triage` | `plan-worker-ready` |
+| `Issue Concierge 2c ▸ Approval Resume` | a maintainer removes `plan-approval-required` (and by hand) |
+| `Issue Concierge 2d ▸ Spawn Work Items` | by hand, for an issue whose plan lists work in the related repository; a plain workflow, no model |
+| `Issue Concierge 3a PR Worker` | `plan-triage-handoff` |
+| `Issue Concierge 3b ▸ PR Ready Signal` | the coding agent finishes (and by hand for one pull request) |
+| `Issue Concierge 3c PR Triage` | `pr-worker-ready` |
+| `Issue Concierge 4a ▸ Janitor` | after gate labels change, on assignment and on close, hourly, and on demand |
+| `Issue Concierge 4b ▸ Related Repo Closer` | a canonical issue (it carries `original-in-related-repo`) closes, and by hand for one issue; a plain workflow, no model |
+| `Issue Concierge 4c ▸ Waiting for Release` | an issue closes because a pull request merged, and by hand for one issue; a plain workflow, no model (an issue closed by hand, as not planned or as a duplicate gets nothing) |
+| `Issue Concierge 4g ▸ Route Back` | by hand, for the canonical issue of a link whose work belongs in the original's repository after all; a plain workflow, no model |
+| `Issue Concierge 4d Release Closer` | a release is published |
+| `Issue Concierge 4e ▸ Updater` | daily, and on demand |
+| `Issue Concierge 4f ▸ Check Deployment` | on pull requests, and on demand |
+| `Issue Concierge 5a ▸ Status` | when a label that matters changes, on a comment, hourly, and on demand; a plain workflow, no model |
+| `Issue Concierge 5b ▸ Commands` | a comment, a label that changes what waits for a maintainer, an issue closing or reopening, hourly, and on demand for one issue; a plain workflow, no model |
 
-The ordering holds whether the sidebar counts punctuation or ignores it, because the code is unique and sits before the marker. Names stay within about 40 characters (the longest is 35); longer ones truncate in the sidebar.
+The ordering holds whether the sidebar counts punctuation or ignores it, because the code is unique and sits before the marker. Names stay within 40 characters (three reach it, so a new name has to be shorter); longer ones truncate in the sidebar.
 
 To add a workflow, give it the next free step letter in its phase (or a new phase digit), add `▸` only if it has `workflow_dispatch`, and set the name in the frontmatter (`name:`) of a gh-aw definition or at the top of a plain workflow. `tools/workflow-names.test.mjs` checks the format, that codes are unique, that the markers match what each workflow actually allows, and that sorting the names sorts the pipeline. File names are separate: they keep their stems (`issue-worker`, `janitor`) so reordering the display names never means renaming files.
 
@@ -126,7 +126,7 @@ A gate hands on by a label, and the label event starts the next gate. gh-aw send
 
 **The rule.** The description of a pull request that closes an issue has a section `## Resolution`, written for the person who reported the issue: what was wrong, what changed, what they will see now and how to use it. Plain language, three to eight sentences, no labels, gates, workflows or decision numbers; a record is cited by its full URL, as everywhere ([record 0029](https://github.com/gearsnlevers/issue-concierge/blob/main/docs/decisions/0029-the-reporter-is-told-how-an-issue-was-resolved.md)). The PR worker tells the coding agent to write it, PR triage reports on it in its comment (a line starting "Resolution:", advisory like the other two lines), and a maintainer or a person's own pull request follows the same rule.
 
-**What `Concierge 4c ▸ Waiting for Release` does.** It is a plain workflow, no model. When an issue closes because a pull request merged, it reads the pull request and posts one comment on the issue:
+**What `Issue Concierge 4c ▸ Waiting for Release` does.** It is a plain workflow, no model. When an issue closes because a pull request merged, it reads the pull request and posts one comment on the issue:
 - First line `Fixed in #N.` (or `Fixed in owner/repo#N.` for a pull request in another repository). The release closer reads that line, and only when `github-actions[bot]` wrote it.
 - The `## Resolution` section, between hidden markers so that the text can be found again, then one line about the release: it will be in the next release and a comment names it, or, when a release published after the merge already contains the merge commit (decided by git, [record 0024](https://github.com/gearsnlevers/issue-concierge/blob/main/docs/decisions/0024-a-release-contains-a-fix-when-git-says-so-not-when-the-notes-do.md)), which one. A hidden marker names the pull request, so a run that starts twice posts once.
 - The label `waiting-for-release`, or `released` for a fix a release already contains, before the comment: a run that stopped half way is finished by the next one.
@@ -134,7 +134,7 @@ A gate hands on by a label, and the label event starts the next gate. gh-aw send
 
 **Trust.** The section is text from a pull request, and anyone can write one. It is used only when a person merged the pull request, because that merge is the maintainer's look at the description ([record 0005](https://github.com/gearsnlevers/issue-concierge/blob/main/docs/decisions/0005-a-maintainer-holds-the-levers-of-the-pipeline.md)), and no model reads or writes it, so there is nothing to inject into. The copy removes HTML and comments, images and `@` mentions (a mention in a bot's comment would notify a stranger; it is put in a code span) and is cut at a paragraph or sentence end at 1,500 characters, with a link to the pull request for the rest. The comment on the issue is the copy that counts: a description edited after the merge changes nothing already posted.
 
-**The original issue.** `Concierge 4b ▸ Related Repo Closer` puts the same text in its comment on the original, in the other repository, before it waits for a release or closes: the text the harness posted on the canonical issue, or, because both workflows start on the same close and the first may not have posted yet, the same text read from the pull request. Bare references (`#12`) name issues of the canonical repository, so they are qualified (`owner/repo#12`) for the original. If the text cannot be read, nothing is written: an original is never closed without its explanation because of a failed read.
+**The original issue.** `Issue Concierge 4b ▸ Related Repo Closer` puts the same text in its comment on the original, in the other repository, before it waits for a release or closes: the text the harness posted on the canonical issue, or, because both workflows start on the same close and the first may not have posted yet, the same text read from the pull request. Bare references (`#12`) name issues of the canonical repository, so they are qualified (`owner/repo#12`) for the original. If the text cannot be read, nothing is written: an original is never closed without its explanation because of a failed read.
 
 **Limits, on purpose.** The coding agent cannot edit the description of its own pull request after it opened it, so the section is written from the plan, and a maintainer fixes it before merging; PR triage's line says what it found. One pull request that closes several issues gives each the same text. A close by hand, as not planned or as a duplicate, and a close by a commit get nothing from the workflow: a maintainer says what there is to say, and the release closer's `Included in vX.` still follows for the ones that wait.
 
@@ -257,7 +257,7 @@ The PR gate worker only routes to the coding agent, so it uses the small model l
 
 The issue worker can end without signalling. Its run can reach the turn limit before it posts (frodo-lib#803, 2026-10-24: ten turns on reading the code, `429 Maximum LLM invocations exceeded (10 / 10)`, no comment, no label), or it can post and ask for `issue-worker-ready` with a confidence below HIGH, which gh-aw holds back as a suggestion (`Successfully added 0 labels ... Suggested 1 labels`), so no label event starts issue triage. The issue then sits outside the pipeline with nothing saying so. A routed issue is the worst case: it starts held, so a missing triage looks like the hold doing its job, and removing the hold does nothing because `plan-approval-resume` rightly finds no classification to approve. A restart through the issue worker is no way back: it writes another analysis (frodo-lib#802 got one).
 
-`Concierge 1e ▸ Stalled Issue Sweep` (plain Actions, no LLM, [decision 0030](decisions/0030-a-stalled-issue-is-given-the-gate-label-again-by-code.md)) does what a maintainer did by hand: every hour it gives `issue-worker-ready` again, with `SIGNAL_TOKEN`, to an open issue that has an analysis of this repository's issue worker and no evidence of being past issue triage. It removes the label first when it is there, because re-adding a label that is there starts nothing; issue triage then reads the analysis that is already there and writes no second one.
+`Issue Concierge 1e ▸ Stalled Issue Sweep` (plain Actions, no LLM, [decision 0030](decisions/0030-a-stalled-issue-is-given-the-gate-label-again-by-code.md)) does what a maintainer did by hand: every hour it gives `issue-worker-ready` again, with `SIGNAL_TOKEN`, to an open issue that has an analysis of this repository's issue worker and no evidence of being past issue triage. It removes the label first when it is there, because re-adding a label that is there starts nothing; issue triage then reads the analysis that is already there and writes no second one.
 
 - **Evidence of being past triage** is the janitor's list, without the hold: an outcome of issue triage (`TRIAGE_OUTCOMES`), `plan-worker-ready`, `plan-triage-handoff`, a `complexity/*` or `risk/*` label, or the coding agent as assignee, and also a comment of a later gate (issue triage, plan worker, plan triage, PR worker or PR triage of this repository; the marker gh-aw appends names the gate). The comment matters because the labels can vanish: on an issue that carries the hold the janitor takes `issue-triage-handoff` and `plan-worker-ready` away within seconds, and plan triage's classification comes only after the plan, so for a few minutes on frodo-lib#803 (2026-10-26, found by a dry run of the sweep) a plan comment was the only trace that the gates were running. `plan-approval-required` is not evidence, which is the difference to the janitor: it reads the hold as "the plan is decided" and removes `issue-worker-ready` within seconds, harmlessly, because the label event has already started the run.
 - **It leaves alone** pull requests, closed issues, bot-authored issues, originals marked `related-repo` (planning happens on the linked issue), issues that carry `no-auto-processing`, issues an open pull request closes (the worker adds no gate label for those on purpose), and issues without an analysis of this repository's worker (the other repository's worker writes the first comment of a canonical issue, and its marker names the other repository).
@@ -273,7 +273,7 @@ The labels say where one issue is. A maintainer asks other questions: what waits
 
 ### The status issue
 
-`Concierge 5a ▸ Status` (plain Actions, no model) keeps one pinned issue, "Concierge status". The bot opens it, it carries `no-auto-processing`, and every gate skips both, so the Concierge never acts on it. The workflow runs when a label that matters changes, when someone comments, every hour and by hand, one run behind the other, and it edits the page only when its content changed. The page, in order:
+`Issue Concierge 5a ▸ Status` (plain Actions, no model) keeps one pinned issue, "Concierge status". The bot opens it, it carries `no-auto-processing`, and every gate skips both, so the Concierge never acts on it. The workflow runs when a label that matters changes, when someone comments, every hour and by hand, one run behind the other, and it edits the page only when its content changed. The page, in order:
 
 - **Needs you.** The issues whose next move is a maintainer's, each queue with a count, the oldest waiting first and how long: held because the request changes what exists (`needs-decision`), held because it may not fit the scope (`scope-review`), and a plan waiting for approval (`plan-approval-required`). Whose move it is comes from the labels, in one place (`scripts/issue-concierge-state.mjs`).
 - **Reporter replies waiting.** An open issue whose latest comment is from someone who is not a maintainer (`OWNER`, `MEMBER`, `COLLABORATOR`) and not a bot, from the last `reporter-replies-days` days. It includes opted-out issues, marked as such, because nobody else is watching them. It shows the login and a link and never the text of the comment.
@@ -290,7 +290,7 @@ What comes from outside is made safe: a title or a login goes into the page with
 
 ### Commands and the options comment
 
-An issue that waits for a maintainer carries the command a maintainer needs next, in the issue itself ([decision 0036](decisions/0036-a-maintainer-decides-by-command-from-the-issue.md)). `Concierge 5b ▸ Commands` (plain Actions, no model) does two things.
+An issue that waits for a maintainer carries the command a maintainer needs next, in the issue itself ([decision 0036](decisions/0036-a-maintainer-decides-by-command-from-the-issue.md)). `Issue Concierge 5b ▸ Commands` (plain Actions, no model) does two things.
 
 **The options comment.** One comment on an issue that waits, written by the bot, derived from the labels alone (`scripts/commands.mjs`, the same state as the status issue): a sentence in plain words for whoever reads the issue (no label, command or workflow in it), then the commands for that situation in a collapsed block, and the role they need. It appears only while a maintainer has to act:
 
@@ -427,7 +427,7 @@ The comment contains exactly one mention and no internal terms. It does not trig
 
 A link can be wrong. The plan gate may find that the fix belongs in the repository the issue came from ("Wrong layer"), or a person may read the code and see it. Until the first such case there was no way back: plan triage tells a maintainer to "move or re-route" the issue and nothing did it, removing `related-repo` from the original starts nothing (only the removal of `no-auto-processing` restarts the issue worker, and it would see the link comment and keep the issue routed), and the closer leaves a canonical issue closed as not planned "to a maintainer". On frodo-lib#803 (2026-10-26) the plan wrote "Layer: not verified ... probably in frodo-cli" about code it had not read, while the code that had to change (`getTreeDescendents`) was in the library, so a maintainer had to ask whether it could be flipped back.
 
-`Concierge 4g ▸ Route Back` ([decision 0031](decisions/0031-the-work-of-a-link-is-routed-back-by-one-explicit-act.md); plain Actions, no LLM) moves the work back in one act that a maintainer starts by hand for the canonical issue, with an optional dry run. Nothing starts it by itself ([decision 0005](decisions/0005-a-maintainer-holds-the-levers-of-the-pipeline.md): moving work to another repository is a maintainer's decision). In order:
+`Issue Concierge 4g ▸ Route Back` ([decision 0031](decisions/0031-the-work-of-a-link-is-routed-back-by-one-explicit-act.md); plain Actions, no LLM) moves the work back in one act that a maintainer starts by hand for the canonical issue, with an optional dry run. Nothing starts it by itself ([decision 0005](decisions/0005-a-maintainer-holds-the-levers-of-the-pipeline.md): moving work to another repository is a maintainer's decision). In order:
 
 1. The proof of the link is the closer's (`verifyOriginal`): the `Reported from` line only names a candidate, which must be in the related repository, carry `related-repo`, not be opted out and have a comment from the harness that names the canonical issue.
 2. The original gets the hold `plan-approval-required` (when it has none), a plain-language comment that names the canonical issue and links the plan written there, and then loses `related-repo` and gets `issue-triage-handoff`. The plan gate of that repository writes a plan against its own code, with the old plan as a lead, and the hold stays until a maintainer reads that plan. The comment is the only text the reporter sees; it names no label or gate.
@@ -445,7 +445,7 @@ A fix can need a change in two repositories: a library function and the command 
 
 **The plan proposes.** The plan worker reads the code on both sides (the layer check) and, when the fix needs a change in this repository and in the related one, writes one line per repository: `Work item: {owner}/{repo} | {what changes} | where: {file or function} | order: {first, independent or this}`. `this` is the line for the repository that holds the plan; `first` says that its own change needs the other one done first (merged, and released where `related-repos.md` says so); `independent` says neither waits. Plan triage holds such a plan (`plan-approval-required`, no hand-off) like a wrong layer and says that a maintainer splits it, or removes the hold if this repository's part can go on alone.
 
-**A maintainer splits it.** `Concierge 2d ▸ Spawn Work Items` ([decision 0032](decisions/0032-a-fix-that-needs-two-repositories-is-split-from-its-plan-by-a-maintainer.md); plain Actions, no LLM) is run by hand for the issue that holds the plan, with an optional dry run. For each line that names the related repository it:
+**A maintainer splits it.** `Issue Concierge 2d ▸ Spawn Work Items` ([decision 0032](decisions/0032-a-fix-that-needs-two-repositories-is-split-from-its-plan-by-a-maintainer.md); plain Actions, no LLM) is run by hand for the issue that holds the plan, with an optional dry run. For each line that names the related repository it:
 
 1. creates the work item there as an issue of its own: the sentence of the plan, where to look, `Part of {origin}` and a link to the plan, held for plan approval. It carries no link label and no `Reported from` line, so the closer and the reporter notice do not start for it, and a `Part of` issue is never routed by the issue worker there and never split again;
 2. comments on the origin about it. For `order: first` the comment carries a `Depends on:` line and the origin gets `dependency-required`: the dependency watcher then waits for the work item to be merged, released, installable and pinned (the rules of `shared/dependencies.md`), and starts the origin again, which is planned against the real code and goes through its own PR gate. The hold on the origin stays until a maintainer removes it. An `independent` item is only named.

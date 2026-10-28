@@ -1,6 +1,6 @@
 # Releases
 
-Repo Concierge is consumed by pinned release, never by branch. `main` is work in progress; a release is the point where the maintainers say "this is safe to adopt". Deployments learn about new releases by polling (the harness knows nothing about its deployments) and adopt them through a pull request they merge themselves.
+Issue Concierge is consumed by pinned release, never by branch. `main` is work in progress; a release is the point where the maintainers say "this is safe to adopt". Deployments learn about new releases by polling (the harness knows nothing about its deployments) and adopt them through a pull request they merge themselves.
 
 ## What a release contains
 

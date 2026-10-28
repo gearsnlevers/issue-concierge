@@ -43,7 +43,7 @@ Branch `feat/<short>` or `fix/<short>`. Title in conventional-commit form, for e
 - **Always:** run `npm test`.
 - **Ask first:** add a command, change what is printed, add a dependency.
 - **Never:** commit secrets or keys. Copy logic from the library instead of calling it.
-- **Never edit the Repo Concierge's files** (its workflow definitions, scripts and the pin in `.github/concierge.yml`). The updater overwrites them.
+- **Never edit the Issue Concierge's files** (its workflow definitions, scripts and the pin in `.github/concierge.yml`). The updater overwrites them.
 
 ## Layers
 

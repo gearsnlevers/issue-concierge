@@ -1,4 +1,4 @@
-// Release manifest for Repo Concierge (harness-only release tooling, not deployed).
+// Release manifest for Issue Concierge (harness-only release tooling, not deployed).
 //
 // Deterministic: no network, no LLM. Builds release-manifest.json from aw.yml
 // (the list of files a deployment installs) and requirements.json (labels,

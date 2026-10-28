@@ -79,7 +79,7 @@ test('issue worker: an event that adds nothing to an analysis it already posted 
   const text = rendered(read('workflows/issue-worker.md'));
   const analysed = text.split('\n### Already analysed\n')[1]?.split('\n### ')[0];
   assert.ok(analysed, 'Already analysed section not found');
-  assert.match(analysed, /A comment of yours has a footer that names `Concierge 1a ▸ Issue Worker`\./);
+  assert.match(analysed, /A comment of yours has a footer that names `Issue Concierge 1a ▸ Issue Worker`\./);
   assert.match(analysed, /Post no comment then, and signal as usual \(see "Signaling"\)\./);
   assert.match(analysed, /Write a new comment only when something changed that a reporter would want an answer to: the report was edited with new facts, someone answered a question you asked, or someone asked a new one\./);
   assert.match(analysed, /Say only what is new and do not repeat the earlier analysis\./);

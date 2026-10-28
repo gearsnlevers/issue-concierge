@@ -46,7 +46,7 @@ Run the lint and test commands before you finish. <Say which step must come firs
 - **Always:** <for example run the checks, follow the naming rules in `.github/instructions/`>
 - **Ask first:** <for example change a public API, add a dependency, change the CI pipeline>
 - **Never:** commit secrets or keys, edit generated files, <anything else that must not happen>.
-- **Never edit the Repo Concierge's files** (its workflow definitions, scripts and the pin in `.github/concierge.yml`).
+- **Never edit the Issue Concierge's files** (its workflow definitions, scripts and the pin in `.github/concierge.yml`).
   The updater overwrites them. They are listed with their destinations in `release-manifest.json` of the pinned release.
 
 ## Decisions
@@ -54,7 +54,7 @@ Run the lint and test commands before you finish. <Say which step must come firs
 Design decisions live in `docs/decisions/` (or `decisions/` at the repository root when `docs/` is generated) as records
 `NNNN-short-title.md`, listed in the `README.md` of that folder. An accepted record binds until a newer record
 supersedes it. Read the matching record before you change a decided behaviour; a change to it needs a new or superseding
-record in the same pull request (template: `shared/decision-record.md` of the Repo Concierge). Decisions that bind
+record in the same pull request (template: `shared/decision-record.md` of the Issue Concierge). Decisions that bind
 several repositories are listed here with a link: <none, or the list>.
 
 ## Component rules

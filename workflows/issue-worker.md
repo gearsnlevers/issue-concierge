@@ -1,5 +1,5 @@
 ---
-name: "Concierge 1a ▸ Issue Worker"
+name: "Issue Concierge 1a ▸ Issue Worker"
 description: |
   Issue gate worker. Analyzes completeness and actionability.
   Guides reporters only through comments; never mentions internal labels.
@@ -177,7 +177,7 @@ Cover, in ordinary language:
 - Whether the reported behavior is already fixed, or cannot be found in the current code
 
 ### Already analysed
-Look at the comments before you write. A comment of yours has a footer that names `Concierge 1a ▸ Issue Worker`. When one is there and still covers the report as it stands, an event that adds nothing to it does not need a second analysis: a comment that only links, thanks or notes something, a label change, an edit that fixes a typo. Post no comment then, and signal as usual (see "Signaling"). Write a new comment only when something changed that a reporter would want an answer to: the report was edited with new facts, someone answered a question you asked, or someone asked a new one. Say only what is new and do not repeat the earlier analysis.
+Look at the comments before you write. A comment of yours has a footer that names `Issue Concierge 1a ▸ Issue Worker`. When one is there and still covers the report as it stands, an event that adds nothing to it does not need a second analysis: a comment that only links, thanks or notes something, a label change, an edit that fixes a typo. Post no comment then, and signal as usual (see "Signaling"). Write a new comment only when something changed that a reporter would want an answer to: the report was edited with new facts, someone answered a question you asked, or someone asked a new one. Say only what is new and do not repeat the earlier analysis.
 
 ### Opened from another repository
 An issue with a `Reported from {owner}/{repo}#{number}` line was created by the worker of that repository, and its "Routing note" says what that worker found. It is a lead, not proof: check the part you can with the one tool call it needs (the file or function it names), and say only what you checked. A note that the code you read contradicts is worth saying so plainly in your comment: the plan gate and a maintainer decide where the issue belongs. An issue with a `Part of {owner}/{repo}#{number}` line was created from a plan: the sentence under the line is its scope and the plan it links says what was read, so treat both the same way.

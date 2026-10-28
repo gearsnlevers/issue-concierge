@@ -2,7 +2,7 @@
   "name": "{{name}}",
   "version": "0.1.0",
   "private": true,
-  "description": "Sandbox command line app for the Repo Concierge end-to-end tests",
+  "description": "Sandbox command line app for the Issue Concierge end-to-end tests",
   "type": "module",
   "bin": {
     "{{name}}": "src/cli.js"

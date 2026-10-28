@@ -25,7 +25,7 @@ test('it is a plain workflow: no gh-aw definition, no engine, no model', () => {
 test('it starts on a closed issue, or by hand for one issue with an optional dry run', () => {
   assert.match(workflow, /^on:\n {2}issues:\n {4}types: \[closed\]\n {2}workflow_dispatch:\n {4}inputs:\n {6}issue_number:\n(?: {8}.*\n)*? {8}required: true\n/m);
   assert.match(workflow, / {6}dry_run:\n(?: {8}.*\n)*? {8}type: boolean\n {8}default: false\n/);
-  assert.match(workflow, /^name: "Concierge 4b ▸ Related Repo Closer"$/m, 'the marker is on the workflows that can be run by hand');
+  assert.match(workflow, /^name: "Issue Concierge 4b ▸ Related Repo Closer"$/m, 'the marker is on the workflows that can be run by hand');
 });
 
 test('the workflow token may read, and nothing more: the writes use the other repository\'s token', () => {
