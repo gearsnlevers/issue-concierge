@@ -8,7 +8,10 @@ description: |
 # An issue that carries no-auto-processing starts nothing; removing the label (an `unlabeled` event for that label only,
 # no other label) hands the issue over, once. A manual dispatch has no issue payload, so it is always allowed: it is the
 # explicit way to start intake for one issue ("Opting an item out" in docs/multi-phase-design.md).
-if: ${{ (vars.CONCIERGE_PAUSED != 'true' || github.event_name == 'workflow_dispatch') && (github.event_name == 'workflow_dispatch' || github.event.issue.state == 'open') && github.event.issue.user.type != 'Bot' && github.event.comment.user.type != 'Bot' && github.event.issue.pull_request == null && !contains(github.event.issue.labels.*.name, 'no-auto-processing') && (github.event.action != 'unlabeled' || github.event.label.name == 'no-auto-processing') }}
+# A comment that starts with a command (/accept and the others, scripts/commands.mjs) is not a reply from the reporter:
+# the commands workflow carries it out. Analysing it would cost a run and, worse, could finish after the command and
+# put the issue back where the maintainer had just taken it from.
+if: ${{ (vars.CONCIERGE_PAUSED != 'true' || github.event_name == 'workflow_dispatch') && (github.event_name == 'workflow_dispatch' || github.event.issue.state == 'open') && github.event.issue.user.type != 'Bot' && github.event.comment.user.type != 'Bot' && github.event.issue.pull_request == null && !contains(github.event.issue.labels.*.name, 'no-auto-processing') && (github.event.action != 'unlabeled' || github.event.label.name == 'no-auto-processing') && !(github.event_name == 'issue_comment' && (startsWith(github.event.comment.body, '/accept') || startsWith(github.event.comment.body, '/decline') || startsWith(github.event.comment.body, '/approve') || startsWith(github.event.comment.body, '/replan') || startsWith(github.event.comment.body, '/retry') || startsWith(github.event.comment.body, '/help'))) }}
 on:
   # Reporters are the audience of this gate and most of them have no write access, so gh-aw's
   # default role check (admin, maintainer, write) would skip their issues without a word. Every

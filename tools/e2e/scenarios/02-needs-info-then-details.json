@@ -26,7 +26,7 @@
       }
     },
     {
-      "comment": "Sorry, I was not clear. `flattenTree` should accept a second argument, a maximum depth. With `maxDepth: 1` it should list the root and its direct children only, and nothing below them. Without the argument it must behave as it does today. A test should cover both cases."
+      "comment": "Sorry, I was not clear. `flattenTree` should take an optional `maxDepth` argument. With `maxDepth: 1` it should list the root and its direct children only, and nothing below them. Without it the function must behave as it does today. Where the argument goes is up to you. A test should cover both cases."
     },
     {
       "wait": {

@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import { createGitHub, STATUS_MARKER } from './e2e/github.mjs';
 import { MARKER as PAGE_MARKER } from '../scripts/status-issue.mjs';
 import { evaluateCheck, describeSnapshot, CHECK_TYPES } from './e2e/checks.mjs';
@@ -94,6 +95,17 @@ test('every issue a scenario files carries the hold or the opt-out, so that no c
     for (const issue of [s.issue, ...(s.files ?? [])]) {
       assert.ok(issue.labels.includes('plan-approval-required') || issue.labels.includes('no-auto-processing'), `${s.id}: "${issue.title}" can reach a coding agent`);
     }
+  }
+});
+
+test('no scenario asks for a change that collides with the sandbox code, which the change guard rightly holds (the soak of v2.0.0-1)', () => {
+  // flattenTree(node, visited = []) already uses its second parameter. A reporter who asks for "a second argument" asks for a
+  // change to what exists; needs-info-then-details did, was held with needs-decision and never planned, on both pairs, twice.
+  const source = fs.readFileSync(new URL('./e2e/sandbox/lib/src/tree.js', import.meta.url), 'utf8');
+  assert.match(source, /export function flattenTree\(node, visited = \[\]\)/, 'the sandbox signature this test is about');
+  for (const s of scenarios) {
+    const text = JSON.stringify([s.issue, s.files, s.steps]);
+    assert.doesNotMatch(text, /second (argument|parameter)/i, `${s.id}: names a position that flattenTree already uses`);
   }
 });
 
@@ -505,6 +517,21 @@ test('a transient failure is repeated, a missing label is not an error, and a re
   const once = createGitHub({ run: () => { denials++; throw Object.assign(new Error('x'), { stderr: 'HTTP 422' }); }, sleep: async () => {} });
   await assert.rejects(() => once.getIssue('o/r', 1));
   assert.equal(denials, 1, 'an error that is not transient is not repeated');
+});
+
+test('an empty or cut-off answer from GitHub is repeated, as the soak of v2.0.0-1 needed (two filings failed in six seconds)', async () => {
+  for (const message of ['unexpected end of JSON input', 'unexpected EOF']) {
+    const answers = [Object.assign(new Error('x'), { stderr: message }), '{"number":9}'];
+    const sleeps = [];
+    const gh = createGitHub({ run: () => { const next = answers.shift(); if (next instanceof Error) throw next; return next; }, sleep: async (ms) => sleeps.push(ms) });
+    assert.deepEqual(await gh.createIssue('o/r', { title: 't', body: 'b', labels: [] }), { number: 9 }, message);
+    assert.deepEqual(sleeps, [2000], message);
+  }
+  // a message that merely sounds alike is not repeated
+  let tries = 0;
+  const other = createGitHub({ run: () => { tries++; throw Object.assign(new Error('x'), { stderr: 'HTTP 422: Validation Failed' }); }, sleep: async () => {} });
+  await assert.rejects(() => other.createIssue('o/r', { title: 't', body: 'b', labels: [] }));
+  assert.equal(tries, 1);
 });
 
 test('lists are flattened from pages, and the shared lists are asked for once in a few seconds', async () => {
