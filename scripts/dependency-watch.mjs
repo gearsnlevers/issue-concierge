@@ -306,15 +306,22 @@ async function registryHasVersion(pkg, version) {
   return true;
 }
 
+/**
+ * The text of this repository's related-repos.md, from `.github/issue-concierge/` or else, in a repository that has not been
+ * updated yet, from `.github/agentic-workflows/`; empty when there is none. `cwd` is the root of the repository.
+ */
+export function readRelatedText(cwd = '.') {
+  const read = (p) => (fs.existsSync(`${cwd}/${p}`) ? fs.readFileSync(`${cwd}/${p}`, 'utf8') : null);
+  return readConfig('related-repos.md', read).value || '';
+}
+
 export async function main(argv = process.argv.slice(2), env = process.env) {
   const dryRun = argv.includes('--dry-run');
   const issueArg = argv.includes('--issue') ? Number(argv[argv.indexOf('--issue') + 1]) : null;
   const thisRepo = env.GITHUB_REPOSITORY;
   const readToken = env.GH_TOKEN;
   const signalToken = env.SIGNAL_TOKEN || readToken;
-  const related = parseRelatedRepos(
-    readConfig('related-repos.md', (p) => (fs.existsSync(p) ? fs.readFileSync(p, 'utf8') : null)).value || ''
-  );
+  const related = parseRelatedRepos(readRelatedText());
   const ctx = {
     thisRepo,
     related,

@@ -451,6 +451,18 @@ test('main: settings.yml is read, a bad line is a warning and the default stays'
   assert.ok(lines.some((l) => l.includes('`reporter-replies-days`: 14')));
 });
 
+test('main: settings.yml is read from the old folder in a repository that has not been updated yet, and the new folder wins when both have it', () => {
+  const OLD = '.github/agentic-workflows/settings.yml';
+  const NEW = '.github/issue-concierge/settings.yml';
+  const old = run(fakeCtx({ files: { [OLD]: 'reporter-replies-days: 200\n' } }), { DRY_RUN: 'true' });
+  assert.ok(old.lines.some((l) => l.startsWith('::warning::settings.yml line 1: reporter-replies-days must be from 1 to 90')), 'a bad line in the old file is reported');
+  const both = run(fakeCtx({ files: { [OLD]: 'reporter-replies-days: 30\n', [NEW]: 'reporter-replies-days: 7\n' } }), { DRY_RUN: 'true' });
+  assert.ok(both.lines.some((l) => l.includes('`reporter-replies-days`: 7')), 'the new file wins');
+  assert.ok(!both.lines.some((l) => l.includes('`reporter-replies-days`: 30')));
+  const off = fakeCtx({ botIssues: [issue(7, [], { body: MARKER })], files: { [OLD]: 'status-issue: false\n' }, pinned: true });
+  assert.ok(run(off).lines.some((l) => l.includes('the status issue was closed and unpinned')), 'status-issue: false in the old folder is honoured');
+});
+
 test('main: a repository that turned the status issue off is left with it closed, and nothing is collected', () => {
   const ctx = fakeCtx({ botIssues: [issue(7, [], { body: MARKER })], files: { '.github/issue-concierge/settings.yml': 'status-issue: false\n' }, pinned: true });
   const { code, lines } = run(ctx);

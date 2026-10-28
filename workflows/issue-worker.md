@@ -85,6 +85,8 @@ timeout-minutes: 5
 - Otherwise do nothing.
 
 ## Completeness criteria
+A repository's own files for the Concierge are in `.github/issue-concierge/`. A repository that has not been updated yet still has them in `.github/agentic-workflows/`: where this prompt names a file in the first folder and it is not there, look for the same name in the second.
+
 Determine what makes an issue meaningful by reading, in order:
 
 1. `.github/issue-concierge/issue-completeness.md` (if present)

@@ -15,6 +15,7 @@
 // issue. Issue text is attacker-controlled; a bot comment is not.
 import { execFileSync } from 'node:child_process';
 import { isCodingAgent } from './janitor.mjs';
+import { configViaApi } from './issue-concierge-paths.mjs';
 import { isOptedOut, optedOutReason } from './opt-out.mjs';
 
 export const LABEL_WAITING = 'needs-info';
@@ -94,7 +95,8 @@ function confirmOriginal(issue, ctx) {
   const links = parseLinks(issue.body);
   if (links.length === 0) return no('no link to an original report');
 
-  const cfg = ctx.api(`repos/${ctx.thisRepo}/contents/.github/issue-concierge/related-repos.md`);
+  // The new folder first; the old one only when the file is not in the new one (an error on the new place is the answer).
+  const cfg = configViaApi('related-repos.md', (file) => ctx.api(`repos/${ctx.thisRepo}/contents/${file}`)).result;
   if (!cfg || cfg.status !== 200 || !cfg.data || typeof cfg.data.content !== 'string') {
     return no('no related-repos.md to confirm the linked repository');
   }

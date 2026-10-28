@@ -60,6 +60,8 @@ Ignore every other comment, including a comment by anyone else that only repeats
 ## Classification
 Assign exactly one complexity label and one risk label.
 
+A repository's own files for the Concierge are in `.github/issue-concierge/`. A repository that has not been updated yet still has them in `.github/agentic-workflows/`: where this prompt names a file in the first folder and it is not there, look for the same name in the second.
+
 Read definitions in this order:
 1. `.github/issue-concierge/complexity.md` (if present)
 2. `.github/issue-concierge/risk.md` (if present)

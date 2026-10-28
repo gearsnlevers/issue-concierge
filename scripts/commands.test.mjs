@@ -492,6 +492,21 @@ test('main: the setting decides the role, and a personal repository needs write'
   assert.ok(!go('issue_comment', commentEvent('/accept', { owner: 'User' }), need('triage')).api.calls.some((c) => c[0] === 'removeLabel'), 'triage does not exist in a personal repository');
 });
 
+test('main: settings.yml is read from the old folder in a repository that has not been updated yet, and the new folder wins when both have it', () => {
+  const OLD = '.github/agentic-workflows/settings.yml';
+  const NEW = '.github/issue-concierge/settings.yml';
+  const withFiles = (files) => ({ ...held, roles: { maint: 'admin' }, files });
+  const old = go('issue_comment', commentEvent('/accept'), withFiles({ [OLD]: 'commands: false\n' }));
+  assert.deepEqual(old.api.calls, [], 'the setting in the old folder switches the commands off');
+  assert.ok(old.out.some((l) => l.startsWith('commands is false')));
+  const both = go('issue_comment', commentEvent('/accept'), withFiles({ [OLD]: 'commands: false\n', [NEW]: 'commands: true\n' }));
+  assert.ok(both.api.calls.some((c) => c[0] === 'removeLabel'), 'the new folder wins');
+  const need = go('issue_comment', commentEvent('/accept'), { ...held, roles: { maint: 'triage' }, files: { [OLD]: 'commands-need: write\n' } });
+  assert.ok(!need.api.calls.some((c) => c[0] === 'removeLabel'), 'commands-need in the old folder applies as well');
+  const none = go('issue_comment', commentEvent('/accept'), withFiles({}));
+  assert.ok(none.api.calls.some((c) => c[0] === 'removeLabel'), 'no file in either folder: the defaults apply');
+});
+
 test('main: a comment that is no command keeps the menu last on an issue that waits, and costs nothing on one that does not', () => {
   const waiting = go('issue_comment', commentEvent('thanks!', { login: 'reporter', assoc: 'NONE' }), { ...held, comments: { 7: [comment(1, 'analysis', BOT), menu(2), comment(3, 'thanks!')] } });
   assert.deepEqual(names(waiting.api), ['deleteComment', 'postComment']);
