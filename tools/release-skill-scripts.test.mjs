@@ -1,10 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { addedPermissions, groupByDiff, listFiles, normalizeDiff } from '../.claude/skills/cut-a-concierge-release/scripts/compare-update-prs.mjs';
-import { compareManifests, manifestProblems, parseArgs } from '../.claude/skills/cut-a-concierge-release/scripts/verify-release.mjs';
-import { lockProblems, parseArgs as parseRolloutArgs, withoutCrossRepo } from '../.claude/skills/cut-a-concierge-release/scripts/verify-rollout.mjs';
+import { addedPermissions, groupByDiff, isUpdaterPr, listFiles, normalizeDiff } from '../.claude/skills/cut-an-issue-concierge-release/scripts/compare-update-prs.mjs';
+import { compareManifests, manifestProblems, parseArgs } from '../.claude/skills/cut-an-issue-concierge-release/scripts/verify-release.mjs';
+import { lockProblems, parseArgs as parseRolloutArgs, withoutCrossRepo } from '../.claude/skills/cut-an-issue-concierge-release/scripts/verify-rollout.mjs';
 
-// The helpers behind the cut-a-concierge-release skill. They are read-only and are what a person (or an
+// The helpers behind the cut-an-issue-concierge-release skill. They are read-only and are what a person (or an
 // agent) trusts when deciding that a release is good and that every deployment got the same update, so the
 // decisions in them are pinned here: what counts as a surprise and what is masked as "differs by design".
 
@@ -135,4 +135,14 @@ test('withoutCrossRepo ignores the generated settings and the marker, nothing el
   const deployed = 'create-issue:\n  max: 1\n  github-token: ${{ secrets.X }}\n  allowed-repos: ["o/r"]\nthreat-detection: on\n';
   assert.equal(withoutCrossRepo(source), withoutCrossRepo(deployed));
   assert.notEqual(withoutCrossRepo(source), withoutCrossRepo(deployed.replace('max: 1', 'max: 5')));
+});
+
+test('compare-update-prs accepts the updater\'s pull requests under the old and the new names, and nothing else', () => {
+  const pr = (title, headRefName) => ({ title, headRefName });
+  assert.equal(isUpdaterPr(pr('chore: update Issue Concierge v2.0.1 → v2.1.0', 'issue-concierge/update')), true);
+  assert.equal(isUpdaterPr(pr('chore: update Repo Concierge v1.8.0 → v2.0.1', 'concierge/update')), true, 'an updater that predates the rename');
+  assert.equal(isUpdaterPr(pr("chore: move the Issue Concierge's files to their new places", 'issue-concierge/update')), true);
+  assert.equal(isUpdaterPr(pr('chore: update Issue Concierge v2.0.1 → v2.1.0', 'feature/mine')), false, 'a title on someone else\'s branch');
+  assert.equal(isUpdaterPr(pr('fix: something else', 'issue-concierge/update')), false, 'someone else\'s title on the updater\'s branch');
+  assert.equal(isUpdaterPr(pr('chore: update Repo Concierge v1 → v2', 'issue-concierge/update')), true, 'an old title on the new branch is still the updater\'s');
 });

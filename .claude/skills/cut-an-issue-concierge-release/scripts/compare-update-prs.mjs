@@ -1,4 +1,4 @@
-// Read-only comparison of Repo Concierge update pull requests across deployments. Changes nothing.
+// Read-only comparison of Issue Concierge update pull requests across deployments. Changes nothing.
 //
 //   node compare-update-prs.mjs <owner/repo#N> [<owner/repo#N> ...]
 //
@@ -97,6 +97,13 @@ function checkSummary(rollup) {
   return `${states.length} checks, ${failed} failed, ${pending} pending`;
 }
 
+// The pull requests the updater opens. The product used to be called "Repo Concierge" and the branch was `concierge/update`; a
+// deployment that has not had an update by the new updater yet still produces those, and one update pull request of that kind
+// is still to come in each of them. The move pull request is the updater's too.
+const UPDATE_TITLES = [/^chore: update (Issue|Repo) Concierge /, /^chore: move the Issue Concierge's files to their new places$/];
+const UPDATE_BRANCHES = ['issue-concierge/update', 'concierge/update'];
+export const isUpdaterPr = (pr) => UPDATE_TITLES.some((re) => re.test(pr.title)) && UPDATE_BRANCHES.includes(pr.headRefName);
+
 function main(argv) {
   const targets = argv.slice(2);
   if (!targets.length || targets.some((t) => !/^[^/\s]+\/[^#\s]+#\d+$/.test(t))) {
@@ -108,7 +115,7 @@ function main(argv) {
   for (const target of targets) {
     const [repo, number] = target.split('#');
     const pr = JSON.parse(gh(['pr', 'view', number, '-R', repo, '--json', 'title,headRefName,state,isDraft,statusCheckRollup']));
-    const ok = /^chore: update Repo Concierge /.test(pr.title) && pr.headRefName === 'concierge/update';
+    const ok = isUpdaterPr(pr);
     if (!ok) problems++;
     console.log(`${ok ? 'ok  ' : 'FAIL'} ${target}: "${pr.title}" (${pr.headRefName}, ${pr.state}; ${checkSummary(pr.statusCheckRollup)})`);
     entries.push([target, gh(['pr', 'diff', number, '-R', repo])]);
