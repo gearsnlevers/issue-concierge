@@ -12,6 +12,7 @@
 // janitor.mjs and opt-out.mjs, so install those too).
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
+import { PIN_PATH, readPin as readPinFile } from './issue-concierge-paths.mjs';
 import { SETTINGS_PATH, parseSettings, readSettingsText } from './issue-concierge-settings.mjs';
 import {
   BOT, QUEUES, STUCK_AFTER_MINUTES, GATE_LABELS, ago, classify, compareVersions, isAnalysis, labelledAt, latestRelease,
@@ -174,7 +175,7 @@ export function render(m) {
   }
   if (m.pin.version) {
     L.push(`- Pinned: \`${m.pin.version}\` (${m.pin.channel}) from \`${m.pin.source}\`${m.behind ? ` · ⚠ ${m.behind} is available, the updater opens a pull request` : m.latest ? ' · up to date' : ''}`);
-  } else L.push('- No pin file (`.github/concierge.yml`) was found.');
+  } else L.push(`- No pin file (\`${PIN_PATH}\`) was found.`);
   L.push(`- ${tokenLine(m)}`, '');
 
   L.push('## Spend', '');
@@ -376,7 +377,7 @@ export function collect(ctx, repo, settings, signalToken, pausedVariables = []) 
     .slice(0, EVENT_CHECKS);
   for (const { i } of waiting) events.set(i.number, ctx.list(`repos/${repo}/issues/${i.number}/events`, { maxPages: 3 }) ?? []);
 
-  const pin = readPin(ctx.read('.github/concierge.yml'));
+  const pin = readPin(readPinFile((p) => ctx.read(p)).value);
   let latest = null;
   if (pin.source) {
     const releases = ctx.get(`repos/${pin.source}/releases?per_page=30`);

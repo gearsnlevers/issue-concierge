@@ -345,7 +345,7 @@ test('collect reads what the page needs and nothing it does not', () => {
     ],
     issueComments: { 2: [], 3: [{ user: { login: 'github-actions[bot]' }, body: '<!-- gh-aw-workflow-call-id: o/r/issue-worker -->' }] },
     comments: [{ ...comment(1, 'r', ago(H)), issue_url: 'https://api.github.com/repos/o/r/issues/1' }],
-    files: { '.github/concierge.yml': 'source: o/concierge\nversion: v1.8.0\nchannel: stable\n' },
+    files: { '.github/issue-concierge.yml': 'source: o/concierge\nversion: v1.8.0\nchannel: stable\n' },
   });
   const out = collect(ctx, REPO, SETTINGS, 'tok');
   assert.deepEqual(out.issues.map((i) => i.number), [1, 2, 3, 4, 5], 'the status issue and the pull request are not issues to count');
@@ -741,4 +741,13 @@ test('the mention is a comment of the status page and nothing else: the signal t
   assert.ok(!/ctx\.write\([^\n]*(signalToken|SIGNAL_TOKEN)/.test(source), 'the comment is written with the workflow token');
   assert.match(source, /ctx\.list\(`repos\/\$\{repo\}\/collaborators`, \{ token: signalToken \}\)/);
   assert.match(source, /if \(settings\['mention-after-days'\] > 0 && result\.number && !raw\.paused\) \{/);
+});
+
+test('collect reads the pin from the new file, or from the old one until the updater has moved it, and the new one wins', () => {
+  const pinned = (version) => `source: o/concierge\nversion: ${version}\nchannel: stable\n`;
+  const pinOf = (files) => collect(fakeCtx({ issues: [], comments: [], files }), REPO, SETTINGS, 'tok').pin;
+  assert.equal(pinOf({ '.github/issue-concierge.yml': pinned('v2.1.0') }).version, 'v2.1.0');
+  assert.equal(pinOf({ '.github/concierge.yml': pinned('v2.0.1') }).version, 'v2.0.1');
+  assert.equal(pinOf({ '.github/issue-concierge.yml': pinned('v2.1.0'), '.github/concierge.yml': pinned('v2.0.1') }).version, 'v2.1.0');
+  assert.equal(pinOf({}).version, null);
 });
