@@ -32,7 +32,9 @@ export const LABEL_PLAN_HANDOFF = 'plan-triage-handoff';
  * as a CONTRIBUTOR to the workflow token. workflows/issue-triage.md reads this string in its pre-activation step and in its
  * prompt; a test keeps the three equal.
  */
-export const ACCEPT_MARKER = '<!-- concierge:accepted -->';
+export const ACCEPT_MARKER = '<!-- issue-concierge:accepted -->';
+/** What a version before the product was named for its kind wrote. Issue triage counts it as a record too. */
+export const LEGACY_ACCEPT_MARKER = '<!-- concierge:accepted -->';
 
 /** The labels that stop an issue at the first gate; a maintainer accepts it by removing them. */
 export const STOP_LABELS = ['needs-decision', 'scope-review', 'backlog', 'out-of-scope', LABEL_DECLINED, 'needs-info'];
@@ -170,7 +172,7 @@ export function optionsFor(issue, { comments = [], events = [], now = Date.now()
   return { kind, body };
 }
 
-export const menuKind = (comment) => /concierge:options kind=(\S+)/.exec(comment.body || '')?.[1] ?? null;
+export const menuKind = (comment) => /(?:issue-)?concierge:options kind=(\S+)/.exec(comment.body || '')?.[1] ?? null;
 
 const stamp = (c) => `${c.created_at ?? ''}#${String(c.id ?? 0).padStart(20, '0')}`;
 

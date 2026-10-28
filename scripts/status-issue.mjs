@@ -19,9 +19,14 @@ import {
 } from './issue-concierge-state.mjs';
 import { LABEL_OPT_OUT, labelNames } from './opt-out.mjs';
 
-export const TITLE = 'Concierge status';
+export const TITLE = 'Issue Concierge status';
+// What a version before the product was named for its kind called the issue and marked it with. The page is found by either, and renamed.
+export const LEGACY_TITLE = 'Concierge status';
 /** The hidden line that tells the status issue from every other issue the bot opened. */
-export const MARKER = '<!-- concierge:status -->';
+export const MARKER = '<!-- issue-concierge:status -->';
+export const LEGACY_MARKER = '<!-- concierge:status -->';
+/** True when a body carries the marker of the status page, in either spelling. */
+export const hasStatusMarker = (body) => String(body || '').includes(MARKER) || String(body || '').includes(LEGACY_MARKER);
 /** Items listed per queue; the rest is a link to the search. */
 export const LIST_CAP = 10;
 /** Issues whose comments are read to find out whether the issue worker has seen them. */
@@ -213,7 +218,8 @@ export function normalise(body) {
 // ------------------------------------------------------------------ the nudge
 
 /** The hidden line the mention comment starts with. It is the bot's comment on the status issue, found by this line. */
-export const MENTION_MARKER = '<!-- concierge:mention -->';
+export const MENTION_MARKER = '<!-- issue-concierge:mention -->';
+export const LEGACY_MENTION_MARKER = '<!-- concierge:mention -->';
 /** At most this many people are named in one comment. */
 export const MENTION_CAP = 20;
 /** Items listed in a mention comment; the rest is a count. */
@@ -261,7 +267,7 @@ export function nudge(ctx, repo, number, model, settings, signalToken) {
   const days = settings['mention-after-days'];
   const items = overdue(model, days);
   const comments = ctx.list(`repos/${repo}/issues/${number}/comments`) ?? [];
-  const mentions = comments.filter((c) => c.user && c.user.login === BOT && String(c.body || '').startsWith(MENTION_MARKER));
+  const mentions = comments.filter((c) => c.user && c.user.login === BOT && (String(c.body || '').startsWith(MENTION_MARKER) || String(c.body || '').startsWith(LEGACY_MENTION_MARKER)));
   const previous = mentions.length ? mentions[mentions.length - 1] : null;
   // Listing the collaborators needs more than the workflow token may have: try it first, then the signal token.
   let listed = null;
@@ -347,7 +353,7 @@ export function collect(ctx, repo, settings, signalToken, pausedVariables = []) 
   const now = ctx.now;
   const issues = ctx.list(`repos/${repo}/issues?state=open`);
   if (!issues) return null;
-  const candidates = issues.filter((i) => !i.pull_request && !(i.body || '').includes(MARKER));
+  const candidates = issues.filter((i) => !i.pull_request && !hasStatusMarker(i.body));
 
   const windowDays = Math.max(settings['reporter-replies-days'], 7);
   const since = new Date(now - windowDays * 86400000).toISOString();
@@ -396,7 +402,9 @@ const IS_PINNED = 'query($id: ID!) { node(id: $id) { ... on Issue { isPinned } }
 /** Find the status issue among the issues the bot opened, open or closed. */
 export function findStatusIssue(ctx, repo) {
   const bot = ctx.list(`repos/${repo}/issues?state=all&creator=${encodeURIComponent(BOT)}`, { maxPages: 5 }) ?? [];
-  return bot.find((i) => !i.pull_request && (i.body || '').includes(MARKER)) ?? null;
+  // By the marker, in either spelling; an issue the bot opened under one of the two titles and lost its marker from is the page too.
+  const pages = bot.filter((i) => !i.pull_request);
+  return pages.find((i) => hasStatusMarker(i.body)) ?? pages.find((i) => i.title === TITLE || i.title === LEGACY_TITLE) ?? null;
 }
 
 /**
@@ -438,8 +446,13 @@ export function reconcile(ctx, repo, settings, existing, build, signalToken) {
   }
 
   const body = build(pinNote);
-  if (normalise(body) !== normalise(current)) {
-    ctx.write('PATCH', `repos/${repo}/issues/${issue.number}`, { body });
+  const patch = {};
+  if (normalise(body) !== normalise(current)) patch.body = body;
+  // A page that an earlier version opened is renamed, not replaced: there is one status issue, and it is this one. Only the
+  // title that version gave it is renamed; a title a maintainer chose is theirs.
+  if (issue.title === LEGACY_TITLE) patch.title = TITLE;
+  if (Object.keys(patch).length) {
+    ctx.write('PATCH', `repos/${repo}/issues/${issue.number}`, patch);
     if (action === 'unchanged') action = 'updated';
   }
   return { action, pinned, number: issue.number };

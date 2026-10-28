@@ -20,7 +20,7 @@
 # Concierge was paused may need /retry afterwards; the status issue shows it as stuck after an hour.
 
 # status-issue: true | false                                       default: true
-#   One pinned issue, "Concierge status", created and kept up to date by the bot. It shows what waits for a
+#   One pinned issue, "Issue Concierge status", created and kept up to date by the bot. It shows what waits for a
 #   maintainer, reporter replies that nobody has answered, which issues the Concierge manages and which it
 #   does not (opted out with no-auto-processing, opened by a bot, not yet picked up), health (the last good
 #   run, failed runs, the pinned version against the latest release, the signal token's expiry) and the

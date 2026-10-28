@@ -38,9 +38,12 @@ export const BRANCH = 'issue-concierge/update';
 export const LEGACY_BRANCH = 'concierge/update';
 export const MOVE_TITLE = "chore: move the Issue Concierge's files to their new places";
 export const MANIFEST_ASSET = 'release-manifest.json';
-const CROSS_REPO_MARKER = /^([ \t]*)# concierge:cross-repo[ \t]*\n/gm;
+// Both spellings of both markers. The delivered workflow files carry the older one (`# concierge:cross-repo`) until every
+// deployment's updater reads both: an update is made by the updater the deployment already has, and one that does not know
+// the newer spelling would leave the line in the file and write no CROSS_REPO. The newer spelling is for the release after.
+const CROSS_REPO_MARKER = /^([ \t]*)# (?:issue-)?concierge:cross-repo[ \t]*\n/gm;
 // The same settings for a plain workflow, as the environment of a step instead of safe-output keys.
-const CROSS_REPO_ENV_MARKER = /^([ \t]*)# concierge:cross-repo-env[ \t]*\n/gm;
+const CROSS_REPO_ENV_MARKER = /^([ \t]*)# (?:issue-)?concierge:cross-repo-env[ \t]*\n/gm;
 
 const sha256 = (buf) => createHash('sha256').update(buf).digest('hex');
 const lockOf = (dest) => dest.replace(/\.md$/, '.lock.yml');
@@ -120,7 +123,8 @@ export function selectRelated(relatedText) {
 
 /**
  * Replace each `# concierge:cross-repo` marker (in a definition) with the generated safe-output settings, and each
- * `# concierge:cross-repo-env` marker (in a plain workflow) with the generated environment, or remove it.
+ * `# concierge:cross-repo-env` marker (in a plain workflow) with the generated environment, or remove it. A marker with
+ * the product's name in front (`# issue-concierge:cross-repo`) is the same marker.
  */
 export function applyCrossRepo(text, related) {
   return text

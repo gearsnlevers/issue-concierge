@@ -142,6 +142,38 @@ test('cross-repo generation: settings from related-repos.md, or nothing', () => 
   assert.equal(applyCrossRepo('no marker\n', related), 'no marker\n');
 });
 
+test('both spellings of the markers are the same marker: a file with the older one and a file with the newer give the same result', () => {
+  const related = { repo: 'o/cli', secret: 'CLI_TOKEN' };
+  const fileWith = (a, b) => `a\n  create-issue:\n    max: 1\n    # ${a}\n  env:\n    GH_TOKEN: x\n  # ${b}\nrun: y\n`;
+  const older = fileWith('concierge:cross-repo', 'concierge:cross-repo-env');
+  const newer = fileWith('issue-concierge:cross-repo', 'issue-concierge:cross-repo-env');
+  const mixed = fileWith('issue-concierge:cross-repo', 'concierge:cross-repo-env');
+  for (const r of [related, null]) {
+    assert.equal(applyCrossRepo(newer, r), applyCrossRepo(older, r));
+    assert.equal(applyCrossRepo(mixed, r), applyCrossRepo(older, r));
+  }
+  assert.ok(!applyCrossRepo(newer, related).includes('concierge:cross-repo'), 'no marker is left behind');
+  // the markers are told apart by their end: the longer one is not eaten by the shorter
+  assert.equal(applyCrossRepo('    # issue-concierge:cross-repo-env\n', related), '    CROSS_REPO: o/cli\n    CROSS_REPO_TOKEN: ${{ secrets.CLI_TOKEN }}\n');
+  assert.equal(applyCrossRepo('x # concierge:cross-repo\n', related), 'x # concierge:cross-repo\n', 'a marker is a line of its own');
+});
+
+test('a deployment generated from a release with the older marker shows no local changes when the next release has either spelling', async () => {
+  const oldSource = 'safe-outputs:\n  close-issue:\n    max: 1\n    # concierge:cross-repo\n';
+  const related = '.github/issue-concierge/related-repos.md';
+  const relatedText = 'this: o/me\n\nrelated:\n  - role: cli\n    repo: o/cli\n    secret: CLI_TOKEN\n    when: |\n      x\n';
+  const generated = applyCrossRepo(oldSource, { repo: 'o/cli', secret: 'CLI_TOKEN' });
+  for (const next of [oldSource, oldSource.replace('# concierge:', '# issue-concierge:')]) {
+    const h = harness();
+    h.add('v1.0.0', { 'workflows/closer.md': oldSource });
+    h.add('v1.1.0', { 'workflows/closer.md': next.replace('max: 1', 'max: 2') });
+    const d = deployment({ '.github/workflows/closer.md': generated, [related]: relatedText }, pinned('v1.0.0'));
+    const out = await run({ root: d.root, local: true, source: 'o/concierge' }, h.ctx());
+    assert.deepEqual(out.drift, [], 'the previous release is read with the same rules, so nothing looks edited');
+    assert.equal(d.read('.github/workflows/closer.md'), 'safe-outputs:\n  close-issue:\n    max: 2\n    github-token: ${{ secrets.CLI_TOKEN }}\n    allowed-repos: ["o/cli"]\n');
+  }
+});
+
 test('cross-repo generation in a plain workflow: the environment from related-repos.md, or nothing', () => {
   const text = 'env:\n  GH_TOKEN: x\n  # concierge:cross-repo-env\nrun: y\n';
   const related = { repo: 'o/cli', secret: 'CLI_TOKEN' };

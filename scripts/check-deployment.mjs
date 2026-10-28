@@ -53,7 +53,9 @@ export const REQUIREMENTS = [{ file: 'issue-worker.lock.yml', outputs: ['create_
  * (`CROSS_REPO` and `CROSS_REPO_TOKEN`, from the `# concierge:cross-repo-env` marker).
  */
 export const CLOSER = 'related-repo-closer.yml';
-const CLOSER_MARKER = '# concierge:cross-repo-env';
+// Both spellings. The delivered workflow keeps the older one until every deployment's updater reads both; a pull request that
+// installed a closer with either line still in it came from an updater that does not know the marker.
+const CLOSER_MARKERS = ['# issue-concierge:cross-repo-env', '# concierge:cross-repo-env'];
 
 /** The files that tell coding agents how to work on the repository; either one is enough. */
 export const GUIDANCE_FILES = ['AGENTS.md', '.github/copilot-instructions.md'];
@@ -130,11 +132,12 @@ export function checkDeployment(relatedText, locks) {
       errors.push(`${CLOSER}: not found; ${rel.repo} needs it`);
     } else {
       const text = String(locks[CLOSER]);
-      if (text.includes(CLOSER_MARKER) && envValue(text, 'CROSS_REPO') === undefined && envValue(text, 'CROSS_REPO_TOKEN') === undefined) {
+      const leftover = CLOSER_MARKERS.find((m) => text.includes(m));
+      if (leftover && envValue(text, 'CROSS_REPO') === undefined && envValue(text, 'CROSS_REPO_TOKEN') === undefined) {
         // The update that first installs the closer is made by the updater of the release before, which does not know
         // the marker yet. That is a state to finish, not a mistake: the next run of the updater writes the lines.
         warnings.push(
-          `${CLOSER}: still has the ${CLOSER_MARKER} marker, so CROSS_REPO and CROSS_REPO_TOKEN were not written: the updater that installed it predates the marker. Run the Concierge updater again (issue-concierge-updater.yml, with target set to the pinned release); until then the closer updates nothing in ${rel.repo}`
+          `${CLOSER}: still has the ${leftover} marker, so CROSS_REPO and CROSS_REPO_TOKEN were not written: the updater that installed it predates the marker. Run the Concierge updater again (issue-concierge-updater.yml, with target set to the pinned release); until then the closer updates nothing in ${rel.repo}`
         );
       } else {
         if (envValue(text, 'CROSS_REPO') !== rel.repo) {

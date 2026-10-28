@@ -15,8 +15,12 @@ import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
-export const ISSUE_TITLE = 'Concierge currency: actions and gh-aw are behind their latest release';
-export const MARKER = '<!-- concierge-currency -->';
+export const ISSUE_TITLE = 'Issue Concierge currency: actions and gh-aw are behind their latest release';
+export const MARKER = '<!-- issue-concierge-currency -->';
+// What a version before the product was named for its kind opened the issue with. An open issue under the old title is the
+// one issue, and it is renamed when it is updated.
+export const LEGACY_ISSUE_TITLE = 'Concierge currency: actions and gh-aw are behind their latest release';
+export const LEGACY_MARKER = '<!-- concierge-currency -->';
 
 /** Every `uses:` of a workflow file, with the version comment gh-aw and Dependabot put after a SHA. */
 export function parseUses(text, file = '') {
@@ -131,7 +135,8 @@ export function renderIssue({ behind, unknown }) {
 
 /** Opens, updates or closes the one currency issue. `gh(args)` runs the GitHub CLI and returns its output. */
 export function syncIssue(result, gh, title = ISSUE_TITLE) {
-  const open = JSON.parse(gh(['issue', 'list', '--state', 'open', '--search', `"${title}" in:title`, '--json', 'number,title', '--limit', '20'])).find((i) => i.title === title);
+  const titles = title === ISSUE_TITLE ? [ISSUE_TITLE, LEGACY_ISSUE_TITLE] : [title];
+  const open = JSON.parse(gh(['issue', 'list', '--state', 'open', '--search', 'Concierge currency in:title', '--json', 'number,title', '--limit', '20'])).find((i) => titles.includes(i.title));
   if (result.behind.length === 0) {
     if (!open) return 'nothing is behind and no issue is open';
     gh(['issue', 'close', String(open.number), '--comment', 'Everything the Concierge pins is current again.']);
@@ -139,7 +144,7 @@ export function syncIssue(result, gh, title = ISSUE_TITLE) {
   }
   const body = renderIssue(result);
   if (open) {
-    gh(['issue', 'edit', String(open.number), '--body', body]);
+    gh(['issue', 'edit', String(open.number), ...(open.title !== title ? ['--title', title] : []), '--body', body]);
     return `updated #${open.number}`;
   }
   gh(['issue', 'create', '--title', title, '--body', body]);

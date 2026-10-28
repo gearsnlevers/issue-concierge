@@ -68,7 +68,7 @@ if ! activation_if "$tmp/.github/workflows/issue-triage.lock.yml" | tr '\n' ' ' 
   echo "::error::issue-triage does not read the accepted outcome in its compiled activation condition"
   exit 1
 fi
-if ! grep -q "id: accepted" "$tmp/.github/workflows/issue-triage.lock.yml" || ! grep -qF "const MARKER = '<!-- concierge:accepted -->';" "$tmp/.github/workflows/issue-triage.lock.yml"; then
+if ! grep -q "id: accepted" "$tmp/.github/workflows/issue-triage.lock.yml" || ! grep -qF "const MARKERS = ['<!-- issue-concierge:accepted -->', '<!-- concierge:accepted -->'];" "$tmp/.github/workflows/issue-triage.lock.yml"; then
   echo "::error::issue-triage lost its accepted step in the compiled lock"
   exit 1
 fi
