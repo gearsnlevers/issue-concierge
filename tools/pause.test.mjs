@@ -121,10 +121,10 @@ test('the status page and the commands are told whether the Concierge is paused,
   }
 });
 
-test('the compile smoke reads the term in every compiled gate and in the two steps that write', () => {
+test('the compile smoke reads the term in every compiled gate and in the three steps that write', () => {
   const smoke = read('tools/ci-compile-smoke.sh');
   assert.match(smoke, /for name in issue-worker issue-triage plan-worker plan-triage pr-worker pr-triage release-closer; do\n  if ! activation_if "\$tmp\/\.github\/workflows\/\$name\.lock\.yml" \| tr '\\n' ' ' \| tr -s ' ' \| grep -qF "vars\.CONCIERGE_PAUSED != 'true'"; then/);
-  assert.match(smoke, /for name in pr-worker release-closer; do\n  if \[ "\$\(grep -cF "vars\.CONCIERGE_PAUSED != 'true'" "\$tmp\/\.github\/workflows\/\$name\.lock\.yml"\)" -lt 2 \]; then/);
+  assert.match(smoke, /for name in pr-worker issue-triage release-closer; do\n  if \[ "\$\(grep -cF "vars\.CONCIERGE_PAUSED != 'true'" "\$tmp\/\.github\/workflows\/\$name\.lock\.yml"\)" -lt 2 \]; then/);
 });
 
 test('the docs, the record and the checklist say the same', () => {

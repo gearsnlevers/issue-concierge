@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
-  STOP_LABELS, effectiveNeed, main, mayUse, menuCandidates, menuKind, neutralizeMentions, optionsFor, parseCommand, planMenu, planReason,
+  ACCEPT_MARKER, STOP_LABELS, effectiveNeed, main, mayUse, menuCandidates, menuKind, neutralizeMentions, optionsFor, parseCommand, planMenu, planReason,
   runCommand, situationOf, syncOptions,
 } from './commands.mjs';
 import { OPTIONS_MARKER, isOptionsComment } from './concierge-state.mjs';
@@ -284,16 +284,35 @@ test('main: the variable reaches the commands through the environment', () => {
   assert.ok(running.calls.some((c) => c[0] === 'removeLabel'));
 });
 
-test('/accept removes what stops the issue with the workflow token and hands it on with the signal token', () => {
+const ACCEPTED = (actor = 'maint') => ['reply', 7, `${ACCEPT_MARKER}\nAccepted by @${actor} with /accept. The request goes to planning now.`];
+
+test('/accept removes what stops the issue with the workflow token, records the decision, and hands it on with the signal token', () => {
   const { result, api } = run('accept', issue(['needs-decision', 'enhancement', 'plan-approval-required']));
   assert.equal(result.ok, true);
-  assert.deepEqual(api.calls, [['removeLabel', 7, 'needs-decision'], ['addLabelSignal', 7, 'issue-triage-handoff']]);
+  assert.deepEqual(api.calls, [['removeLabel', 7, 'needs-decision'], ACCEPTED(), ['addLabelSignal', 7, 'issue-triage-handoff']]);
 });
 
-test('/accept takes every stop away, reopens a declined issue, and starts the plan once', () => {
+test('/accept records the decision in a comment of the bot, with a marker, naming the maintainer, before the label that hands the issue on', () => {
+  const { api } = run('accept', issue(['needs-decision']), { actor: 'volker' });
+  const order = api.calls.map((c) => c[0]);
+  assert.ok(order.indexOf('reply') > -1 && order.indexOf('reply') < order.indexOf('addLabelSignal'), 'the record comes first, so nothing the hand-over starts can miss it');
+  const body = api.calls.find((c) => c[0] === 'reply')[2];
+  assert.equal(ACCEPT_MARKER, '<!-- concierge:accepted -->');
+  assert.ok(body.startsWith(`${ACCEPT_MARKER}\n`), 'the marker opens the comment');
+  assert.match(body, /Accepted by @volker with \/accept\. The request goes to planning now\.$/);
+  assert.doesNotMatch(body, /needs-decision|issue-triage-handoff|plan-approval-required/, 'the reporter reads it: no internal labels');
+});
+
+test('a command that is refused records nothing', () => {
+  for (const i of [issue(['enhancement']), issue(classifiedHold), issue([], { state: 'closed' })]) {
+    assert.equal(run('accept', i).api.calls.some((c) => c[0] === 'reply'), false);
+  }
+});
+
+test('/accept takes every stop away, reopens a declined issue, records the decision and starts the plan once', () => {
   const { result, api } = run('accept', issue(['scope-review', 'backlog', 'declined'], { state: 'closed' }));
   assert.equal(result.ok, true);
-  assert.deepEqual(api.calls, [['removeLabel', 7, 'scope-review'], ['removeLabel', 7, 'backlog'], ['removeLabel', 7, 'declined'], ['reopen', 7], ['addLabelSignal', 7, 'issue-triage-handoff']]);
+  assert.deepEqual(api.calls, [['removeLabel', 7, 'scope-review'], ['removeLabel', 7, 'backlog'], ['removeLabel', 7, 'declined'], ['reopen', 7], ACCEPTED(), ['addLabelSignal', 7, 'issue-triage-handoff']]);
   assert.deepEqual(STOP_LABELS, ['needs-decision', 'scope-review', 'backlog', 'out-of-scope', 'declined', 'needs-info']);
 });
 
@@ -433,7 +452,7 @@ test('main: a maintainer\'s /accept runs, gets a rocket, and the menu is brought
   const real = first.removeLabel;
   first.removeLabel = (n, l) => { real(n, l); first.getIssue = () => issue([]); };
   assert.equal(main(env, first, (m) => out.push(m)), 0);
-  assert.deepEqual(names(first).slice(0, 3), ['removeLabel', 'addLabelSignal', 'react']);
+  assert.deepEqual(names(first).slice(0, 4), ['removeLabel', 'reply', 'addLabelSignal', 'react']);
   assert.deepEqual(first.calls.find((c) => c[0] === 'react'), ['react', 500, 'rocket']);
   assert.ok(out.some((l) => l.includes('/accept by maint: removed needs-decision')));
 });

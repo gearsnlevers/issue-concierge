@@ -4,7 +4,8 @@
   "covers": [
     "an issue held because it changes what exists gets one options comment, written by the bot, as its last comment",
     "a later comment moves it to the end again, and there is still only one",
-    "/accept removes the hold on the request and starts the plan worker, and the options comment changes to match the plan that waits for approval"
+    "/accept removes the hold on the request and starts the plan worker, and the options comment changes to match the plan that waits for approval",
+    "a reply that started the issue worker before the command does not bring the hold back when that run ends, whoever the maintainer is to the workflow token: the command is recorded by a comment of the bot, which issue triage reads"
   ],
   "profiles": ["public", "private"],
   "repo": "lib",
@@ -43,6 +44,7 @@
         "timeoutMinutes": 35,
         "checks": [
           { "name": "the hold on the request is gone", "type": "labels", "exclude": ["needs-decision", "issue-triage-handoff"] },
+          { "name": "the bot recorded the decision, once", "type": "comments", "from": "bot", "match": "concierge:accepted", "count": 1 },
           { "name": "the plan worker planned it", "type": "comments", "workflow": "plan-worker", "min": 1 },
           { "name": "the plan is classified and still waits for approval", "type": "labels", "include": ["plan-approval-required"], "oneWithPrefix": ["complexity/", "risk/"], "exclude": ["plan-triage-handoff"] },
           { "name": "the options comment now offers the plan's commands, as the last comment", "type": "lastComment", "match": "concierge:options kind=plan[\\s\\S]*`/approve`" },
