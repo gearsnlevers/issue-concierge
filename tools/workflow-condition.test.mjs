@@ -60,6 +60,6 @@ test('the extraction helpers read single-line and folded conditions of the real 
   const prWorker = frontmatterIf(read('workflows/pr-worker.md'));
   assert.match(prWorker, /existing_fix_result != 'failure'/, 'folded block, joined into one line');
   assert.match(jobIf(read('workflows/janitor.yml'), 'clean'), /github\.event\.action != 'labeled'/);
-  assert.match(stepIf(read('workflows/pr-worker.md'), 'existing_fix'), /^\(vars\.CONCIERGE_PAUSED != 'true' \|\| github\.event_name == 'workflow_dispatch'\) && github\.event\.label\.name == 'plan-triage-handoff'/);
+  assert.match(stepIf(read('workflows/pr-worker.md'), 'existing_fix'), /^\(vars\.ISSUE_CONCIERGE_PAUSED != 'true' && vars\.CONCIERGE_PAUSED != 'true' \|\| github\.event_name == 'workflow_dispatch'\) && github\.event\.label\.name == 'plan-triage-handoff'/);
   assert.throws(() => jobIf(read('workflows/janitor.yml'), 'nope'), /no job/);
 });

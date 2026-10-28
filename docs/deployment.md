@@ -446,7 +446,9 @@ Who may use the commands is the setting `commands-need` in `.github/issue-concie
 
 ### Pause
 
-To stop the Concierge in a repository, create the repository variable `CONCIERGE_PAUSED` with the value `true`: Settings › Secrets and variables › Actions › Variables › New repository variable, or `gh variable set CONCIERGE_PAUSED --body true`. To resume, delete it (`gh variable delete CONCIERGE_PAUSED`) or set it to anything but `true`. In an organisation repository write access is enough. Nothing needs installing: the updater delivers the conditions with the workflows.
+To stop the Concierge in a repository, create the repository variable `ISSUE_CONCIERGE_PAUSED` with the value `true`: Settings › Secrets and variables › Actions › Variables › New repository variable, or `gh variable set ISSUE_CONCIERGE_PAUSED --body true`. To resume, delete it (`gh variable delete ISSUE_CONCIERGE_PAUSED`) or set it to anything but `true`. In an organisation repository write access is enough. Nothing needs installing: the updater delivers the conditions with the workflows.
+
+The variable was called `CONCIERGE_PAUSED` in v2.0.x. That name still pauses, so a pause set under it does not lift when the Concierge is updated, and either variable set to `true` is enough: to resume, delete both. Nothing has to be renamed.
 
 While it is set, no gate, sweep, closer or notifier touches an issue or a pull request: each run is skipped by its own condition, which costs nothing and uses no AI credits. The status issue shows a banner, a command that would hand an issue on is refused, and a run started by hand from the Actions tab still works. Runs already in flight finish. After resuming, an issue that was in a gate meanwhile may need `/retry`.
 
@@ -711,7 +713,7 @@ Nothing here is required: the Concierge reads the old names as well as the new o
 - [ ] Spawn work items installed where there is a `related-repos.md` (`spawn-work-items.yml` and `spawn-work-items.mjs`; needs `SIGNAL_TOKEN`; the updater does it and writes the token of the related repository)
 - [ ] Stalled issue sweep installed (`stalled-issue-sweep.yml` and `stalled-issue-sweep.mjs`; needs `SIGNAL_TOKEN`; the updater does it)
 - [ ] Janitor installed (`janitor.yml` and `janitor.mjs`)
-- [ ] Pause tried: with the repository variable `CONCIERGE_PAUSED` set to `true`, a new comment starts no gate (the runs are skipped), the status issue shows the banner after its next run, and deleting the variable ends it
+- [ ] Pause tried: with the repository variable `ISSUE_CONCIERGE_PAUSED` set to `true`, a new comment starts no gate (the runs are skipped), the status issue shows the banner after its next run, and deleting the variable ends it
 - [ ] Commands installed (`commands.yml` and `commands.mjs`; needs `SIGNAL_TOKEN`; the updater does it); on an issue that carries `needs-decision` the last comment is the options comment, and `/accept` from a collaborator with the role hands the issue to the plan worker
 - [ ] Status issue installed (`status.yml`, `status-issue.mjs`, `issue-concierge-settings.mjs` and `issue-concierge-state.mjs`; the updater does it); after the first run the "Concierge status" issue exists, is pinned, and its counts match the open issues
 - [ ] PR ready signal installed (`pr-ready-signal.yml` and `pr-ready-signal.mjs`; needs `SIGNAL_TOKEN`)

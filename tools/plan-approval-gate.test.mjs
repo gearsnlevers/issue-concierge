@@ -64,7 +64,7 @@ test('plan triage: the description says when approval is added', () => {
 
 test('resume workflow: starts only for the approval label and passes the actor to the script', () => {
   const yml = read('workflows/plan-approval-resume.yml');
-  assert.match(yml, /if: \(vars\.CONCIERGE_PAUSED != 'true' \|\| github\.event_name == 'workflow_dispatch'\) && \(github\.event_name != 'issues' \|\| github\.event\.label\.name == 'plan-approval-required'\) && !contains\(github\.event\.issue\.labels\.\*\.name, 'no-auto-processing'\)/);
+  assert.match(yml, /if: \(vars\.ISSUE_CONCIERGE_PAUSED != 'true' && vars\.CONCIERGE_PAUSED != 'true' \|\| github\.event_name == 'workflow_dispatch'\) && \(github\.event_name != 'issues' \|\| github\.event\.label\.name == 'plan-approval-required'\) && !contains\(github\.event\.issue\.labels\.\*\.name, 'no-auto-processing'\)/);
   assert.match(yml, /ACTOR: \$\{\{ github\.actor \}\}/);
 });
 

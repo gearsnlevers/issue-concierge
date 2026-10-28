@@ -20,7 +20,7 @@ const body = md.slice(md.indexOf('\n---\n', 4) + 5);
 // ---- The workflow ------------------------------------------------------------------------------------------
 
 test('the step is deterministic, never blocks the agent and has the permissions it needs, nothing more', () => {
-  assert.match(frontmatter, /id: included_fixes\n\s+if: \(vars\.CONCIERGE_PAUSED != 'true' \|\| github\.event_name == 'workflow_dispatch'\)\n\s+continue-on-error: true\n\s+uses: actions\/github-script@v9\n/);
+  assert.match(frontmatter, /id: included_fixes\n\s+if: \(vars\.ISSUE_CONCIERGE_PAUSED != 'true' && vars\.CONCIERGE_PAUSED != 'true' \|\| github\.event_name == 'workflow_dispatch'\)\n\s+continue-on-error: true\n\s+uses: actions\/github-script@v9\n/);
   assert.match(frontmatter, /^ {2}permissions:\n {4}issues: write\n {4}pull-requests: read\n {4}contents: read\n/m);
   assert.doesNotMatch(frontmatter, /^ {4}(pull-requests|contents): write/m);
 });

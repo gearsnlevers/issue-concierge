@@ -17,7 +17,7 @@
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import { parseSettings, readSettingsText } from './issue-concierge-settings.mjs';
-import { BOT, GATE_LABELS, OPTIONS_MARKER, STUCK_AFTER_MINUTES, isOptionsComment, labelledAt, MAINTAINER_ASSOCIATIONS } from './issue-concierge-state.mjs';
+import { BOT, GATE_LABELS, OPTIONS_MARKER, STUCK_AFTER_MINUTES, isOptionsComment, labelledAt, MAINTAINER_ASSOCIATIONS, pausedBy } from './issue-concierge-state.mjs';
 import { LABEL_OPT_OUT, isOptedOut, labelNames } from './opt-out.mjs';
 import { MARKER as APPROVAL_MARKER, decide as decideApproval } from './plan-approval-resume.mjs';
 
@@ -214,7 +214,7 @@ export function runCommand(cmd, { issue, actor, api, paused = false }) {
   // While the Concierge is paused no gate starts, so a command that hands an issue on would leave it behind a gate that
   // never runs. Declining and listing the commands start nothing.
   if (paused && ['accept', 'approve', 'replan', 'retry'].includes(cmd.name)) {
-    return refuse('The Concierge is paused (the repository variable `CONCIERGE_PAUSED` is `true`), so nothing would start. Resume it first, then give the command again.');
+    return refuse('The Concierge is paused (the repository variable `ISSUE_CONCIERGE_PAUSED` is `true`, or `CONCIERGE_PAUSED`, its older name), so nothing would start. Resume it first, then give the command again.');
   }
 
   switch (cmd.name) {
@@ -428,7 +428,7 @@ export function main(env = process.env, api = realApi(env, env.GITHUB_REPOSITORY
       const role = api.role(commenter.login);
       const allowed = role !== null && mayUse(role, cfg.need, { organisation });
       if (allowed) {
-        const result = runCommand(cmd, { issue: api.getIssue(number), actor: commenter.login, api, paused: env.CONCIERGE_PAUSED === 'true' });
+        const result = runCommand(cmd, { issue: api.getIssue(number), actor: commenter.login, api, paused: pausedBy(env).length > 0 });
         api.react(payload.comment.id, result.ok ? 'rocket' : 'confused');
         if (!result.ok) api.reply(number, `Could not run \`/${cmd.name}\`: ${result.reason}`);
         log(`#${number}: /${cmd.name} by ${commenter.login}: ${result.ok ? result.note : result.reason}`);

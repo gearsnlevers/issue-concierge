@@ -48,7 +48,7 @@ test('pr-worker: the hold and the dependency label are both in the activation if
 
 test('pr-worker: the step is still the guard for the hand-off label only, and may now remove it', () => {
   const fm = prWorker.frontmatter;
-  assert.match(fm, /id: existing_fix\n\s+if: \(vars\.CONCIERGE_PAUSED != 'true' \|\| github\.event_name == 'workflow_dispatch'\) && github\.event\.label\.name == 'plan-triage-handoff' && github\.event\.issue\.state == 'open' && !contains\(github\.event\.issue\.labels\.\*\.name, 'no-auto-processing'\)\n\s+continue-on-error: true\n/);
+  assert.match(fm, /id: existing_fix\n\s+if: \(vars\.ISSUE_CONCIERGE_PAUSED != 'true' && vars\.CONCIERGE_PAUSED != 'true' \|\| github\.event_name == 'workflow_dispatch'\) && github\.event\.label\.name == 'plan-triage-handoff' && github\.event\.issue\.state == 'open' && !contains\(github\.event\.issue\.labels\.\*\.name, 'no-auto-processing'\)\n\s+continue-on-error: true\n/);
   // the pre-activation job needs write access to remove the void label and post the one comment
   assert.match(fm, /^ {2}permissions:\n {4}issues: write\n {4}pull-requests: read\n/m);
 });

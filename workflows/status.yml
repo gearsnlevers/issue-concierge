@@ -66,6 +66,8 @@ jobs:
           # Pins the issue, and is the token whose expiry the page reports.
           SIGNAL_TOKEN: ${{ secrets.SIGNAL_TOKEN }}
           DRY_RUN: ${{ inputs.dry_run }}
-          # When it is 'true' the page says so (the Concierge is paused).
+          # When either is 'true' the page says so (the Concierge is paused).
+          # CONCIERGE_PAUSED is the name the variable had before; it still pauses.
+          ISSUE_CONCIERGE_PAUSED: ${{ vars.ISSUE_CONCIERGE_PAUSED }}
           CONCIERGE_PAUSED: ${{ vars.CONCIERGE_PAUSED }}
         run: node .github/scripts/status-issue.mjs

@@ -4,7 +4,7 @@ description: |
   Plan gate triage. Assigns complexity and risk.
   Adds plan-approval-required for high complexity or high risk; does not hand off while that label is present.
   Reads repository-local complexity and risk definitions when present.
-if: ${{ (vars.CONCIERGE_PAUSED != 'true' || github.event_name == 'workflow_dispatch') && github.event.issue.state == 'open' && github.event.issue.user.type != 'Bot' && !contains(github.event.issue.labels.*.name, 'no-auto-processing') }}
+if: ${{ (vars.ISSUE_CONCIERGE_PAUSED != 'true' && vars.CONCIERGE_PAUSED != 'true' || github.event_name == 'workflow_dispatch') && github.event.issue.state == 'open' && github.event.issue.user.type != 'Bot' && !contains(github.event.issue.labels.*.name, 'no-auto-processing') }}
 on:
   issues:
     types: [labeled]

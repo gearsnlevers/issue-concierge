@@ -82,13 +82,14 @@ test('the gate stands down when the accepted step failed, and only then: the oth
   assert.equal(holds(condition, ctx({ state: 'closed' }, { accepted_result: 'success' })), false);
   assert.equal(holds(condition, ctx({ user: { type: 'Bot' } }, { accepted_result: 'success' })), false);
   assert.equal(holds(condition, ctx({ labels: [{ name: 'no-auto-processing' }] }, { accepted_result: 'success' })), false);
-  assert.equal(holds(condition, ctx({}, { accepted_result: 'success' }, { CONCIERGE_PAUSED: 'true' })), false);
+  assert.equal(holds(condition, ctx({}, { accepted_result: 'success' }, { ISSUE_CONCIERGE_PAUSED: 'true' })), false);
+  assert.equal(holds(condition, ctx({}, { accepted_result: 'success' }, { CONCIERGE_PAUSED: 'true' })), false, 'the name it had in v2.0.x pauses too');
 });
 
 test('the step runs in pre-activation, never fails the job itself, and only for its own label, while the Concierge runs and the issue is open', () => {
   assert.match(frontmatter, /^ {2}steps:\n/m, 'on.steps');
   assert.match(frontmatter, /id: accepted\n/);
-  assert.match(frontmatter, /id: accepted\n\s+if: \(vars\.CONCIERGE_PAUSED != 'true' \|\| github\.event_name == 'workflow_dispatch'\) && github\.event\.label\.name == 'issue-worker-ready' && github\.event\.issue\.state == 'open' && github\.event\.issue\.user\.type != 'Bot' && !contains\(github\.event\.issue\.labels\.\*\.name, 'no-auto-processing'\)\n\s+continue-on-error: true\n\s+uses: actions\/github-script@v9/);
+  assert.match(frontmatter, /id: accepted\n\s+if: \(vars\.ISSUE_CONCIERGE_PAUSED != 'true' && vars\.CONCIERGE_PAUSED != 'true' \|\| github\.event_name == 'workflow_dispatch'\) && github\.event\.label\.name == 'issue-worker-ready' && github\.event\.issue\.state == 'open' && github\.event\.issue\.user\.type != 'Bot' && !contains\(github\.event\.issue\.labels\.\*\.name, 'no-auto-processing'\)\n\s+continue-on-error: true\n\s+uses: actions\/github-script@v9/);
   // it removes the label that started the run, and reads comments
   assert.match(frontmatter, /^ {2}permissions:\n {4}issues: write\n/m);
 });

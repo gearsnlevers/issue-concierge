@@ -213,7 +213,7 @@ test('a paused Concierge says so at the top of the page, since when, and how to 
   const body = render(summarize({ ...fixture(), paused: { since: '2026-10-27T09:30:00Z' } }, SETTINGS, NOW));
   const banner = body.split('\n').find((l) => l.startsWith('> ⏸'));
   assert.match(banner, /^> ⏸ \*\*Paused\*\* since 2026-10-27 09:30 UTC\. No gate, sweep, closer or notifier touches an issue or a pull request, and runs that are already in flight finish\./);
-  assert.match(banner, /delete the repository variable `CONCIERGE_PAUSED` or set it to anything but `true`: \[Settings › Variables\]\(https:\/\/github\.com\/o\/r\/settings\/variables\/actions\)/);
+  assert.match(banner, /delete the repository variable `ISSUE_CONCIERGE_PAUSED` \(and `CONCIERGE_PAUSED`, its older name, if it is set\) or set it to anything but `true`: \[Settings › Variables\]\(https:\/\/github\.com\/o\/r\/settings\/variables\/actions\)/);
   assert.match(banner, /may need `\/retry` afterwards/);
   assert.ok(body.indexOf('> ⏸') < body.indexOf('## Needs you'), 'before the first section');
   assert.match(render(summarize({ ...fixture(), paused: { since: null } }, SETTINGS, NOW)), /> ⏸ \*\*Paused\*\*\. No gate/, 'without a date when the variable cannot be read');
@@ -228,17 +228,36 @@ test('collect reads the date of the variable only when the Concierge is paused, 
   assert.equal(collect(idle, REPO, SETTINGS, 't').paused, null);
   assert.equal(idle.calls.variableRead, undefined);
   const paused = fakeCtx({ issues: [] });
-  assert.deepEqual(collect(paused, REPO, SETTINGS, 't', true).paused, { since: '2026-10-27T09:30:00Z' });
+  assert.deepEqual(collect(paused, REPO, SETTINGS, 't', ['ISSUE_CONCIERGE_PAUSED']).paused, { since: '2026-10-27T09:30:00Z' });
+  assert.deepEqual(paused.calls.variablesRead, ['ISSUE_CONCIERGE_PAUSED'], 'it asks for the variable that is set, and for no other');
+  const old = fakeCtx({ issues: [] });
+  assert.deepEqual(collect(old, REPO, SETTINGS, 't', ['CONCIERGE_PAUSED']).paused, { since: '2026-10-27T09:30:00Z' });
+  assert.deepEqual(old.calls.variablesRead, ['CONCIERGE_PAUSED']);
   const denied = fakeCtx({ issues: [], variable: { status: 403, data: null } });
-  assert.deepEqual(collect(denied, REPO, SETTINGS, 't', true).paused, { since: null });
+  assert.deepEqual(collect(denied, REPO, SETTINGS, 't', ['ISSUE_CONCIERGE_PAUSED']).paused, { since: null });
+});
+
+test('collect with both variables set says the pause began with the earlier one, and with only one readable uses that one', () => {
+  const stamp = (updated_at) => ({ status: 200, data: { updated_at } });
+  const both = fakeCtx({ issues: [], variableByName: { ISSUE_CONCIERGE_PAUSED: stamp('2026-10-28T08:00:00Z'), CONCIERGE_PAUSED: stamp('2026-10-27T09:30:00Z') } });
+  assert.deepEqual(collect(both, REPO, SETTINGS, 't', ['ISSUE_CONCIERGE_PAUSED', 'CONCIERGE_PAUSED']).paused, { since: '2026-10-27T09:30:00Z' });
+  assert.deepEqual(both.calls.variablesRead, ['ISSUE_CONCIERGE_PAUSED', 'CONCIERGE_PAUSED']);
+  const half = fakeCtx({ issues: [], variableByName: { ISSUE_CONCIERGE_PAUSED: { status: 403, data: null }, CONCIERGE_PAUSED: stamp('2026-10-27T09:30:00Z') } });
+  assert.deepEqual(collect(half, REPO, SETTINGS, 't', ['ISSUE_CONCIERGE_PAUSED', 'CONCIERGE_PAUSED']).paused, { since: '2026-10-27T09:30:00Z' });
 });
 
 test('main: the variable reaches the page through the environment', () => {
   const ctx = fakeCtx({ issues: [] });
-  const { lines } = run(ctx, { DRY_RUN: 'true', CONCIERGE_PAUSED: 'true' });
+  const { lines } = run(ctx, { DRY_RUN: 'true', ISSUE_CONCIERGE_PAUSED: 'true' });
   assert.ok(lines.some((l) => l.includes('> ⏸ **Paused** since 2026-10-27 09:30 UTC')));
-  const other = run(fakeCtx({ issues: [] }), { DRY_RUN: 'true', CONCIERGE_PAUSED: 'false' });
-  assert.ok(!other.lines.some((l) => l.includes('Paused')));
+  for (const vars of [{ CONCIERGE_PAUSED: 'true' }, { ISSUE_CONCIERGE_PAUSED: 'TRUE', CONCIERGE_PAUSED: 'false' }]) {
+    const older = run(fakeCtx({ issues: [] }), { DRY_RUN: 'true', ...vars });
+    assert.ok(older.lines.some((l) => l.includes('> ⏸ **Paused**')), JSON.stringify(vars));
+  }
+  for (const vars of [{}, { ISSUE_CONCIERGE_PAUSED: 'false', CONCIERGE_PAUSED: 'false' }, { ISSUE_CONCIERGE_PAUSED: '', CONCIERGE_PAUSED: '' }]) {
+    const other = run(fakeCtx({ issues: [] }), { DRY_RUN: 'true', ...vars });
+    assert.ok(!other.lines.some((l) => l.includes('Paused')), JSON.stringify(vars));
+  }
 });
 
 test('an empty repository gets a page that says so, not a blank one', () => {
@@ -259,7 +278,7 @@ test('normalise ignores the time of the last change and nothing else', () => {
 // ---------------------------------------------------------------- GitHub
 
 /** A fake GitHub: routes the calls of the script to canned answers and records every write. */
-function fakeCtx({ collaborators = [{ login: 'alice', type: 'User', role_name: 'admin' }, { login: 'bob', type: 'User', role_name: 'maintain' }], collaboratorsFail = [], variable = { status: 200, data: { value: 'true', updated_at: '2026-10-27T09:30:00Z' } }, issues = [], botIssues = [], comments = [], issueComments = {}, events = {}, runs = [], files = {}, releases = [{ tag_name: 'v1.8.0', prerelease: false }], probe = { state: 'ok', expiresAt: null }, pinned = false, pinFails = null } = {}) {
+function fakeCtx({ collaborators = [{ login: 'alice', type: 'User', role_name: 'admin' }, { login: 'bob', type: 'User', role_name: 'maintain' }], collaboratorsFail = [], variableByName = null, variable = { status: 200, data: { value: 'true', updated_at: '2026-10-27T09:30:00Z' } }, issues = [], botIssues = [], comments = [], issueComments = {}, events = {}, runs = [], files = {}, releases = [{ tag_name: 'v1.8.0', prerelease: false }], probe = { state: 'ok', expiresAt: null }, pinned = false, pinFails = null } = {}) {
   const calls = { list: [], write: [], graphql: [] };
   let isPinned = pinned;
   return {
@@ -282,7 +301,12 @@ function fakeCtx({ collaborators = [{ login: 'alice', type: 'User', role_name: '
     },
     get(p) {
       if (p.startsWith('repos/o/concierge/releases')) return { status: 200, data: releases };
-      if (p === 'repos/o/r/actions/variables/CONCIERGE_PAUSED') { calls.variableRead = (calls.variableRead ?? 0) + 1; return variable; }
+      const named = /^repos\/o\/r\/actions\/variables\/(ISSUE_CONCIERGE_PAUSED|CONCIERGE_PAUSED)$/.exec(p);
+      if (named) {
+        calls.variableRead = (calls.variableRead ?? 0) + 1;
+        (calls.variablesRead ??= []).push(named[1]);
+        return variableByName?.[named[1]] ?? variable;
+      }
       throw new Error(`unexpected get ${p}`);
     },
     runs: () => runs,
@@ -624,9 +648,12 @@ test('main: nothing is mentioned when the setting is 0, in a dry run, while paus
   run(dry, { DRY_RUN: 'true' });
   assert.deepEqual(written(dry, 'POST'), []);
   const paused = ctxWith(settings('mention-after-days: 7\n'));
-  const { lines } = run(paused, { CONCIERGE_PAUSED: 'true' });
+  const { lines } = run(paused, { ISSUE_CONCIERGE_PAUSED: 'true' });
   assert.ok(!lines.some((l) => l.startsWith('mention:')));
   assert.deepEqual(comments(paused), []);
+  const pausedOld = ctxWith(settings('mention-after-days: 7\n'));
+  run(pausedOld, { CONCIERGE_PAUSED: 'true' });
+  assert.deepEqual(comments(pausedOld), [], 'the older name pauses the nudge too');
   const noPage = ctxWith({ ...settings('status-issue: false\nmention-after-days: 7\n'), botIssues: [] });
   run(noPage);
   assert.deepEqual(comments(noPage), []);
