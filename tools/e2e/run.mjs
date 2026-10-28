@@ -4,8 +4,10 @@
 // gates leave, how the issue ends, that no run failed. Every scenario stops at a hold or at an early outcome, so no code
 // is ever written and no pull request merged. See docs/e2e.md.
 //
-// Usage: node tools/e2e/run.mjs [--profile public|private|all] [--scenario id,id] [--yes] [--retries 1]
+// Usage: node tools/e2e/run.mjs [--profile public|private|all] [--scenario id|number,id|number] [--yes] [--retries 1]
 //          [--poll-seconds 45] [--out results.json] [--list] [--cleanup-stale HOURS]
+// A scenario is known by its id and by its number, the prefix of its file name (10-command-accepts-a-held-request.json is
+// scenario 10); docs/e2e.md lists them by number, and --scenario takes either.
 // The pairs (profiles) run side by side; the scenarios of one pair run one after another.
 // Without --yes it prints what it would do and files nothing. GH_TOKEN names the identity that files the issues:
 // it must be a person with write access to the sandbox repositories, because the gates ignore issues by bots.
@@ -30,12 +32,19 @@ export function loadConfig(file = path.join(HERE, 'config.json')) {
   return JSON.parse(fs.readFileSync(file, 'utf8'));
 }
 
+/** The number of a scenario: the digits at the start of its file name (01-happy-path-to-the-hold.json is scenario 1). */
+export const numberOf = (file) => {
+  const m = /^(\d+)-/.exec(file);
+  if (!m) throw new Error(`${file}: a scenario file name starts with its number and a hyphen, like 01-happy-path-to-the-hold.json`);
+  return Number(m[1]);
+};
+
 export function loadScenarios(dir = path.join(HERE, 'scenarios')) {
   return fs
     .readdirSync(dir)
     .filter((f) => f.endsWith('.json'))
     .sort()
-    .map((f) => ({ ...JSON.parse(fs.readFileSync(path.join(dir, f), 'utf8')), file: f }));
+    .map((f) => ({ ...JSON.parse(fs.readFileSync(path.join(dir, f), 'utf8')), file: f, number: numberOf(f) }));
 }
 
 /** Replaces {{name}} with a value; a name that has no value is a mistake in the scenario, not an empty string. */
@@ -386,21 +395,24 @@ export async function main(argv = process.argv.slice(2), env = process.env, io =
       problems.forEach((p) => io.err(`::error::${p}`));
       return 2;
     }
-    const wanted = opts.scenario ? opts.scenario.split(',') : scenarios.map((s) => s.id);
-    const unknown = wanted.filter((id) => !scenarios.some((s) => s.id === id));
+    // A scenario is named by its id or by its number ("10" is command-accepts-a-held-request).
+    const named = (token) => scenarios.find((s) => s.id === token || (/^\d+$/.test(token) && s.number === Number(token)));
+    const tokens = opts.scenario ? opts.scenario.split(',') : scenarios.map((s) => s.id);
+    const unknown = tokens.filter((token) => !named(token));
     if (unknown.length) throw new Error(`unknown scenario ${unknown.join(', ')}`);
+    const wanted = tokens.map((token) => named(token).id);
     const profiles = !opts.profile || opts.profile === 'all' ? Object.keys(config.profiles) : [opts.profile];
     if (profiles.some((p) => !(p in config.profiles))) throw new Error(`--profile must be all or one of ${Object.keys(config.profiles).join(', ')}`);
     const selected = scenarios.filter((s) => wanted.includes(s.id));
     const owner = env.E2E_OWNER || config.owner;
 
     if (opts.list) {
-      selected.forEach((s) => io.out(`${s.id}\t${s.profiles.join(',')}\t${s.steps.length} steps\t${s.title}`));
+      selected.forEach((s) => io.out(`${s.number}\t${s.id}\t${s.profiles.join(',')}\t${s.steps.length} steps\t${s.title}`));
       return 0;
     }
     if (!opts.yes && !opts['cleanup-stale']) {
       io.out(`Plan only (add --yes to run). Sandbox owner ${owner}; retries ${opts.retries ?? 1}.`);
-      for (const s of selected) for (const p of profiles.filter((p) => s.profiles.includes(p))) io.out(`- ${s.id} on ${owner}/${config.profiles[p][s.repo]} (${p}): ${s.title}`);
+      for (const s of selected) for (const p of profiles.filter((p) => s.profiles.includes(p))) io.out(`- scenario ${s.number}, ${s.id}, on ${owner}/${config.profiles[p][s.repo]} (${p}): ${s.title}`);
       return 0;
     }
 

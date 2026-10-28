@@ -51,23 +51,25 @@ How a run goes: each scenario files its issue(s) with a tag in the title and a h
 
 ## The scenarios
 
-| Scenario | What it protects | Pairs |
-| -------- | ---------------- | ----- |
-| `happy-path-to-the-hold` | A code-reading enhancement is analysed once inside the turn budget, planned once, classified, and stops at the hold; a thanks comment afterwards starts nothing | both |
-| `needs-info-then-details` | A request without details is asked for them; the reply starts the pipeline again | both |
-| `out-of-scope-closes` | A request that matches an out-of-scope item is declined, labelled and closed as not planned, and never planned | both |
-| `dependency-then-satisfied` | A `Depends on:` line gets `dependency-required`; closing the other issue lets the issue through | both |
-| `opt-out-then-hand-over` | An issue with `no-auto-processing` gets nothing; removing the label starts intake once | both |
-| `removal-urgent-is-held` | An urgent request to remove and replace an exported function and a command gets `needs-decision`, no plan and no classification, and a reply that argues for it does not lift the hold | both |
-| `removal-casual-is-held` | The same kind of request worded as a tidy-up with no rush is held too, not parked as `backlog` | both |
-| `status-issue-lists-the-held-issue` | The status issue appears by itself (the first label event starts the status workflow), lists the held issue under "Needs you", counts it among the managed issues and carries the numbers for a dashboard; creating it opens no failure issue | both |
-| `command-accepts-a-held-request` | A held request carries an options comment that is always the last comment (a later comment moves it, and there is still one), `/accept` from a maintainer hands it to the plan worker, and the options comment changes to match the plan that waits | both |
-| `command-declines-a-request` | `/decline <reason>` closes a held request as not planned, adds `declined`, tells the reporter with the reason, and the options comment is gone | both |
-| `bug-fix-passes` | A crash in an exported function is analysed, planned once and classified like before, with no `needs-decision` and no "Breaking change:" line | both |
+A scenario is known by its number and by its name. The number is the prefix of its file in `tools/e2e/scenarios/` (`10-command-accepts-a-held-request.json` is scenario 10), so "scenario 10" means that one everywhere: in this table, in a report, and on the command line, where `--scenario 10` and `--scenario command-accepts-a-held-request` are the same. `node tools/e2e/run.mjs --list` prints them with their numbers. The Flows column says which flow of [flows.md](flows.md) the scenario tests live; a flow that no scenario names is covered by unit tests only.
+
+| # | Scenario | Flows | What it protects | Pairs |
+| - | -------- | ----- | ---------------- | ----- |
+| 1 | `happy-path-to-the-hold` | 1, 9 | A code-reading enhancement is analysed once inside the turn budget, planned once, classified, and stops at the hold; a thanks comment afterwards starts nothing | both |
+| 2 | `needs-info-then-details` | 2 | A request without details is asked for them; the reply starts the pipeline again | both |
+| 3 | `out-of-scope-closes` | 3 | A request that matches an out-of-scope item is declined, labelled and closed as not planned, and never planned | both |
+| 4 | `dependency-then-satisfied` | 7 | A `Depends on:` line gets `dependency-required`; closing the other issue lets the issue through | both |
+| 5 | `opt-out-then-hand-over` | 8 | An issue with `no-auto-processing` gets nothing; removing the label starts intake once | both |
+| 6 | `removal-urgent-is-held` | 4 | An urgent request to remove and replace an exported function and a command gets `needs-decision`, no plan and no classification, and a reply that argues for it does not lift the hold | both |
+| 7 | `removal-casual-is-held` | 4 | The same kind of request worded as a tidy-up with no rush is held too, not parked as `backlog` | both |
+| 8 | `bug-fix-passes` | 1, 4 | A crash in an exported function is analysed, planned once and classified like before, with no `needs-decision` and no "Breaking change:" line | both |
+| 9 | `status-issue-lists-the-held-issue` | 14 | The status issue appears by itself (the first label event starts the status workflow), lists the held issue under "Needs you", counts it among the managed issues and carries the numbers for a dashboard; creating it opens no failure issue | both |
+| 10 | `command-accepts-a-held-request` | 9, 13 | A held request carries an options comment that is always the last comment (a later comment moves it, and there is still one), `/accept` from a maintainer hands it to the plan worker, and the options comment changes to match the plan that waits | both |
+| 11 | `command-declines-a-request` | 13 | `/decline <reason>` closes a held request as not planned, adds `declined`, tells the reporter with the reason, and the options comment is gone | both |
 
 The two removal scenarios and `bug-fix-passes` check the change guard ([decision 0034](decisions/0034-a-request-that-changes-what-exists-is-held-for-a-maintainer.md)) from both sides: what it must hold and what it must let through. `happy-path-to-the-hold` is the second let-through case, a refinement (a better sort order) that must not be held. The removal scenarios carry the hold like every scenario: the first layer, `needs-decision` and no plan, does not depend on it.
 
-Cross-repository scenarios (routing with a Routing note, the work items and the spawn, route back, the release closer) come next. On the private pair they are expected to show the limit of the workflow token, not to pass.
+Cross-repository scenarios (routing with a Routing note, the work items and the spawn, route back, the release closer) come next; they are flows 10, 11, 12 and 16 in [flows.md](flows.md), together with the backlog, the already-handled reports, the pause, the stalled sweep, the janitor and the updater, which no scenario tests live yet. On the private pair they are expected to show the limit of the workflow token, not to pass.
 
 ## Writing a scenario
 
