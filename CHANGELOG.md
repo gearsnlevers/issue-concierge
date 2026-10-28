@@ -1,5 +1,22 @@
 # Changelog
 
+## [v2.0.0] - 2026-10-28
+
+### What's Changed
+* feat: test the Concierge end to end in a sandbox of its own by @vscheuber in https://github.com/gearsnlevers/issue-concierge/pull/62
+* fix: three gate prompt gaps found by the first end-to-end runs by @vscheuber in https://github.com/gearsnlevers/issue-concierge/pull/63
+* feat: hold a request that changes what exists for a maintainer before it is planned by @vscheuber in https://github.com/gearsnlevers/issue-concierge/pull/64
+* feat: a status issue for every repository, and a settings file of its own by @vscheuber in https://github.com/gearsnlevers/issue-concierge/pull/65
+* feat: a maintainer decides by command, and the issue says which one applies by @vscheuber in https://github.com/gearsnlevers/issue-concierge/pull/66
+* feat: the Concierge is paused by a repository variable by @vscheuber in https://github.com/gearsnlevers/issue-concierge/pull/67
+* chore: move gh-aw to v0.93.5 by @vscheuber in https://github.com/gearsnlevers/issue-concierge/pull/68
+* chore: the Concierge's own files use its new home by @vscheuber in https://github.com/gearsnlevers/issue-concierge/pull/69
+* feat: mention the maintainers about what has waited too long (mention-after-days) by @vscheuber in https://github.com/gearsnlevers/issue-concierge/pull/70
+* fix: what the first soak found (a race after /accept, two faults of the suite) by @vscheuber in https://github.com/gearsnlevers/issue-concierge/pull/71
+* docs: accept decision records 0030 to 0037 by @vscheuber in https://github.com/gearsnlevers/issue-concierge/pull/72
+
+**Full Changelog**: https://github.com/gearsnlevers/issue-concierge/compare/v1.8.0...v2.0.0
+
 ## [v2.0.0-1] - 2026-10-27
 
 ### What's Changed
