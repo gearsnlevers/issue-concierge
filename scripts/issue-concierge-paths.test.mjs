@@ -52,7 +52,8 @@ test('an error on the new place is the answer: a stale file in the old place doe
     const got = configViaApi('scope.md', (p) => (p === configPath('scope.md') ? { status } : { status: 200 }));
     assert.deepEqual([got.path, got.result.status], [configPath('scope.md'), status]);
   }
-  assert.equal(viaApi(['a', 'b'], () => null).result, null, 'no answer at all is no answer');
+  const noAnswer = viaApi(['a', 'b'], (p) => (p === 'a' ? null : { status: 200 }));
+  assert.deepEqual([noAnswer.path, noAnswer.result, noAnswer.legacy], ['a', null, false], 'no answer at all is a failed read: the old place does not stand in for it');
 });
 
 test('the updater moves what is only in the old place, and reports what is in both', () => {

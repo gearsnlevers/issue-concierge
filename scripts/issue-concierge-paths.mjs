@@ -44,7 +44,8 @@ export const readPin = (read) => firstFound([PIN_PATH, LEGACY_PIN_PATH], read);
  */
 export function viaApi(paths, get) {
   const first = get(paths[0]);
-  if (first && first.status !== 404) return { path: paths[0], result: first, legacy: false };
+  // Only an explicit "not there" falls back. No answer at all is a failed read, and a file in the old place must not stand in for it.
+  if (!first || first.status !== 404) return { path: paths[0], result: first, legacy: false };
   for (const path of paths.slice(1)) {
     const next = get(path);
     if (next && next.status === 200) return { path, result: next, legacy: true };
