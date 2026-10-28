@@ -6,7 +6,7 @@
 // read the same state, so that what a maintainer is shown and what a command does cannot drift apart.
 // Rules and reasons: docs/multi-phase-design.md, "The maintainer's view".
 //
-// Install: copy to .github/scripts/concierge-state.mjs (it imports janitor.mjs and opt-out.mjs, so install those too).
+// Install: copy to .github/scripts/issue-concierge-state.mjs (it imports janitor.mjs and opt-out.mjs, so install those too).
 import { GATE, isCodingAgent } from './janitor.mjs';
 import { isOptedOut, labelNames } from './opt-out.mjs';
 

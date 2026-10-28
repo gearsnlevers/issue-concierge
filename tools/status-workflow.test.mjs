@@ -56,22 +56,22 @@ test('it checks out the default branch and runs one script, so the settings are 
 });
 
 test('everything it needs is delivered with it: the workflow, its three scripts and the settings template', () => {
-  for (const file of ['workflows/status.yml', 'scripts/status-issue.mjs', 'scripts/concierge-settings.mjs', 'scripts/concierge-state.mjs', 'shared/settings.yml']) {
+  for (const file of ['workflows/status.yml', 'scripts/status-issue.mjs', 'scripts/issue-concierge-settings.mjs', 'scripts/issue-concierge-state.mjs', 'shared/settings.yml']) {
     assert.match(aw, new RegExp(`^  - ${file.replace('.', '\\.')}$`, 'm'), `${file} is in aw.yml`);
   }
   const entry = (file) => buildManifest({ root: ROOT, version: '0.0.0-test' }).files.find((f) => f.path === file);
   assert.deepEqual([entry('workflows/status.yml').kind, entry('workflows/status.yml').dest], ['workflow', '.github/workflows/status.yml']);
-  for (const script of ['status-issue', 'concierge-settings', 'concierge-state']) assert.equal(entry(`scripts/${script}.mjs`).dest, `.github/scripts/${script}.mjs`);
+  for (const script of ['status-issue', 'issue-concierge-settings', 'issue-concierge-state']) assert.equal(entry(`scripts/${script}.mjs`).dest, `.github/scripts/${script}.mjs`);
   assert.deepEqual([entry('shared/settings.yml').kind, entry('shared/settings.yml').dest], ['reference', null], 'the template is read, not installed');
 });
 
 test('every script it imports is delivered too, so that an install runs', () => {
-  for (const file of ['status-issue', 'concierge-state', 'concierge-settings']) {
+  for (const file of ['status-issue', 'issue-concierge-state', 'issue-concierge-settings']) {
     for (const [, dep] of read(`scripts/${file}.mjs`).matchAll(/^import .* from '\.\/([\w-]+\.mjs)';$/gm)) {
       assert.match(aw, new RegExp(`^  - scripts/${dep.replace('.', '\\.')}$`, 'm'), `${file} imports ${dep}`);
     }
   }
-  assert.match(workflow, /scripts\/concierge-settings\.mjs and scripts\/concierge-state\.mjs to \.github\/scripts\/ \(they import janitor\.mjs and\n# opt-out\.mjs, so install those too\)/);
+  assert.match(workflow, /scripts\/issue-concierge-settings\.mjs and scripts\/issue-concierge-state\.mjs to \.github\/scripts\/ \(they import janitor\.mjs and\n# opt-out\.mjs, so install those too\)/);
 });
 
 test('the status issue is invisible to the gates: opened by the bot and marked with the opt-out label', () => {
@@ -89,7 +89,7 @@ test('the docs, the record and the checklist say the same', () => {
   assert.match(design, /^## The maintainer's view$/m);
   assert.match(design, /\| `Concierge 5a ▸ Status` \| when a label that matters changes, on a comment, hourly, and on demand; a plain workflow, no model \|/);
   assert.match(read('docs/deployment.md'), /^### Status issue$/m);
-  assert.match(read('docs/deployment.md'), /- \[ \] Status issue installed \(`status\.yml`, `status-issue\.mjs`, `concierge-settings\.mjs` and `concierge-state\.mjs`; the updater does it\)/);
+  assert.match(read('docs/deployment.md'), /- \[ \] Status issue installed \(`status\.yml`, `status-issue\.mjs`, `issue-concierge-settings\.mjs` and `issue-concierge-state\.mjs`; the updater does it\)/);
   assert.match(read('docs/deployment.md'), /\| `settings\.yml` \| No \|/);
   assert.match(read('README.md'), /Every repository that runs the Concierge gets a pinned issue, "Concierge status"/);
   assert.match(read('README.md'), /- `settings\.yml`: what the Concierge does in this repository/);

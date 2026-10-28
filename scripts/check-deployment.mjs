@@ -1,7 +1,7 @@
 // Deployment check for Repo Concierge.
 //
 // Deterministic: no LLM, no network. Verifies that the compiled workflows can
-// do what .github/agentic-workflows/related-repos.md promises: for every
+// do what .github/issue-concierge/related-repos.md promises: for every
 // related repository that names a secret, the issue worker may create issues
 // there and the related-repo closer may comment, label and close there, with
 // that secret. Reads the compiled .lock.yml of the issue worker and the text of
@@ -14,11 +14,11 @@
 // when it keeps no decision records (docs/decisions/, or decisions/ at the
 // repository root when docs/ is generated).
 //
-// It warns, and never fails, about a line of .github/agentic-workflows/settings.yml that the Concierge cannot use
+// It warns, and never fails, about a line of .github/issue-concierge/settings.yml that the Concierge cannot use
 // (an unknown setting, a value out of range): the default stays, so nothing stops, but the setting does not do what
 // the file says.
 import fs from 'node:fs';
-import { SETTINGS_PATH, parseSettings } from './concierge-settings.mjs';
+import { SETTINGS_PATH, parseSettings } from './issue-concierge-settings.mjs';
 import { parseRelatedRepos } from './dependency-watch.mjs';
 
 /** Warnings about the lines of a settings file that cannot be used; `null` when there is no file. */
@@ -115,7 +115,7 @@ export function checkDeployment(relatedText, locks) {
         // The update that first installs the closer is made by the updater of the release before, which does not know
         // the marker yet. That is a state to finish, not a mistake: the next run of the updater writes the lines.
         warnings.push(
-          `${CLOSER}: still has the ${CLOSER_MARKER} marker, so CROSS_REPO and CROSS_REPO_TOKEN were not written: the updater that installed it predates the marker. Run the Concierge updater again (concierge-updater.yml, with target set to the pinned release); until then the closer updates nothing in ${rel.repo}`
+          `${CLOSER}: still has the ${CLOSER_MARKER} marker, so CROSS_REPO and CROSS_REPO_TOKEN were not written: the updater that installed it predates the marker. Run the Concierge updater again (issue-concierge-updater.yml, with target set to the pinned release); until then the closer updates nothing in ${rel.repo}`
         );
       } else {
         if (envValue(text, 'CROSS_REPO') !== rel.repo) {
@@ -188,9 +188,9 @@ export function main(cwd = process.cwd()) {
   for (const notice of checkDecisions((d) => isDirectory(`${cwd}/${d}`))) console.log(`::notice::${notice}`);
   const settingsPath = `${cwd}/${SETTINGS_PATH}`;
   for (const problem of checkSettings(fs.existsSync(settingsPath) ? fs.readFileSync(settingsPath, 'utf8') : null)) console.log(`::warning::${problem}`);
-  const relatedPath = `${cwd}/.github/agentic-workflows/related-repos.md`;
+  const relatedPath = `${cwd}/.github/issue-concierge/related-repos.md`;
   if (!fs.existsSync(relatedPath)) {
-    console.log('No .github/agentic-workflows/related-repos.md: nothing to check.');
+    console.log('No .github/issue-concierge/related-repos.md: nothing to check.');
     return 0;
   }
   const locks = {};

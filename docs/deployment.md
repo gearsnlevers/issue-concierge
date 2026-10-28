@@ -32,7 +32,7 @@ Commit the files on a branch and open a pull request.
 
 ## 2. Optional shared configuration
 
-The files under `shared/` in the harness repository are templates. They are **not** required for a working deployment. Copy only the ones you need into `.github/agentic-workflows/` of the consuming repository.
+The files under `shared/` in the harness repository are templates. They are **not** required for a working deployment. Copy only the ones you need into `.github/issue-concierge/` of the consuming repository.
 
 | File | Required? | Purpose |
 |------|-----------|---------|
@@ -53,11 +53,11 @@ If `related-repos.md` is absent, no linked-issue routing occurs.
 
 ### Repository guidance (`AGENTS.md`)
 
-Optional, and read from the repository's own files rather than from `.github/agentic-workflows/`: `AGENTS.md` at the root (start from `shared/agents.md`), `.github/copilot-instructions.md`, and `.github/instructions/*.instructions.md` with `applyTo` globs. The Copilot coding agent loads them itself, the plan worker lists the rules that apply in its plan, and PR triage adds a "Repository rules:" line to its comment. Both gates read the default branch only, so a pull request cannot loosen the rules it is judged by. Keep `AGENTS.md` at 60 lines or fewer: it is loaded into every agent run. `check-deployment` prints a notice, and never fails, when neither `AGENTS.md` nor `.github/copilot-instructions.md` exists.
+Optional, and read from the repository's own files rather than from `.github/issue-concierge/`: `AGENTS.md` at the root (start from `shared/agents.md`), `.github/copilot-instructions.md`, and `.github/instructions/*.instructions.md` with `applyTo` globs. The Copilot coding agent loads them itself, the plan worker lists the rules that apply in its plan, and PR triage adds a "Repository rules:" line to its comment. Both gates read the default branch only, so a pull request cannot loosen the rules it is judged by. Keep `AGENTS.md` at 60 lines or fewer: it is loaded into every agent run. `check-deployment` prints a notice, and never fails, when neither `AGENTS.md` nor `.github/copilot-instructions.md` exists.
 
 ### Decision records (`docs/decisions/` or `decisions/`)
 
-Optional, and read from the repository's own folder rather than from `.github/agentic-workflows/`: one file `NNNN-short-title.md` per decision in `docs/decisions/` (start from `shared/decision-record.md`) and an index `docs/decisions/README.md`. A repository whose `docs/` is generated output that gets rewritten (typedoc, for example) keeps them in `decisions/` at the repository root instead, with the index `decisions/README.md`. The gates look for `docs/decisions/README.md` first and then for `decisions/README.md`; the first one found wins, and records from both folders are never merged. Each record has frontmatter with `status:`, `date:`, `decision-makers:` and optionally `applies-to:` (path globs) and `issues:`; only `accepted` records bind, until a newer record supersedes them. The plan worker lists the ones that apply to a request under "Decisions that apply" (and a request that conflicts with one under "Conflicts with NNNN", which makes plan triage add the `plan-approval-required` hold), the PR worker tells the coding agent to follow them, and PR triage adds a "Decisions:" line to its comment. Both gates read the default branch only. Records are as public as the repository: no secrets. `check-deployment` prints a notice, and never fails, when neither `docs/decisions/` nor `decisions/` exists.
+Optional, and read from the repository's own folder rather than from `.github/issue-concierge/`: one file `NNNN-short-title.md` per decision in `docs/decisions/` (start from `shared/decision-record.md`) and an index `docs/decisions/README.md`. A repository whose `docs/` is generated output that gets rewritten (typedoc, for example) keeps them in `decisions/` at the repository root instead, with the index `decisions/README.md`. The gates look for `docs/decisions/README.md` first and then for `decisions/README.md`; the first one found wins, and records from both folders are never merged. Each record has frontmatter with `status:`, `date:`, `decision-makers:` and optionally `applies-to:` (path globs) and `issues:`; only `accepted` records bind, until a newer record supersedes them. The plan worker lists the ones that apply to a request under "Decisions that apply" (and a request that conflicts with one under "Conflicts with NNNN", which makes plan triage add the `plan-approval-required` hold), the PR worker tells the coding agent to follow them, and PR triage adds a "Decisions:" line to its comment. Both gates read the default branch only. Records are as public as the repository: no secrets. `check-deployment` prints a notice, and never fails, when neither `docs/decisions/` nor `decisions/` exists.
 
 ### related-repos.md schema
 
@@ -423,12 +423,12 @@ A plain Actions workflow (no LLM) keeps one pinned issue, "Concierge status", up
 |----------------------|-----------------------------|
 | `workflows/status.yml` | `.github/workflows/status.yml` |
 | `scripts/status-issue.mjs` | `.github/scripts/status-issue.mjs` |
-| `scripts/concierge-settings.mjs` | `.github/scripts/concierge-settings.mjs` |
-| `scripts/concierge-state.mjs` | `.github/scripts/concierge-state.mjs` |
+| `scripts/issue-concierge-settings.mjs` | `.github/scripts/issue-concierge-settings.mjs` |
+| `scripts/issue-concierge-state.mjs` | `.github/scripts/issue-concierge-state.mjs` |
 
 It imports `janitor.mjs` and `opt-out.mjs`, so install those too. It writes the issue with the workflow token (`Issues: write`, as `github-actions[bot]`), reads the runs (`Actions: read`) and uses `SIGNAL_TOKEN` for two things only: pinning the issue, and asking GitHub when that token expires. Without the secret the issue is still written, unpinned, and says so. The workflow is skipped for an issue that carries `no-auto-processing`, and the hourly run counts it.
 
-To turn it off, to change how far back it looks for reporter replies, or to have the maintainers mentioned on the status issue about what has waited for them for a number of days (`mention-after-days`, off by default; it lists the collaborators with the workflow token and then with `SIGNAL_TOKEN`), copy `shared/settings.yml` to `.github/agentic-workflows/settings.yml` and edit it; `status-issue: false` closes and unpins the issue. A repository can hold three pinned issues; if there are three already, the status issue is created unpinned and the page says why.
+To turn it off, to change how far back it looks for reporter replies, or to have the maintainers mentioned on the status issue about what has waited for them for a number of days (`mention-after-days`, off by default; it lists the collaborators with the workflow token and then with `SIGNAL_TOKEN`), copy `shared/settings.yml` to `.github/issue-concierge/settings.yml` and edit it; `status-issue: false` closes and unpins the issue. A repository can hold three pinned issues; if there are three already, the status issue is created unpinned and the page says why.
 
 ### Commands
 
@@ -439,9 +439,9 @@ A maintainer decides what becomes of an issue that waits for them by commenting 
 | `workflows/commands.yml` | `.github/workflows/commands.yml` |
 | `scripts/commands.mjs` | `.github/scripts/commands.mjs` |
 
-It imports `concierge-settings.mjs`, `concierge-state.mjs`, `plan-approval-resume.mjs`, `janitor.mjs` and `opt-out.mjs`, so install those too. It needs `SIGNAL_TOKEN` (Issues: Read and write): handing an issue on and closing it must start the next gate, which a change made with the workflow token does not. Comments, reactions and label removals use the workflow token (`Issues: write`).
+It imports `issue-concierge-settings.mjs`, `issue-concierge-state.mjs`, `plan-approval-resume.mjs`, `janitor.mjs` and `opt-out.mjs`, so install those too. It needs `SIGNAL_TOKEN` (Issues: Read and write): handing an issue on and closing it must start the next gate, which a change made with the workflow token does not. Comments, reactions and label removals use the workflow token (`Issues: write`).
 
-Who may use the commands is the setting `commands-need` in `.github/agentic-workflows/settings.yml` (template `shared/settings.yml`): `triage` by default, so that people who triage but do not write code can decide; `write`, `maintain` or `admin` narrow it. A personal repository has no triage role, so write is the lowest there. `commands: false` turns the commands and the options comment off. The new label `declined` (see [Create labels](#4-create-labels)) is what `/decline` adds.
+Who may use the commands is the setting `commands-need` in `.github/issue-concierge/settings.yml` (template `shared/settings.yml`): `triage` by default, so that people who triage but do not write code can decide; `write`, `maintain` or `admin` narrow it. A personal repository has no triage role, so write is the lowest there. `commands: false` turns the commands and the options comment off. The new label `declined` (see [Create labels](#4-create-labels)) is what `/decline` adds.
 
 ### Pause
 
@@ -451,7 +451,7 @@ While it is set, no gate, sweep, closer or notifier touches an issue or a pull r
 
 ## Deployment check
 
-`check-deployment` catches the configuration mistakes that otherwise surface as a failed run weeks later. It reads the compiled `.lock.yml` of the issue worker and the text of the related-repo closer's workflow (what actually runs) and compares them with `.github/agentic-workflows/related-repos.md`. For every related repository that names a `secret`, it requires that:
+`check-deployment` catches the configuration mistakes that otherwise surface as a failed run weeks later. It reads the compiled `.lock.yml` of the issue worker and the text of the related-repo closer's workflow (what actually runs) and compares them with `.github/issue-concierge/related-repos.md`. For every related repository that names a `secret`, it requires that:
 
 - `issue-worker` has `create-issue` enabled with `allowed-repos` containing the repository and `github-token` set to that secret;
 - `related-repo-closer.yml` has `CROSS_REPO` set to the repository and `CROSS_REPO_TOKEN` set to that secret (the updater writes both).
@@ -684,7 +684,7 @@ git push
 - [ ] Issues enabled
 - [ ] `COPILOT_GITHUB_TOKEN` set (org secret for orgs, repo secret for user repos) or org Copilot billing enabled
 - [ ] Workflow `.md` files added (and, if split-repo routing is used, `related-repo-closer.yml` and its script, see above)
-- [ ] Optional `.github/agentic-workflows/` config files added only if needed
+- [ ] Optional `.github/issue-concierge/` config files added only if needed
 - [ ] Issue template present (or optional completeness override)
 - [ ] `gh aw compile` run and lock files committed
 - [ ] All recommended labels created (including `related-repo`, `original-in-related-repo`, `no-auto-processing`, `dependency-required`, `dependency-satisfied`)
@@ -700,7 +700,7 @@ git push
 - [ ] Janitor installed (`janitor.yml` and `janitor.mjs`)
 - [ ] Pause tried: with the repository variable `CONCIERGE_PAUSED` set to `true`, a new comment starts no gate (the runs are skipped), the status issue shows the banner after its next run, and deleting the variable ends it
 - [ ] Commands installed (`commands.yml` and `commands.mjs`; needs `SIGNAL_TOKEN`; the updater does it); on an issue that carries `needs-decision` the last comment is the options comment, and `/accept` from a collaborator with the role hands the issue to the plan worker
-- [ ] Status issue installed (`status.yml`, `status-issue.mjs`, `concierge-settings.mjs` and `concierge-state.mjs`; the updater does it); after the first run the "Concierge status" issue exists, is pinned, and its counts match the open issues
+- [ ] Status issue installed (`status.yml`, `status-issue.mjs`, `issue-concierge-settings.mjs` and `issue-concierge-state.mjs`; the updater does it); after the first run the "Concierge status" issue exists, is pinned, and its counts match the open issues
 - [ ] PR ready signal installed (`pr-ready-signal.yml` and `pr-ready-signal.mjs`; needs `SIGNAL_TOKEN`)
 - [ ] Branch protection / ruleset configured (require PR, status checks, no force-push)
 - [ ] Auto-merge enabled (if low/low unattended merge is desired)

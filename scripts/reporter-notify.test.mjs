@@ -25,7 +25,7 @@ const workerComment = (id, repo = THIS) => ({
 /** A fake read-only GitHub keyed by path (query ignored); `over` replaces entries. */
 function world(over = {}) {
   const base = {
-    [`repos/${THIS}/contents/.github/agentic-workflows/related-repos.md`]: {
+    [`repos/${THIS}/contents/.github/issue-concierge/related-repos.md`]: {
       status: 200,
       data: { content: Buffer.from(CONFIG).toString('base64') },
     },
@@ -189,7 +189,7 @@ test('an error status is an error even when the response carries a body', () => 
   let w = world({ 'repos/rockcarver/frodo-cli/issues/887': { status: 403, data: valid } });
   assert.equal(notify(issue(), w.ctx).notified, false);
   w = world({
-    [`repos/${THIS}/contents/.github/agentic-workflows/related-repos.md`]: { status: 500, data: { content: Buffer.from(CONFIG).toString('base64') } },
+    [`repos/${THIS}/contents/.github/issue-concierge/related-repos.md`]: { status: 500, data: { content: Buffer.from(CONFIG).toString('base64') } },
   });
   assert.equal(notify(issue(), w.ctx).notified, false);
   w = world({ [`repos/${THIS}/issues/783/comments`]: { status: 502, data: [workerComment(100)] } });
@@ -247,7 +247,7 @@ test('a link to a repository the config does not list is not followed', () => {
 });
 
 test('without related-repos.md nothing can be confirmed', () => {
-  const w = world({ [`repos/${THIS}/contents/.github/agentic-workflows/related-repos.md`]: { status: 404, data: null } });
+  const w = world({ [`repos/${THIS}/contents/.github/issue-concierge/related-repos.md`]: { status: 404, data: null } });
   assert.equal(notify(issue(), w.ctx).notified, false);
 });
 

@@ -8,15 +8,15 @@
 // by a bot and carries no-auto-processing, and every gate skips both. Rules and reasons:
 // docs/multi-phase-design.md, "The maintainer's view".
 //
-// Install: copy to .github/scripts/status-issue.mjs (it imports concierge-settings.mjs, concierge-state.mjs,
+// Install: copy to .github/scripts/status-issue.mjs (it imports issue-concierge-settings.mjs, issue-concierge-state.mjs,
 // janitor.mjs and opt-out.mjs, so install those too).
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
-import { SETTINGS_PATH, parseSettings } from './concierge-settings.mjs';
+import { SETTINGS_PATH, parseSettings, readSettingsText } from './issue-concierge-settings.mjs';
 import {
   BOT, QUEUES, STUCK_AFTER_MINUTES, GATE_LABELS, ago, classify, compareVersions, isAnalysis, labelledAt, latestRelease,
   readPin, reporterReplies, runHealth, safeText, spend, tokenExpiry,
-} from './concierge-state.mjs';
+} from './issue-concierge-state.mjs';
 import { LABEL_OPT_OUT, labelNames } from './opt-out.mjs';
 
 export const TITLE = 'Concierge status';
@@ -240,7 +240,7 @@ export function renderMention(logins, items, days, now) {
   L.push(`${plural(items.length, 'issue')} ${items.length === 1 ? 'has' : 'have'} waited for a maintainer for ${plural(days, 'day')} or more:`, '');
   for (const i of items.slice(0, MENTION_ITEMS)) L.push(`- #${i.number} ${safeText(i.title)} · ${i.queue.toLowerCase()} · waiting ${ago(now - i.since)}`);
   if (items.length > MENTION_ITEMS) L.push(`- and ${items.length - MENTION_ITEMS} more, listed on this page`);
-  L.push('', 'The lists above say what each one needs. To stop these comments, set `mention-after-days: 0` in `.github/agentic-workflows/settings.yml`.');
+  L.push('', 'The lists above say what each one needs. To stop these comments, set `mention-after-days: 0` in `.github/issue-concierge/settings.yml`.');
   return L.join('\n');
 }
 
@@ -445,7 +445,7 @@ export function main(env = process.env, ctx = realContext(env)) {
     console.error('GITHUB_REPOSITORY is required');
     return 1;
   }
-  const text = ctx.read(SETTINGS_PATH);
+  const text = readSettingsText((p) => ctx.read(p));
   const { settings, problems } = parseSettings(text);
   for (const p of problems) console.log(`::warning::${p}`);
   const signalToken = env.SIGNAL_TOKEN || '';

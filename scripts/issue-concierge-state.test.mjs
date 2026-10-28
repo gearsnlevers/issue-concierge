@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 import {
   CONCIERGE_LABELS, GATE_LABELS, QUEUES, STUCK_AFTER_MINUTES, aicOf, ago, classify, compareVersions, isAnalysis, isConciergeLabel,
   labelledAt, latestRelease, queueOf, readPin, reporterReplies, runHealth, safeText, spend, tokenExpiry,
-} from './concierge-state.mjs';
+} from './issue-concierge-state.mjs';
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const requirements = JSON.parse(fs.readFileSync(path.join(ROOT, 'requirements.json'), 'utf8'));

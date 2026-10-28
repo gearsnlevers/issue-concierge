@@ -4,7 +4,7 @@ The updater keeps a deployment on a released version of Repo Concierge. It is th
 
 ## What it does
 
-A plain Actions workflow (`concierge-updater.yml`, no LLM) runs daily and on demand:
+A plain Actions workflow (`issue-concierge-updater.yml`, no LLM) runs daily and on demand:
 
 1. Reads `.github/concierge.yml`, the deployment's pin (source repository, version, commit, channel).
 2. Asks the source repository for its latest release on the pinned channel (`stable` ignores prereleases). Nothing newer: done.
@@ -22,7 +22,7 @@ The pull request body has the release notes, the files added, changed and remove
 
 Everything the manifest installs: the gh-aw definitions (`.github/workflows/*.md` with their `.lock.yml`), the plain workflows and the scripts. Do not edit these files in a deployment; the next update reverts the edit and says so in the pull request. Reference material (`shared/`, `docs/`) is not installed.
 
-To customize, use the places that are yours: `.github/agentic-workflows/` (complexity, risk and completeness definitions, `related-repos.md`) and `.github/concierge.yml` (`channel`).
+To customize, use the places that are yours: `.github/issue-concierge/` (complexity, risk and completeness definitions, `related-repos.md`) and `.github/concierge.yml` (`channel`).
 
 **When the Concierge moves.** The pin's `source:` names the repository the updater reads. The Concierge moved from `vscheuber/repo-concierge` to `gearsnlevers/issue-concierge` (transferred, then renamed). GitHub redirects a transferred and renamed repository by its identity, for the API, git and the web, so a deployment that still names the old source keeps working: its updater reads releases, tags and files through the redirect. Change the `source:` line by hand once, in a pull request that touches that line only; the version, the commit and the channel stay as they are, and the updater reads the new source from then on. Never create a repository at the old name: that ends the redirect.
 
@@ -46,7 +46,7 @@ CROSS_REPO_TOKEN: ${{ secrets.<secret> }}
 
 Both come from the related repository in `related-repos.md` that names a `secret`, and a marker is removed when there is none. One related repository with a secret is supported (a safe output takes one token); two is an error. `check-deployment` verifies the compiled result of the first and the generated lines of the second.
 
-A marker takes effect one release late. The update that first installs a marker is made by the updater the deployment already has, the previous release's, which does not know it: the file arrives with the marker line left in and nothing generated, and `check-deployment` says so as a warning. Run the updater once more with the pinned release as the target (`gh workflow run concierge-updater.yml -f target=vX.Y.Z`): the updater that the first update installed writes the lines, in a second pull request. A deployment without a related repository needs no second run, and its marker line is only a comment until the next update removes it.
+A marker takes effect one release late. The update that first installs a marker is made by the updater the deployment already has, the previous release's, which does not know it: the file arrives with the marker line left in and nothing generated, and `check-deployment` says so as a warning. Run the updater once more with the pinned release as the target (`gh workflow run issue-concierge-updater.yml -f target=vX.Y.Z`): the updater that the first update installed writes the lines, in a second pull request. A deployment without a related repository needs no second run, and its marker line is only a comment until the next update removes it.
 
 ## Setting it up
 
@@ -60,10 +60,10 @@ A marker takes effect one release late. The update that first installs a marker 
 export GH_TOKEN="$(gh auth token)"   # the updater reads GitHub unauthenticated (60 requests/hour) without one
 git checkout -b concierge/first-adoption
 mkdir -p .github/scripts
-for f in concierge-updater dependency-watch opt-out; do
+for f in issue-concierge-updater dependency-watch opt-out; do
   gh api "repos/gearsnlevers/issue-concierge/contents/scripts/$f.mjs?ref=v1.0.0" --jq .content | base64 -d > ".github/scripts/$f.mjs"
 done
-node .github/scripts/concierge-updater.mjs --local --source gearsnlevers/issue-concierge --target v1.0.0
+node .github/scripts/issue-concierge-updater.mjs --local --source gearsnlevers/issue-concierge --target v1.0.0
 git add -A .github .gitattributes && git commit -m "chore: adopt Repo Concierge v1.0.0" && git push -u origin HEAD
 ```
 
@@ -72,10 +72,10 @@ git add -A .github .gitattributes && git commit -m "chore: adopt Repo Concierge 
 ## Commands
 
 ```
-node .github/scripts/concierge-updater.mjs                  update to the latest release of the pinned channel
-node .github/scripts/concierge-updater.mjs --dry-run        show what would change, change nothing
-node .github/scripts/concierge-updater.mjs --target v1.2.0  a specific release; the pinned one repairs drift
-node .github/scripts/concierge-updater.mjs --local          write the working tree and compile; no branch, push or pull request
+node .github/scripts/issue-concierge-updater.mjs                  update to the latest release of the pinned channel
+node .github/scripts/issue-concierge-updater.mjs --dry-run        show what would change, change nothing
+node .github/scripts/issue-concierge-updater.mjs --target v1.2.0  a specific release; the pinned one repairs drift
+node .github/scripts/issue-concierge-updater.mjs --local          write the working tree and compile; no branch, push or pull request
 ```
 
 In Actions the workflow is **Concierge 4e ▸ Updater**; `workflow_dispatch` takes `target` and `dry-run`.

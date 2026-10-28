@@ -47,7 +47,7 @@ A dependency's required state depends on where it lives.
 1. **Same repository.**
    - A pull request is satisfied when merged.
    - An issue is satisfied when closed as completed.
-2. **A related repository whose entry in `.github/agentic-workflows/related-repos.md` has `release.requires_consumer_release: true`** (for example a CLI issue that depends on a library issue or pull request). Merged or closed is not enough. All four must hold, checked in this order:
+2. **A related repository whose entry in `.github/issue-concierge/related-repos.md` has `release.requires_consumer_release: true`** (for example a CLI issue that depends on a library issue or pull request). Merged or closed is not enough. All four must hold, checked in this order:
    1. **Merged.** The pull request is merged. For an issue, the change that closed it is found from the `closed` event or a merged cross-referenced pull request. An issue closed as completed with no linkable change needs a maintainer.
    2. **Released.** A release of the related repository contains the merge commit. Prereleases count. The oldest such release is used.
    3. **Installable.** The package named by `release.pins` is resolvable on the npm registry at that release's version. A GitHub release alone is not enough, because publishing lags it.

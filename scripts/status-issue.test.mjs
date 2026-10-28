@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { LIST_CAP, MARKER, MENTION_CAP, MENTION_MARKER, TITLE, collect, findStatusIssue, main, maintainersOf, normalise, nudge, overdue, planMention, reconcile, render, renderMention, summarize } from './status-issue.mjs';
-import { DEFAULTS } from './concierge-settings.mjs';
+import { DEFAULTS } from './issue-concierge-settings.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const NOW = Date.parse('2026-10-27T12:00:00Z');
@@ -444,7 +444,7 @@ test('main: a dry run prints the page and writes nothing', () => {
 });
 
 test('main: settings.yml is read, a bad line is a warning and the default stays', () => {
-  const ctx = fakeCtx({ files: { '.github/agentic-workflows/settings.yml': 'reporter-replies-days: 200\n' } });
+  const ctx = fakeCtx({ files: { '.github/issue-concierge/settings.yml': 'reporter-replies-days: 200\n' } });
   const { code, lines } = run(ctx, { DRY_RUN: 'true' });
   assert.equal(code, 0);
   assert.ok(lines.some((l) => l.startsWith('::warning::settings.yml line 1: reporter-replies-days must be from 1 to 90')));
@@ -452,7 +452,7 @@ test('main: settings.yml is read, a bad line is a warning and the default stays'
 });
 
 test('main: a repository that turned the status issue off is left with it closed, and nothing is collected', () => {
-  const ctx = fakeCtx({ botIssues: [issue(7, [], { body: MARKER })], files: { '.github/agentic-workflows/settings.yml': 'status-issue: false\n' }, pinned: true });
+  const ctx = fakeCtx({ botIssues: [issue(7, [], { body: MARKER })], files: { '.github/issue-concierge/settings.yml': 'status-issue: false\n' }, pinned: true });
   const { code, lines } = run(ctx);
   assert.equal(code, 0);
   assert.ok(lines.some((l) => l.includes('the status issue was closed and unpinned')));
@@ -525,7 +525,7 @@ test('renderMention: the logins are the only mentions, the titles mention nobody
   assert.match(body, /- #1 Ping &#64;everyone about &#35;99 &#60;b&#62;x&#60;\/b&#62; · held: changes what exists · waiting 20 d/);
   assert.equal(body.split('\n').filter((l) => l.startsWith('- #')).length, 10);
   assert.match(body, /- and 3 more, listed on this page/);
-  assert.match(body, /set `mention-after-days: 0` in `\.github\/agentic-workflows\/settings\.yml`/);
+  assert.match(body, /set `mention-after-days: 0` in `\.github\/issue-concierge\/settings\.yml`/);
   assert.match(renderMention(['amy'], items.slice(0, 1), 1, NOW), /^1 issue has waited for a maintainer for 1 day or more:/m);
 });
 
@@ -596,7 +596,7 @@ const mainEnv = { DRY_RUN: undefined };
 const overdueIssues = { issues: [issue(1, ['needs-decision'], { title: 'Remove the widgets command' })], events: { 1: labelled('needs-decision', ago(9 * D)) } };
 
 test('main: with mention-after-days set, an issue that has waited that long is mentioned on the status issue', () => {
-  const ctx = ctxWith({ ...overdueIssues, files: { '.github/agentic-workflows/settings.yml': 'mention-after-days: 7\n' } });
+  const ctx = ctxWith({ ...overdueIssues, files: { '.github/issue-concierge/settings.yml': 'mention-after-days: 7\n' } });
   const { lines } = run(ctx);
   assert.ok(lines.includes('mention: mentioned 2 people about 1 issue'));
   assert.equal(written(ctx, 'POST').filter((w) => w.path.endsWith('/comments')).length, 1);
@@ -604,7 +604,7 @@ test('main: with mention-after-days set, an issue that has waited that long is m
 
 test('main: nothing is mentioned when the setting is 0, in a dry run, while paused, or with the status issue off', () => {
   const comments = (ctx) => ctx.calls.list.filter((p) => /issues\/99\/comments$/.test(p) || p === 'repos/o/r/collaborators');
-  const settings = (text) => ({ ...overdueIssues, files: { '.github/agentic-workflows/settings.yml': text } });
+  const settings = (text) => ({ ...overdueIssues, files: { '.github/issue-concierge/settings.yml': text } });
   const off = ctxWith(settings('mention-after-days: 0\n'));
   run(off);
   assert.deepEqual(comments(off), [], 'the default asks nothing of GitHub');

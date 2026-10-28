@@ -6,7 +6,7 @@
 # always the last comment (it is posted again after anyone else comments), and it is deleted when nothing waits.
 #
 # A command does what a person with the role can already do by hand with the labels. The role is read from GitHub for
-# the person who commented (the setting `commands-need` in .github/agentic-workflows/settings.yml, template
+# the person who commented (the setting `commands-need` in .github/issue-concierge/settings.yml, template
 # shared/settings.yml, says which role is enough; triage is the default), and the comment is read from the event file:
 # it is never put into a shell command. With `commands: false` the workflow does nothing.
 #
@@ -18,7 +18,7 @@
 # An issue that carries 'no-auto-processing' starts no run here ("Opting an item out").
 #
 # Install: copy this file to .github/workflows/commands.yml and scripts/commands.mjs to .github/scripts/commands.mjs (it
-# imports concierge-settings.mjs, concierge-state.mjs, plan-approval-resume.mjs, janitor.mjs and opt-out.mjs, so
+# imports issue-concierge-settings.mjs, issue-concierge-state.mjs, plan-approval-resume.mjs, janitor.mjs and opt-out.mjs, so
 # install those too).
 # Needs SIGNAL_TOKEN: a label added or an issue closed with the workflow token starts no workflow, and handing an issue
 # on is what starts the next gate.

@@ -189,7 +189,7 @@ test('PR ready signal: a labelled pull request is not signalled; the sweep and a
 
 test('every workflow that acts on an issue or pull request checks the label', () => {
   // the two that do not act on an item: the deployment check and the updater
-  const exempt = new Set(['check-deployment.yml', 'concierge-updater.yml']);
+  const exempt = new Set(['check-deployment.yml', 'issue-concierge-updater.yml']);
   const files = fs.readdirSync(new URL('../workflows/', import.meta.url)).filter((f) => /\.(md|yml)$/.test(f));
   assert.ok(files.length >= 16, 'expected every workflow');
   for (const f of files) {

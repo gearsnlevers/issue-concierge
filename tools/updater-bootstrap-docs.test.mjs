@@ -24,11 +24,11 @@ function importClosure(start) {
 test('the first-adoption bootstrap in docs/updater.md copies every script the updater imports', () => {
   const loop = read('docs/updater.md').match(/^for f in ([a-z -]+); do$/m);
   assert.ok(loop, 'docs/updater.md has the bootstrap loop');
-  assert.deepEqual([...importClosure('concierge-updater')].sort(), loop[1].split(' ').sort());
+  assert.deepEqual([...importClosure('issue-concierge-updater')].sort(), loop[1].split(' ').sort());
 });
 
 test('the closure is computed from the real imports', () => {
-  const closure = importClosure('concierge-updater');
+  const closure = importClosure('issue-concierge-updater');
   assert.ok(closure.has('dependency-watch') && closure.has('opt-out'));
   assert.ok(!closure.has('janitor'));
 });

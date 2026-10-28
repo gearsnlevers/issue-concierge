@@ -3,7 +3,7 @@
 // Deterministic: no LLM. A maintainer decides what becomes of an issue that waits for them by commenting a command
 // (`/accept`, `/decline`, `/approve`, `/replan`, `/retry`), and the Concierge keeps one comment on such an issue, the
 // options comment, that says what is needed and which command does what. The options comment is derived from the
-// issue's labels alone (scripts/concierge-state.mjs shows the same state on the status issue), it exists only while a
+// issue's labels alone (scripts/issue-concierge-state.mjs shows the same state on the status issue), it exists only while a
 // maintainer has to act, it is always the last comment, and it is deleted when nothing waits any more.
 //
 // A command does what a person with the role can already do by hand with the labels, no more. The commenter's role is
@@ -12,12 +12,12 @@
 // mentions neutralised. The Concierge still never lifts a hold on its own: a person gives the command, and the
 // approval names that person. Rules and reasons: docs/multi-phase-design.md, "The maintainer's view".
 //
-// Install: copy to .github/scripts/commands.mjs (it imports concierge-settings.mjs, concierge-state.mjs,
+// Install: copy to .github/scripts/commands.mjs (it imports issue-concierge-settings.mjs, issue-concierge-state.mjs,
 // plan-approval-resume.mjs, janitor.mjs and opt-out.mjs, so install those too).
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
-import { SETTINGS_PATH, parseSettings } from './concierge-settings.mjs';
-import { BOT, GATE_LABELS, OPTIONS_MARKER, STUCK_AFTER_MINUTES, isOptionsComment, labelledAt, MAINTAINER_ASSOCIATIONS } from './concierge-state.mjs';
+import { parseSettings, readSettingsText } from './issue-concierge-settings.mjs';
+import { BOT, GATE_LABELS, OPTIONS_MARKER, STUCK_AFTER_MINUTES, isOptionsComment, labelledAt, MAINTAINER_ASSOCIATIONS } from './issue-concierge-state.mjs';
 import { LABEL_OPT_OUT, isOptedOut, labelNames } from './opt-out.mjs';
 import { MARKER as APPROVAL_MARKER, decide as decideApproval } from './plan-approval-resume.mjs';
 
@@ -387,7 +387,7 @@ export function menuCandidates(api, now) {
 // ------------------------------------------------------------------ the entry point
 
 function settingsFrom(api, log) {
-  const { settings, problems } = parseSettings(api.read(SETTINGS_PATH));
+  const { settings, problems } = parseSettings(readSettingsText((p) => api.read(p)));
   for (const p of problems) log(`::warning::${p}`);
   return { on: settings.commands, need: settings['commands-need'] };
 }

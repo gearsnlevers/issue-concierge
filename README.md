@@ -93,11 +93,11 @@ High complexity or high risk adds `plan-approval-required`, and a maintainer can
 
 Valid but non-urgent issues receive `backlog` and do not enter the plan gate, with one exception: a low-hanging fruit (the issue worker judges the change small and low in risk, which is low complexity and low risk) receives `low-hanging-fruit` and is handed to the plan gate anyway. Plan triage then makes the real complexity and risk call. To move a `backlog` issue forward by hand, remove `backlog` and add `issue-triage-handoff`.
 
-A repository can add `.github/agentic-workflows/scope.md` (template: [shared/scope.md](shared/scope.md)) to state what the project is for and what it will not do. A request that matches an explicit exclusion is declined with a short reason and closed as not planned (`out-of-scope`). A request that only looks like it may not fit is held for a maintainer (`scope-review`) and nothing is closed. Without the file the check is off. See [docs/multi-phase-design.md](docs/multi-phase-design.md#scope-check).
+A repository can add `.github/issue-concierge/scope.md` (template: [shared/scope.md](shared/scope.md)) to state what the project is for and what it will not do. A request that matches an explicit exclusion is declined with a short reason and closed as not planned (`out-of-scope`). A request that only looks like it may not fit is held for a maintainer (`scope-review`) and nothing is closed. Without the file the check is off. See [docs/multi-phase-design.md](docs/multi-phase-design.md#scope-check).
 
-A request that changes what already exists is held for a maintainer before anything is planned: removing, renaming or replacing a command, an option, an exported function or a file format, breaking something that works today (a signature, an output format a script may parse), or changing the architecture. This is not part of the scope check and does not need a file. The issue worker judges by what the change does, not by how the issue argues for it ("nobody uses it", "it is safe", a suggested replacement); issue triage applies `needs-decision`, hands nothing on and closes nothing; and a plan that turns out to remove something carries a "Breaking change:" line that makes plan triage hold it. Fixes, additions and refinements that leave everything working as before go through. A repository can add `.github/agentic-workflows/guard.md` (template: [shared/guard.md](shared/guard.md)) to name what it protects and what it lets through freely. To accept a held request, a maintainer removes `needs-decision` and adds `issue-triage-handoff`. See [docs/multi-phase-design.md](docs/multi-phase-design.md#a-change-to-what-exists).
+A request that changes what already exists is held for a maintainer before anything is planned: removing, renaming or replacing a command, an option, an exported function or a file format, breaking something that works today (a signature, an output format a script may parse), or changing the architecture. This is not part of the scope check and does not need a file. The issue worker judges by what the change does, not by how the issue argues for it ("nobody uses it", "it is safe", a suggested replacement); issue triage applies `needs-decision`, hands nothing on and closes nothing; and a plan that turns out to remove something carries a "Breaking change:" line that makes plan triage hold it. Fixes, additions and refinements that leave everything working as before go through. A repository can add `.github/issue-concierge/guard.md` (template: [shared/guard.md](shared/guard.md)) to name what it protects and what it lets through freely. To accept a held request, a maintainer removes `needs-decision` and adds `issue-triage-handoff`. See [docs/multi-phase-design.md](docs/multi-phase-design.md#a-change-to-what-exists).
 
-Every repository that runs the Concierge gets a pinned issue, "Concierge status", written and kept current by a plain workflow (no model): what waits for a maintainer, the reporter replies nobody has answered, which issues the Concierge manages and which it does not (opted out, opened by bots, not yet picked up), whether the gates are healthy and what they cost. It is derived from the repository's own state, so it needs no access beyond the repository, and the Concierge never acts on it. `.github/agentic-workflows/settings.yml` (template: [shared/settings.yml](shared/settings.yml)) turns it off, changes how far back it looks for replies, or asks it to mention the maintainers about what has waited for them too long (`mention-after-days`). See [docs/multi-phase-design.md](docs/multi-phase-design.md#the-maintainers-view).
+Every repository that runs the Concierge gets a pinned issue, "Concierge status", written and kept current by a plain workflow (no model): what waits for a maintainer, the reporter replies nobody has answered, which issues the Concierge manages and which it does not (opted out, opened by bots, not yet picked up), whether the gates are healthy and what they cost. It is derived from the repository's own state, so it needs no access beyond the repository, and the Concierge never acts on it. `.github/issue-concierge/settings.yml` (template: [shared/settings.yml](shared/settings.yml)) turns it off, changes how far back it looks for replies, or asks it to mention the maintainers about what has waited for them too long (`mention-after-days`). See [docs/multi-phase-design.md](docs/multi-phase-design.md#the-maintainers-view).
 
 An issue that waits for a maintainer carries the command they need next. A comment starting with `/accept`, `/decline [reason]`, `/approve`, `/replan` or `/retry` does what the role can already do by hand with the labels, with the person who gave it named in the thread, and one comment of the bot, always the last, says which command applies to this issue. Triage is the default role, so people who triage but do not write code can decide (`commands-need` in `settings.yml`); `commands: false` turns it off. See [docs/multi-phase-design.md](docs/multi-phase-design.md#commands-and-the-options-comment).
 
@@ -179,7 +179,7 @@ Also create the labels listed above. Without the labels the workflows cannot sig
 
 ## Fine-tuning per Repository
 
-A repository tunes the gates with optional files under `.github/agentic-workflows/`, never by editing the installed workflows, because an update replaces those (with the Concierge updater, the update pull request lists every managed file a deployment edited):
+A repository tunes the gates with optional files under `.github/issue-concierge/`, never by editing the installed workflows, because an update replaces those (with the Concierge updater, the update pull request lists every managed file a deployment edited):
 - `issue-completeness.md`: what a complete report is, if the issue templates do not say.
 - `scope.md`: what the project does not do.
 - `guard.md`: what the project protects from change, and what it lets through freely.
@@ -225,7 +225,7 @@ Templates are in `shared/`. A repository can also supply an environment agent (s
 │   ├── related-repo-closer.yml
 │   ├── waiting-for-release.yml
 │   ├── release-closer.md
-│   ├── concierge-updater.yml
+│   ├── issue-concierge-updater.yml
 │   ├── check-deployment.yml
 │   ├── route-back.yml
 │   ├── status.yml
@@ -233,10 +233,11 @@ Templates are in `shared/`. A repository can also supply an environment agent (s
 ├── scripts/                 what the plain workflows run
 │   ├── check-deployment.mjs
 │   ├── commands.mjs
-│   ├── concierge-settings.mjs
-│   ├── concierge-state.mjs
-│   ├── concierge-updater.mjs
 │   ├── dependency-watch.mjs
+│   ├── issue-concierge-paths.mjs
+│   ├── issue-concierge-settings.mjs
+│   ├── issue-concierge-state.mjs
+│   ├── issue-concierge-updater.mjs
 │   ├── janitor.mjs
 │   ├── opt-out.mjs
 │   ├── plan-approval-resume.mjs

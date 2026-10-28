@@ -66,7 +66,7 @@ test('script: it creates, comments and gates, and never closes, unlabels, lifts 
 test('plan worker: work items are written only after reading both sides, in one exact form, naming only a listed repository', () => {
   const text = rendered(read('workflows/plan-worker.md'));
   const items = section(text, '## Work items');
-  assert.match(items, /Only in a repository with `\.github\/agentic-workflows\/related-repos\.md`, and only when you read the code on both sides and found that the fix needs a change in this repository and a change in the related repository/);
+  assert.match(items, /Only in a repository with `\.github\/issue-concierge\/related-repos\.md`, and only when you read the code on both sides and found that the fix needs a change in this repository and a change in the related repository/);
   assert.match(items, /If the whole fix is in one repository, write no work items and say nothing about them\./);
   assert.match(items, /Work item: \{owner\}\/\{repo\} \| \{what changes, in one sentence\} \| where: \{the file or function you read\} \| order: \{first, independent or this\}/);
   assert.match(items, /`order: this` is the line for this repository\./);

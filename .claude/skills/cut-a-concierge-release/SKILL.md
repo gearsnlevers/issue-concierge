@@ -71,9 +71,9 @@ If the maintainer did not ask for the rollout, stop here and report the tag, the
 ## 4. Dispatch the updater in every deployment
 
 ```bash
-gh workflow run concierge-updater.yml -R <owner/repo>                       # latest release of the pinned channel
-gh workflow run concierge-updater.yml -R <owner/repo> -f target=vX.Y.Z      # a specific release
-gh run list -R <owner/repo> --workflow concierge-updater.yml -L 1 --json databaseId,status,conclusion
+gh workflow run issue-concierge-updater.yml -R <owner/repo>                       # latest release of the pinned channel
+gh workflow run issue-concierge-updater.yml -R <owner/repo> -f target=vX.Y.Z      # a specific release
+gh run list -R <owner/repo> --workflow issue-concierge-updater.yml -L 1 --json databaseId,status,conclusion
 gh pr list -R <owner/repo> --head concierge/update --state open --json number,title,url
 ```
 

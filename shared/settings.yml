@@ -1,6 +1,6 @@
 # Repo Concierge settings for this repository.
 #
-# Copy this file to .github/agentic-workflows/settings.yml. It is optional: without it, or without a line,
+# Copy this file to .github/issue-concierge/settings.yml. It is optional: without it, or without a line,
 # the default shown below applies.
 #
 # The Concierge reads the file from the default branch, so a change takes effect when it is merged, and a pull

@@ -5,6 +5,7 @@
 // gates when every dependency is satisfied. Rules: shared/dependencies.md.
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
+import { readConfig } from './issue-concierge-paths.mjs';
 import { isOptedOut, optedOutReason } from './opt-out.mjs';
 
 export const BOT_MARKER = '<!-- dependency-watch -->';
@@ -312,9 +313,7 @@ export async function main(argv = process.argv.slice(2), env = process.env) {
   const readToken = env.GH_TOKEN;
   const signalToken = env.SIGNAL_TOKEN || readToken;
   const related = parseRelatedRepos(
-    fs.existsSync('.github/agentic-workflows/related-repos.md')
-      ? fs.readFileSync('.github/agentic-workflows/related-repos.md', 'utf8')
-      : ''
+    readConfig('related-repos.md', (p) => (fs.existsSync(p) ? fs.readFileSync(p, 'utf8') : null)).value || ''
   );
   const ctx = {
     thisRepo,

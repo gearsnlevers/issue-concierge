@@ -150,7 +150,7 @@ Do not reopen a closed issue.
 
 ## This repository consumes the fix
 
-Read `.github/agentic-workflows/related-repos.md`.
+Read `.github/issue-concierge/related-repos.md`.
 Apply this only when an entry sets `release.requires_consumer_release: true`.
 
 1. Read the published release notes and the version of each pinned package (`release.pins`).

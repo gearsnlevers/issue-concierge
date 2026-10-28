@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { DEFAULTS, SCHEMA, SETTINGS_PATH, parseSettings } from './concierge-settings.mjs';
+import { DEFAULTS, SCHEMA, SETTINGS_PATH, parseSettings } from './issue-concierge-settings.mjs';
 import { checkSettings } from './check-deployment.mjs';
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -90,7 +90,7 @@ test('the starter file explains what mention-after-days does, who it names, how 
 
 test('the starter file says where it goes, that it is optional and that it is read from the default branch', () => {
   const starter = fs.readFileSync(path.join(ROOT, 'shared/settings.yml'), 'utf8');
-  assert.match(starter, /Copy this file to \.github\/agentic-workflows\/settings\.yml\. It is optional/);
+  assert.match(starter, /Copy this file to \.github\/issue-concierge\/settings\.yml\. It is optional/);
   assert.match(starter, /The Concierge reads the file from the default branch, so a change takes effect when it is merged/);
-  assert.equal(SETTINGS_PATH, '.github/agentic-workflows/settings.yml');
+  assert.equal(SETTINGS_PATH, '.github/issue-concierge/settings.yml');
 });

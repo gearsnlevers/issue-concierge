@@ -44,7 +44,7 @@ const COVERED = [
 const EXEMPT = {
   'status.yml': 'the maintainer\'s view: it shows that the Concierge is paused',
   'commands.yml': 'the maintainer\'s control: it refuses what would start a gate, and still declines and lists',
-  'concierge-updater.yml': 'it changes the Concierge\'s own files, not an issue or a pull request',
+  'issue-concierge-updater.yml': 'it changes the Concierge\'s own files, not an issue or a pull request',
   'check-deployment.yml': 'it reads the repository\'s configuration, not an issue or a pull request',
   'route-back.yml': 'started by hand only',
   'spawn-work-items.yml': 'started by hand only',
@@ -108,7 +108,7 @@ test('the workflows that are not paused are the ones that should keep running', 
   for (const file of ['route-back.yml', 'spawn-work-items.yml']) {
     assert.deepEqual([...onBlock(file).matchAll(/^  ([a-z_]+):/gm)].map((m) => m[1]), ['workflow_dispatch'], `${file} is started by hand only`);
   }
-  for (const file of ['concierge-updater.yml', 'check-deployment.yml']) {
+  for (const file of ['issue-concierge-updater.yml', 'check-deployment.yml']) {
     assert.doesNotMatch(onBlock(file), /^  (issues|issue_comment|pull_request_target):/m, `${file} reacts to no issue`);
   }
 });

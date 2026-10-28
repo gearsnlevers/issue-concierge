@@ -19,7 +19,7 @@ import {
   run,
   BRANCH,
   CONFIG_PATH,
-} from './concierge-updater.mjs';
+} from './issue-concierge-updater.mjs';
 
 const sha256 = (b) => createHash('sha256').update(b).digest('hex');
 const INSTALL = [
@@ -343,7 +343,7 @@ test('first adoption in local mode: writes the files and the pin, compiles, no g
 test('cross-repository settings come from related-repos.md', async () => {
   const h = harness();
   h.add('v1.0.0', { 'workflows/closer.md': 'safe-outputs:\n  close-issue:\n    max: 1\n    # concierge:cross-repo\n' });
-  const d = deployment({ '.github/agentic-workflows/related-repos.md': 'this: o/me\n\nrelated:\n  - role: cli\n    repo: o/cli\n    secret: CLI_TOKEN\n    when: |\n      x\n' });
+  const d = deployment({ '.github/issue-concierge/related-repos.md': 'this: o/me\n\nrelated:\n  - role: cli\n    repo: o/cli\n    secret: CLI_TOKEN\n    when: |\n      x\n' });
   await run({ root: d.root, local: true, source: 'o/concierge' }, h.ctx());
   assert.equal(d.read('.github/workflows/closer.md'), 'safe-outputs:\n  close-issue:\n    max: 1\n    github-token: ${{ secrets.CLI_TOKEN }}\n    allowed-repos: ["o/cli"]\n');
 });
@@ -352,7 +352,7 @@ test('the environment of a plain workflow comes from related-repos.md, and the m
   const closer = 'jobs:\n  close:\n    steps:\n      - env:\n          GH_TOKEN: x\n          # concierge:cross-repo-env\n';
   const h = harness();
   h.add('v1.0.0', { 'workflows/closer.yml': closer });
-  const withRelated = deployment({ '.github/agentic-workflows/related-repos.md': 'this: o/me\n\nrelated:\n  - role: cli\n    repo: o/cli\n    secret: CLI_TOKEN\n    when: |\n      x\n' });
+  const withRelated = deployment({ '.github/issue-concierge/related-repos.md': 'this: o/me\n\nrelated:\n  - role: cli\n    repo: o/cli\n    secret: CLI_TOKEN\n    when: |\n      x\n' });
   await run({ root: withRelated.root, local: true, source: 'o/concierge' }, h.ctx());
   assert.equal(
     withRelated.read('.github/workflows/closer.yml'),

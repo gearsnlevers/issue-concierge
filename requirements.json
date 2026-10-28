@@ -177,7 +177,7 @@
       "purpose": "Optional. Lets the Concierge updater push its update branch and open the pull request: a fine-grained token for this repository only with Contents, Pull requests and Workflows write. Without it the updater only reports"
     }
   ],
-  "perRelatedRepository": "For every related repository in .github/agentic-workflows/related-repos.md that names a secret: that secret, with Issues: Read and write on the other repository (used by issue-worker create-issue and the related-repo closer)",
+  "perRelatedRepository": "For every related repository in .github/issue-concierge/related-repos.md that names a secret: that secret, with Issues: Read and write on the other repository (used by issue-worker create-issue and the related-repo closer)",
   "install": [
     {
       "from": "workflows/",

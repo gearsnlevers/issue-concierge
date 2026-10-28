@@ -1,5 +1,5 @@
 <!--
-Template for AGENTS.md at the ROOT of the consuming repository (not under .github/agentic-workflows/).
+Template for AGENTS.md at the ROOT of the consuming repository (not under .github/issue-concierge/).
 Coding agents (the Copilot cloud agent, Copilot CLI, code review and others) load AGENTS.md on their own, and the
 Concierge's plan and PR gates read it from the default branch. Nothing else needs wiring.
 Keep it short, 60 lines or fewer: it is loaded into every agent run and every token costs credits. Put commands

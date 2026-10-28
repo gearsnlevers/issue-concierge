@@ -12,11 +12,11 @@
 // digests. It downloads data and never runs it. gh-aw is used only to compile
 // the definitions, at the version the manifest names.
 //
-//   node concierge-updater.mjs                      update to the latest release of the pinned channel
-//   node concierge-updater.mjs --dry-run            show what would change, touch nothing
-//   node concierge-updater.mjs --target v1.2.0      a specific release (also repairs drift on the pinned one)
-//   node concierge-updater.mjs --local              write the working tree and compile, no branch, push or PR
-//   node concierge-updater.mjs --local --source owner/repo --target v1.0.0   first adoption
+//   node issue-concierge-updater.mjs                      update to the latest release of the pinned channel
+//   node issue-concierge-updater.mjs --dry-run            show what would change, touch nothing
+//   node issue-concierge-updater.mjs --target v1.2.0      a specific release (also repairs drift on the pinned one)
+//   node issue-concierge-updater.mjs --local              write the working tree and compile, no branch, push or PR
+//   node issue-concierge-updater.mjs --local --source owner/repo --target v1.0.0   first adoption
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
@@ -24,7 +24,7 @@ import path from 'node:path';
 import { compareSemver, parseRelatedRepos } from './dependency-watch.mjs';
 
 export const CONFIG_PATH = '.github/concierge.yml';
-export const RELATED_PATH = '.github/agentic-workflows/related-repos.md';
+export const RELATED_PATH = '.github/issue-concierge/related-repos.md';
 export const BRANCH = 'concierge/update';
 export const MANIFEST_ASSET = 'release-manifest.json';
 const CROSS_REPO_MARKER = /^([ \t]*)# concierge:cross-repo[ \t]*\n/gm;
@@ -49,7 +49,7 @@ export function parseConfig(text) {
 
 export function renderConfig({ source, version, sha, channel = 'stable' }) {
   return [
-    '# Repo Concierge pin. concierge-updater rewrites version and sha; change channel by hand',
+    '# Repo Concierge pin. issue-concierge-updater rewrites version and sha; change channel by hand',
     '# (stable | prerelease). Do not edit the other lines.',
     `source: ${source}`,
     `version: ${version}`,
@@ -204,7 +204,7 @@ export function renderPrBody({ from, to, notes, plan, drift, labels, requires, g
     out.push(
       '## Local changes this update overwrites',
       '',
-      'These managed files differ from what the pinned release installs. Keep a customization by moving it to `.github/agentic-workflows/` or `related-repos.md`, or reject this update:',
+      'These managed files differ from what the pinned release installs. Keep a customization by moving it to `.github/issue-concierge/` or `related-repos.md`, or reject this update:',
       '',
       list(drift),
       ''

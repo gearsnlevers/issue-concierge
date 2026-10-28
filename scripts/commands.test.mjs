@@ -8,7 +8,7 @@ import {
   ACCEPT_MARKER, STOP_LABELS, effectiveNeed, main, mayUse, menuCandidates, menuKind, neutralizeMentions, optionsFor, parseCommand, planMenu, planReason,
   runCommand, situationOf, syncOptions,
 } from './commands.mjs';
-import { OPTIONS_MARKER, isOptionsComment } from './concierge-state.mjs';
+import { OPTIONS_MARKER, isOptionsComment } from './issue-concierge-state.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const NOW = Date.parse('2026-10-27T12:00:00Z');
@@ -486,7 +486,7 @@ test('main: when GitHub does not tell the role, a collaborator is told so, and n
 });
 
 test('main: the setting decides the role, and a personal repository needs write', () => {
-  const need = (value) => ({ ...held, roles: { maint: 'triage' }, files: { '.github/agentic-workflows/settings.yml': `commands-need: ${value}\n` } });
+  const need = (value) => ({ ...held, roles: { maint: 'triage' }, files: { '.github/issue-concierge/settings.yml': `commands-need: ${value}\n` } });
   assert.ok(go('issue_comment', commentEvent('/accept'), need('triage')).api.calls.some((c) => c[0] === 'removeLabel'));
   assert.ok(!go('issue_comment', commentEvent('/accept'), need('write')).api.calls.some((c) => c[0] === 'removeLabel'));
   assert.ok(!go('issue_comment', commentEvent('/accept', { owner: 'User' }), need('triage')).api.calls.some((c) => c[0] === 'removeLabel'), 'triage does not exist in a personal repository');
@@ -504,7 +504,7 @@ test('main: a pull request comment, a bot\'s comment and the setting off do noth
   assert.deepEqual(go('issue_comment', commentEvent('/accept', { pr: true }), held).api.calls, []);
   const bot = go('issue_comment', commentEvent('/accept', { login: 'github-actions[bot]', type: 'Bot' }), { ...held, comments: { 7: [comment(1, 'x'), menu(2)] } });
   assert.ok(!bot.api.calls.some((c) => c[0] === 'removeLabel' || c[0] === 'react'));
-  const off = go('issue_comment', commentEvent('/accept'), { ...held, roles: { maint: 'admin' }, files: { '.github/agentic-workflows/settings.yml': 'commands: false\n' } });
+  const off = go('issue_comment', commentEvent('/accept'), { ...held, roles: { maint: 'admin' }, files: { '.github/issue-concierge/settings.yml': 'commands: false\n' } });
   assert.deepEqual(off.api.calls, []);
   assert.ok(off.out.some((l) => l.startsWith('commands is false')));
 });

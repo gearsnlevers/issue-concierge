@@ -31,7 +31,7 @@ permissions:
   pull-requests: read
 
 concurrency:
-  group: concierge-updater
+  group: issue-concierge-updater
   cancel-in-progress: false
 
 jobs:
@@ -61,4 +61,4 @@ jobs:
           args=()
           if [ -n "${TARGET}" ]; then args+=(--target "${TARGET}"); fi
           if [ "${DRY_RUN}" = "true" ]; then args+=(--dry-run); fi
-          node .github/scripts/concierge-updater.mjs "${args[@]}"
+          node .github/scripts/issue-concierge-updater.mjs "${args[@]}"

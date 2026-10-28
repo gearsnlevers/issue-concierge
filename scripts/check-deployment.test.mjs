@@ -196,11 +196,11 @@ test('main: AGENTS.md or copilot-instructions.md silences the notice; a director
 test('main: the notice never changes the outcome of the real checks', () => {
   const related = 'this: a/b\n\nrelated:\n  - role: cli\n    repo: a/c\n    secret: C_TOKEN\n    when: |\n      x\n';
   // A related repository whose compiled workflows are missing: the existing error still fails the check.
-  const failing = runMain({ '.github/agentic-workflows/related-repos.md': related });
+  const failing = runMain({ '.github/issue-concierge/related-repos.md': related });
   assert.equal(failing.code, 1);
   assert.match(failing.out, /::error::/);
   assert.match(failing.out, /::notice::/);
-  assert.equal(runMain({ '.github/agentic-workflows/related-repos.md': related, 'AGENTS.md': 'x' }).code, 1);
+  assert.equal(runMain({ '.github/issue-concierge/related-repos.md': related, 'AGENTS.md': 'x' }).code, 1);
 });
 
 // Decision records: a notice, never a failure.
@@ -258,7 +258,7 @@ test('main: decisions/ at the repository root silences the decision notice; a fi
 
 test('main: the decision notice never changes the outcome of the real checks', () => {
   const related = 'this: a/b\n\nrelated:\n  - role: cli\n    repo: a/c\n    secret: C_TOKEN\n    when: |\n      x\n';
-  const failing = runMain({ '.github/agentic-workflows/related-repos.md': related, 'AGENTS.md': '# Agents' });
+  const failing = runMain({ '.github/issue-concierge/related-repos.md': related, 'AGENTS.md': '# Agents' });
   assert.equal(failing.code, 1);
   assert.match(failing.out, /Design decisions are not preserved/);
 });

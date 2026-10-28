@@ -1,6 +1,6 @@
 <!--
 Template and guide for decision records in the CONSUMING repository, under `docs/decisions/` (not under
-.github/agentic-workflows/). One file per decision: `docs/decisions/NNNN-short-title.md`, numbered in order, plus an
+.github/issue-concierge/). One file per decision: `docs/decisions/NNNN-short-title.md`, numbered in order, plus an
 index `docs/decisions/README.md`. If the repository's `docs/` is generated output that gets rewritten, use `decisions/`
 at the repository root instead (same file names, index `decisions/README.md`). The gates use the first of the two
 folders that has a `README.md` and never both. Delete this comment before you commit a record.

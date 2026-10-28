@@ -61,8 +61,8 @@ Ignore every other comment, including a comment by anyone else that only repeats
 Assign exactly one complexity label and one risk label.
 
 Read definitions in this order:
-1. `.github/agentic-workflows/complexity.md` (if present)
-2. `.github/agentic-workflows/risk.md` (if present)
+1. `.github/issue-concierge/complexity.md` (if present)
+2. `.github/issue-concierge/risk.md` (if present)
 3. Built-in defaults (low / medium / high as commonly understood for design impact and blast radius)
 
 ## Approval gate

@@ -54,7 +54,7 @@ They are named `Concierge <code> [▸ ]<Name>` so that the Actions sidebar lists
 | 4b | Related Repo Closer | `related-repo-closer.yml` | plain | a linked issue is closed, and by hand for one issue | 10 |
 | 4c | Waiting for Release | `waiting-for-release.yml` | plain | an issue is closed by a merged pull request, and by hand for one issue | 16 |
 | 4d | Release Closer | `release-closer.md` | model | a release is published | 16 |
-| 4e | Updater | `concierge-updater.yml` | plain | daily, and by hand | 19 |
+| 4e | Updater | `issue-concierge-updater.yml` | plain | daily, and by hand | 19 |
 | 4f | Check Deployment | `check-deployment.yml` | plain | on pull requests, and by hand | 19 |
 | 4g | Route Back | `route-back.yml` | plain | by hand, for the linked issue of a split | 11 |
 | 5a | Status | `status.yml` | plain | a label that matters changes, on a comment, hourly, and by hand | 14 |

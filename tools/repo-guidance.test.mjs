@@ -144,7 +144,7 @@ test('template: shared/agents.md is short and covers the six areas, the three bo
   assert.match(flat(t), /every token costs credits/);
   assert.match(t, /\.github\/instructions\/<name>\.instructions\.md/);
   assert.match(t, /applyTo/);
-  assert.match(t, /ROOT of the consuming repository \(not under \.github\/agentic-workflows\/\)/);
+  assert.match(t, /ROOT of the consuming repository \(not under \.github\/issue-concierge\/\)/);
 });
 
 test('manifest: shared/agents.md is listed in aw.yml and shipped as a reference, not installed', () => {

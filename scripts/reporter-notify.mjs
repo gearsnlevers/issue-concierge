@@ -47,7 +47,7 @@ export function parseLinks(body) {
   return [...seen.values()];
 }
 
-/** The `repo: owner/name` entries of `.github/agentic-workflows/related-repos.md`, lower-cased. */
+/** The `repo: owner/name` entries of `.github/issue-concierge/related-repos.md`, lower-cased. */
 export function relatedRepos(configText) {
   const out = new Set();
   for (const m of String(configText || '').matchAll(/^\s*(?:-\s*)?repo:\s*([A-Za-z0-9][A-Za-z0-9-]*\/[A-Za-z0-9._-]+)\s*$/gm)) {
@@ -94,7 +94,7 @@ function confirmOriginal(issue, ctx) {
   const links = parseLinks(issue.body);
   if (links.length === 0) return no('no link to an original report');
 
-  const cfg = ctx.api(`repos/${ctx.thisRepo}/contents/.github/agentic-workflows/related-repos.md`);
+  const cfg = ctx.api(`repos/${ctx.thisRepo}/contents/.github/issue-concierge/related-repos.md`);
   if (!cfg || cfg.status !== 200 || !cfg.data || typeof cfg.data.content !== 'string') {
     return no('no related-repos.md to confirm the linked repository');
   }

@@ -82,8 +82,8 @@ for (const pair of PAIRS) {
   });
 
   test(`${label}: related-repos.md names the other repository and the secret that writes there`, () => {
-    const lib = parseRelatedRepos(read(libDir, '.github/agentic-workflows/related-repos.md'));
-    const app = parseRelatedRepos(read(appDir, '.github/agentic-workflows/related-repos.md'));
+    const lib = parseRelatedRepos(read(libDir, '.github/issue-concierge/related-repos.md'));
+    const app = parseRelatedRepos(read(appDir, '.github/issue-concierge/related-repos.md'));
     assert.equal(lib.this, pair.lib);
     assert.deepEqual(lib.related.map((r) => [r.repo, r.secret]), [[pair.app, LIB_SECRET]]);
     assert.equal(app.this, pair.app);
@@ -92,7 +92,7 @@ for (const pair of PAIRS) {
 
   test(`${label}: scope.md declines a graphical interface in both repositories`, () => {
     for (const dir of [libDir, appDir]) {
-      const text = read(dir, '.github/agentic-workflows/scope.md');
+      const text = read(dir, '.github/issue-concierge/scope.md');
       const out = text.split('## Out of scope')[1].split('\n## ')[0];
       assert.match(out, /^- A web page, a dashboard or any other graphical interface/m);
     }
@@ -140,7 +140,7 @@ test('seed overwrites the files of the template and leaves other files alone', (
   const out = fs.mkdtempSync(path.join(os.tmpdir(), 'e2e-reseed-'));
   const args = { role: 'lib', out, this: 'o/e2e-lib', other: 'o/e2e-app', secret: 'E2E_APP_ISSUES_TOKEN' };
   const first = seed(args);
-  assert.ok(first.includes('AGENTS.md') && first.includes('.github/agentic-workflows/related-repos.md'));
+  assert.ok(first.includes('AGENTS.md') && first.includes('.github/issue-concierge/related-repos.md'));
   fs.writeFileSync(path.join(out, 'README.md'), 'changed by hand');
   fs.writeFileSync(path.join(out, 'NOTES.md'), 'mine');
   seed(args);
