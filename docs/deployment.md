@@ -49,7 +49,8 @@ The files under `shared/` in the harness repository are templates. They are **no
 | `safety-policy.md` | No | Reference only; not read by workflows |
 
 If `complexity.md` or `risk.md` are absent, plan triage uses built-in defaults.  
-If `related-repos.md` is absent, no linked-issue routing occurs.
+If `related-repos.md` is absent, no linked-issue routing occurs.  
+A repository that has not been updated yet keeps these files in `.github/agentic-workflows/`, the folder's old name; they are read from there until they are moved (see "Moving to the new names").
 
 ### Repository guidance (`AGENTS.md`)
 
@@ -456,7 +457,7 @@ While it is set, no gate, sweep, closer or notifier touches an issue or a pull r
 - `issue-worker` has `create-issue` enabled with `allowed-repos` containing the repository and `github-token` set to that secret;
 - `related-repo-closer.yml` has `CROSS_REPO` set to the repository and `CROSS_REPO_TOKEN` set to that secret (the updater writes both).
 
-It reports a warning for a related repository without a secret, or for an allowed repository that `related-repos.md` does not list. It also prints notices, never failures, when the repository has neither `AGENTS.md` nor `.github/copilot-instructions.md` (see "Repository guidance" above) and when it has neither a `docs/decisions/` nor a `decisions/` folder (see "Decision records" above). It runs on pull requests that touch the workflows or `related-repos.md`, and on demand. Install it in every deployment, even those without related repositories (it then passes immediately). Copy three files:
+It reports a warning for a related repository without a secret, or for an allowed repository that `related-repos.md` does not list. It also prints notices, never failures, when the repository has neither `AGENTS.md` nor `.github/copilot-instructions.md` (see "Repository guidance" above) and when it has neither a `docs/decisions/` nor a `decisions/` folder (see "Decision records" above). It runs on pull requests that touch the workflows or the files of `.github/issue-concierge/`, and on demand. It also lists, as a notice, the files that are still in the old folder `.github/agentic-workflows/`, and warns about a file that is in both folders (the old one is ignored); neither fails the check in the 2.x releases. Install it in every deployment, even those without related repositories (it then passes immediately). Copy three files:
 
 | From this repository | To the consuming repository |
 |----------------------|-----------------------------|
@@ -671,6 +672,18 @@ git push
 
 `gh aw update` pulls the latest markdown from the central repository and preserves local edits via a 3-way merge. Always recompile after an update.
 
+### Moving to the new names
+
+Nothing here is required: the Concierge reads the old names as well as the new ones, so a repository that does nothing keeps working.
+
+**The folder of the repository's own files.** `.github/agentic-workflows/` is now `.github/issue-concierge/`, named for the product because more than one kind of concierge may share a repository. The files in it (`scope.md`, `guard.md`, `related-repos.md`, `settings.yml`, `complexity.md`, `risk.md`, `issue-completeness.md`) are yours, not the Concierge's.
+
+- Every gate and script looks for each file in the new folder first and in the old one second. A file that is in both places is read from the new folder, and the one in the old folder is ignored.
+- The update moves the files for you. Its pull request renames each file from the old folder to the new one and changes nothing else. An update is made by the updater the repository already has, so the pull request that brings this release does not know the move yet: the next run of the updater (it runs daily, or start it by hand under Actions) opens the pull request that does.
+- `Check Deployment` tells you where you stand. A notice lists the files that are still in the old folder, and a warning says that a file is in both places, so that you can delete the old one. Neither fails the check.
+- To move by hand, rename each file with `git mv .github/agentic-workflows/scope.md .github/issue-concierge/scope.md` (and so on), and commit all of them in one pull request.
+- Move before the next major release. It stops reading the old folder, and a `scope.md` or `guard.md` left there would silently stop applying.
+
 ## Organization vs user repositories
 
 - User-owned repositories work with a token or GitHub App installation on the user account.
@@ -684,7 +697,7 @@ git push
 - [ ] Issues enabled
 - [ ] `COPILOT_GITHUB_TOKEN` set (org secret for orgs, repo secret for user repos) or org Copilot billing enabled
 - [ ] Workflow `.md` files added (and, if split-repo routing is used, `related-repo-closer.yml` and its script, see above)
-- [ ] Optional `.github/issue-concierge/` config files added only if needed
+- [ ] Optional `.github/issue-concierge/` config files added only if needed; none left in the old folder `.github/agentic-workflows/` (the update moves them, and Check Deployment lists what is left)
 - [ ] Issue template present (or optional completeness override)
 - [ ] `gh aw compile` run and lock files committed
 - [ ] All recommended labels created (including `related-repo`, `original-in-related-repo`, `no-auto-processing`, `dependency-required`, `dependency-satisfied`)

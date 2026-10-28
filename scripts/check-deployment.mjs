@@ -18,12 +18,31 @@
 // (an unknown setting, a value out of range): the default stays, so nothing stops, but the setting does not do what
 // the file says.
 import fs from 'node:fs';
-import { SETTINGS_PATH, parseSettings } from './issue-concierge-settings.mjs';
+import { parseSettings, readSettingsText } from './issue-concierge-settings.mjs';
 import { parseRelatedRepos } from './dependency-watch.mjs';
+import { CONFIG_DIR, LEGACY_DIR, configPath, plannedMoves, readConfig } from './issue-concierge-paths.mjs';
 
 /** Warnings about the lines of a settings file that cannot be used; `null` when there is no file. */
 export function checkSettings(text) {
   return text == null ? [] : parseSettings(text).problems;
+}
+
+/**
+ * What to tell a repository whose own files are still in the old folder (`.github/agentic-workflows/`). `exists(path)` says
+ * whether a file is there. A file only in the old folder is read from there until the update has moved it, so this is a
+ * notice; a file in both folders is read from the new one and the old one is ignored, so that is a warning. Neither fails
+ * the check in the 2.x releases. In the next major release, which stops reading the old folder, both become errors: a
+ * scope.md or guard.md left in the old place would silently stop applying.
+ */
+export function checkLegacyFolder(exists) {
+  const { moves, both } = plannedMoves(exists);
+  const name = (m) => m.from.slice(LEGACY_DIR.length + 1);
+  return {
+    notices: moves.length
+      ? [`${moves.map(name).join(', ')} ${moves.length === 1 ? 'is' : 'are'} still in ${LEGACY_DIR}/. The update moves ${moves.length === 1 ? 'it' : 'them'} to ${CONFIG_DIR}/; until then ${moves.length === 1 ? 'it is' : 'they are'} read from there.`]
+      : [],
+    warnings: both.map((m) => `${name(m)} is in both ${LEGACY_DIR}/ and ${CONFIG_DIR}/. The one in ${CONFIG_DIR}/ is used and the one in ${LEGACY_DIR}/ is ignored: delete it.`),
+  };
 }
 
 /** Safe outputs a related repository must be reachable through, per compiled workflow. */
@@ -186,11 +205,14 @@ const isDirectory = (p) => {
 export function main(cwd = process.cwd()) {
   for (const notice of checkGuidance((f) => isFile(`${cwd}/${f}`))) console.log(`::notice::${notice}`);
   for (const notice of checkDecisions((d) => isDirectory(`${cwd}/${d}`))) console.log(`::notice::${notice}`);
-  const settingsPath = `${cwd}/${SETTINGS_PATH}`;
-  for (const problem of checkSettings(fs.existsSync(settingsPath) ? fs.readFileSync(settingsPath, 'utf8') : null)) console.log(`::warning::${problem}`);
-  const relatedPath = `${cwd}/.github/issue-concierge/related-repos.md`;
-  if (!fs.existsSync(relatedPath)) {
-    console.log('No .github/issue-concierge/related-repos.md: nothing to check.');
+  const readFile = (p) => (isFile(`${cwd}/${p}`) ? fs.readFileSync(`${cwd}/${p}`, 'utf8') : null);
+  const legacy = checkLegacyFolder((p) => isFile(`${cwd}/${p}`));
+  for (const notice of legacy.notices) console.log(`::notice::${notice}`);
+  for (const warning of legacy.warnings) console.log(`::warning::${warning}`);
+  for (const problem of checkSettings(readSettingsText(readFile))) console.log(`::warning::${problem}`);
+  const related = readConfig('related-repos.md', readFile);
+  if (related.value === null) {
+    console.log(`No ${configPath('related-repos.md')}: nothing to check.`);
     return 0;
   }
   const locks = {};
@@ -198,7 +220,7 @@ export function main(cwd = process.cwd()) {
     const p = `${cwd}/.github/workflows/${file}`;
     if (fs.existsSync(p)) locks[file] = fs.readFileSync(p, 'utf8');
   }
-  const { errors, warnings } = checkDeployment(fs.readFileSync(relatedPath, 'utf8'), locks);
+  const { errors, warnings } = checkDeployment(related.value, locks);
   for (const w of warnings) console.log(`::warning::${w}`);
   for (const e of errors) console.log(`::error::${e}`);
   console.log(`${errors.length} error(s), ${warnings.length} warning(s)`);

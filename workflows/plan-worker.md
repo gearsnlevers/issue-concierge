@@ -62,6 +62,8 @@ When the plan stands, post no comment. What else you do depends on whether plan 
 - Label a cause you did not check against the code "Hypothesis (unverified)".
 
 ## Layer check
+A repository's own files for the Concierge are in `.github/issue-concierge/`. A repository that has not been updated yet still has them in `.github/agentic-workflows/`: where this prompt names a file in the first folder and it is not there, look for the same name in the second.
+
 Some repositories are one half of a split project: `.github/issue-concierge/related-repos.md` names a related repository, and an issue here may have been opened there (it has a `Reported from {owner}/{repo}#{number}` line) or may be linked to one (it carries `related-repo`). If that file does not exist, skip this section without comment.
 
 When you read the code for the cause, also notice which repository holds the code that has to change. Take the innermost error, not the wrapper another layer put around it (a library's "Error getting tokens" around a terminal read error does not make it a library bug). Search the related repository too when the report could belong there. If the repository's `AGENTS.md` or an accepted decision record says which layer owns what, apply it.

@@ -10,7 +10,8 @@
 # when it has no docs/decisions/ folder (or decisions/ at the repository root
 # when docs/ is generated) of decision records (template:
 # shared/decision-record.md). It warns, and never fails, about a line of
-# .github/issue-concierge/settings.yml that the Concierge cannot use.
+# .github/issue-concierge/settings.yml that the Concierge cannot use, and tells a repository whose own files are
+# still in the old folder .github/agentic-workflows/ which they are (a notice) and which are in both folders (a warning).
 #
 # Install: copy this file to .github/workflows/check-deployment.yml and
 # scripts/check-deployment.mjs (plus scripts/dependency-watch.mjs and
@@ -24,6 +25,9 @@ on:
       - '.github/workflows/*.lock.yml'
       - '.github/workflows/related-repo-closer.yml'
       - '.github/issue-concierge/**'
+      - '.github/agentic-workflows/**'
+      - '.github/issue-concierge.yml'
+      - '.github/concierge.yml'
       - '.github/scripts/check-deployment.mjs'
   workflow_dispatch:
 
