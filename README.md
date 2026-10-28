@@ -13,6 +13,30 @@ Each stage is a gate.
 - Triage agents signal the next gate with `<triage-name>-handoff`.
 - Blocking conditions use `<thing>-required`. Removing the label resumes processing. `dependency-required` is removed automatically by the dependency watcher when the work the issue depends on is finished.
 
+## What it does
+
+These are the flows the Concierge supports, from a first comment to a release. [docs/flows.md](docs/flows.md) says for each one what happens, which workflows carry it out and which live end-to-end scenario tests it, and lists every workflow with the events that start it.
+
+1. From request to pull request
+2. A request without enough details
+3. A request outside the project's scope
+4. A request that changes what exists
+5. A valid request that is not urgent
+6. A report that is already handled
+7. A request that depends on other work
+8. An issue kept out of the Concierge
+9. A plan that needs a person
+10. A request that belongs in another repository
+11. Work sent back
+12. A fix that needs two repositories
+13. A maintainer decides by command
+14. The status issue
+15. Pausing the Concierge
+16. After the merge
+17. An issue that stalled
+18. Labels and runs kept tidy
+19. Staying current
+
 ## Releases
 
 Deployments pin a released version, not `main`. Each release carries notes and a `release-manifest.json` with a digest for every deployable file. Versioning rules, the release procedure and what a release contains: [docs/releases.md](docs/releases.md). Deployments pick releases up with the Concierge updater: [docs/updater.md](docs/updater.md).
@@ -170,54 +194,74 @@ Templates are in `shared/`. A repository can also supply an environment agent (s
 ```
 .
 ├── README.md
-├── aw.yml
+├── AGENTS.md, CLAUDE.md     instructions for coding agents that work on this repository
+├── CHANGELOG.md
+├── aw.yml                   the manifest of the gh-aw definitions
+├── requirements.json        the gh-aw version the workflows are compiled with
 ├── .claude/skills/          agent skills: change-a-gate-workflow, cut-a-concierge-release, record-a-decision
+├── .github/workflows/       the CI, release, currency check and end-to-end run of this repository (not delivered)
 ├── docs/
+│   ├── decisions/           the decision records of the Concierge itself
 │   ├── deployment.md
-│   └── multi-phase-design.md
-├── workflows/
+│   ├── e2e.md
+│   ├── flows.md
+│   ├── multi-phase-design.md
+│   ├── releases.md
+│   └── updater.md
+├── workflows/               in the order they run; what each does: docs/flows.md
 │   ├── issue-worker.md
 │   ├── issue-triage.md
+│   ├── dependency-watch.yml
+│   ├── reporter-notify.yml
+│   ├── stalled-issue-sweep.yml
 │   ├── plan-worker.md
 │   ├── plan-triage.md
-│   ├── pr-worker.md
-│   ├── pr-triage.md
-│   ├── waiting-for-release.yml
-│   ├── dependency-watch.yml
 │   ├── plan-approval-resume.yml
-│   ├── reporter-notify.yml
-│   ├── route-back.yml
 │   ├── spawn-work-items.yml
-│   ├── stalled-issue-sweep.yml
-│   ├── status.yml
-│   ├── commands.yml
-│   ├── janitor.yml
+│   ├── pr-worker.md
 │   ├── pr-ready-signal.yml
-│   └── check-deployment.yml
-├── scripts/
-│   ├── resolution.mjs
-│   ├── dependency-watch.mjs
-│   ├── plan-approval-resume.mjs
-│   ├── reporter-notify.mjs
-│   ├── route-back.mjs
-│   ├── spawn-work-items.mjs
-│   ├── stalled-issue-sweep.mjs
-│   ├── status-issue.mjs
+│   ├── pr-triage.md
+│   ├── janitor.yml
+│   ├── related-repo-closer.yml
+│   ├── waiting-for-release.yml
+│   ├── release-closer.md
+│   ├── concierge-updater.yml
+│   ├── check-deployment.yml
+│   ├── route-back.yml
+│   ├── status.yml
+│   └── commands.yml
+├── scripts/                 what the plain workflows run
+│   ├── check-deployment.mjs
 │   ├── commands.mjs
 │   ├── concierge-settings.mjs
 │   ├── concierge-state.mjs
+│   ├── concierge-updater.mjs
+│   ├── dependency-watch.mjs
 │   ├── janitor.mjs
 │   ├── opt-out.mjs
+│   ├── plan-approval-resume.mjs
 │   ├── pr-ready-signal.mjs
-│   └── check-deployment.mjs
-└── shared/
-    ├── dependencies.md
-    ├── safety-policy.md
-    ├── complexity.md
-    ├── risk.md
-    ├── env-agent-contract.md
-    ├── agents.md
-    └── decision-record.md
+│   ├── related-repo-closer.mjs
+│   ├── reporter-notify.mjs
+│   ├── resolution.mjs
+│   ├── route-back.mjs
+│   ├── spawn-work-items.mjs
+│   ├── stalled-issue-sweep.mjs
+│   └── status-issue.mjs
+├── shared/                  templates for a repository's own files, and the policies the gates read
+│   ├── agents.md
+│   ├── complexity.md
+│   ├── decision-record.md
+│   ├── dependencies.md
+│   ├── env-agent-contract.md
+│   ├── guard.md
+│   ├── issue-completeness.md
+│   ├── related-repos.md
+│   ├── risk.md
+│   ├── safety-policy.md
+│   ├── scope.md
+│   └── settings.yml
+└── tools/                   tests, the release manifest builder, the compile smoke and the end-to-end runner (tools/e2e)
 ```
 
 ## Operational Notes

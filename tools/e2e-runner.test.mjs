@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import { createGitHub, STATUS_MARKER } from './e2e/github.mjs';
 import { MARKER as PAGE_MARKER } from '../scripts/status-issue.mjs';
 import { evaluateCheck, describeSnapshot, CHECK_TYPES } from './e2e/checks.mjs';
-import { cleanupStale, expand, loadConfig, loadScenarios, main, renderSummary, runScenario, runSuite, validateScenario } from './e2e/run.mjs';
+import { cleanupStale, expand, loadConfig, loadScenarios, main, numberOf, renderSummary, runScenario, runSuite, validateScenario } from './e2e/run.mjs';
 
 const config = loadConfig();
 const scenarios = loadScenarios();
@@ -468,14 +468,38 @@ test('without --yes the command line only prints the plan', async () => {
   const sink = io();
   assert.equal(await main(['--scenario', 'out-of-scope-closes', '--profile', 'private'], { E2E_OWNER: 'acme' }, sink), 0);
   assert.match(sink.lines[0], /^Plan only \(add --yes to run\)\. Sandbox owner acme; retries 1\./);
-  assert.deepEqual(sink.lines.slice(1), ['- out-of-scope-closes on acme/e2e-lib-private (private): A request that matches an explicit exclusion in the project\'s scope is declined and closed as not planned']);
+  assert.deepEqual(sink.lines.slice(1), ['- scenario 3, out-of-scope-closes, on acme/e2e-lib-private (private): A request that matches an explicit exclusion in the project\'s scope is declined and closed as not planned']);
+});
+
+test('a scenario is known by its number, the prefix of its file name: the numbers are 1, 2, 3 ... without gaps or repeats', () => {
+  assert.deepEqual(scenarios.map((s) => s.number), scenarios.map((_, i) => i + 1));
+  for (const s of scenarios) assert.equal(s.file, `${String(s.number).padStart(2, '0')}-${s.id}.json`, 'the file is named number, hyphen, id');
+  assert.throws(() => numberOf('happy-path.json'), /starts with its number and a hyphen/);
+  assert.equal(numberOf('07-removal-casual-is-held.json'), 7);
+});
+
+test('--scenario takes a number as well as an id, and --list says which number is which', async () => {
+  const byNumber = io();
+  assert.equal(await main(['--scenario', '10', '--profile', 'public'], { E2E_OWNER: 'acme' }, byNumber), 0);
+  assert.match(byNumber.lines[1], /^- scenario 10, command-accepts-a-held-request, on acme\/e2e-lib \(public\): /);
+  const mixed = io();
+  assert.equal(await main(['--list', '--scenario', '11,2,out-of-scope-closes'], {}, mixed), 0);
+  assert.deepEqual(mixed.lines.map((l) => l.split('\t').slice(0, 2).join(' ')), ['2 needs-info-then-details', '3 out-of-scope-closes', '11 command-declines-a-request']);
+  const listed = io();
+  assert.equal(await main(['--list'], {}, listed), 0);
+  assert.ok(listed.lines.some((l) => l.startsWith('10\tcommand-accepts-a-held-request\t')));
+  for (const token of ['0', '12', '010x', '-1']) {
+    const bad = io();
+    assert.equal(await main(['--scenario', token], {}, bad), 2, token);
+    assert.match(bad.errors[0], new RegExp(`unknown scenario ${token}`));
+  }
 });
 
 test('--list shows the scenarios; a mistake is explained and exits with 2', async () => {
   const sink = io();
   assert.equal(await main(['--list'], {}, sink), 0);
   assert.equal(sink.lines.length, scenarios.length);
-  assert.match(sink.lines[0], /^happy-path-to-the-hold\tpublic,private\t\d+ steps\t/);
+  assert.match(sink.lines[0], /^1\thappy-path-to-the-hold\tpublic,private\t\d+ steps\t/);
   for (const [argv, message] of [
     [['--scenario', 'ghost'], /unknown scenario ghost/],
     [['--profile', 'moon'], /--profile must be all or one of public, private/],

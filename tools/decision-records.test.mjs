@@ -281,5 +281,5 @@ test('docs: the deployment guide and the README describe the records and the not
   const readme = read('README.md');
   assert.match(readme, /\[shared\/decision-record\.md\]\(shared\/decision-record\.md\)/);
   assert.match(readme, /multi-phase-design\.md#decision-records/);
-  assert.match(readme, /decision-record\.md\n```/);
+  assert.match(readme, /^│   ├── decision-record\.md$/m, 'the structure lists the template');
 });
