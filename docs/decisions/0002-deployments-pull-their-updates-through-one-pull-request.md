@@ -4,8 +4,8 @@ date: 2026-10-25
 decision-makers:
   - maintainers
 applies-to:
-  - workflows/concierge-updater.yml
-  - scripts/concierge-updater.mjs
+  - workflows/issue-concierge-updater.yml
+  - scripts/issue-concierge-updater.mjs
 issues:
   - vscheuber/repo-concierge#7
   - vscheuber/repo-concierge#15

@@ -5,8 +5,8 @@ decision-makers:
   - maintainers
 applies-to:
   - workflows/issue-worker.md
-  - workflows/related-repo-closer.md
-  - workflows/waiting-for-release.md
+  - workflows/related-repo-closer.yml
+  - workflows/waiting-for-release.yml
   - workflows/release-closer.md
   - workflows/reporter-notify.yml
   - shared/related-repos.md

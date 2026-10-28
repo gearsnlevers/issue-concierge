@@ -5,7 +5,7 @@ decision-makers:
   - maintainers
 applies-to:
   - workflows/issue-worker.md
-  - workflows/related-repo-closer.md
+  - workflows/related-repo-closer.yml
   - requirements.json
   - shared/related-repos.md
 issues:

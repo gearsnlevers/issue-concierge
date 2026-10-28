@@ -12,7 +12,7 @@ This folder holds the decisions of Repo Concierge itself: how it is released and
 - A pull request that changes a decided behaviour adds or supersedes a record in the same pull request.
 - Records are public. No credentials, tenant names, security-incident details or personal information.
 - Write a record so it stays true: state the rule, not a value that changes. Leave out "currently", "now", "the latest" and any current version, count, size or line number. Say "e.g." or "for example" when an example helps, and date a fact that explains the decision ("on 2026-10-24 the pin was ..."). An accepted record is not edited to keep up with such a fact, so it must not contain one.
-- `applies-to:` lists path globs where that helps; `issues:` lists related issues and pull requests as `owner/repo#N`.
+- `applies-to:` lists path globs where that helps, preferably folders and prefix globs, because files are renamed; every pattern of an accepted record must match a file (`tools/decision-applies-to.test.mjs`). `issues:` lists related issues and pull requests as `owner/repo#N`.
 - A record written after the fact says so in its context ("Recorded retroactively from ...") and describes what the code and the history show.
 
 ## Writing one
