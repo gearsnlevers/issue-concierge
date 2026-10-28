@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
-  ACCEPT_MARKER, STOP_LABELS, effectiveNeed, main, mayUse, menuCandidates, menuKind, neutralizeMentions, optionsFor, parseCommand, planMenu, planReason,
+  ACCEPT_MARKER, LEGACY_ACCEPT_MARKER, STOP_LABELS, effectiveNeed, main, mayUse, menuCandidates, menuKind, neutralizeMentions, optionsFor, parseCommand, planMenu, planReason,
   runCommand, situationOf, syncOptions,
 } from './commands.mjs';
 import { OPTIONS_MARKER, isOptionsComment } from './issue-concierge-state.mjs';
@@ -113,7 +113,7 @@ test('optionsFor: what is needed in plain words, then the commands for this situ
   const o = (labels, comments = []) => optionsFor(issue(labels), { comments, settings: SETTINGS, repo: REPO, now: NOW });
   const decision = o(['needs-decision']);
   assert.equal(decision.kind, 'decision');
-  assert.equal(decision.body.split('\n')[0], '<!-- concierge:options kind=decision -->');
+  assert.equal(decision.body.split('\n')[0], '<!-- issue-concierge:options kind=decision -->');
   assert.match(decision.body, /\nThis request changes something that already exists, so a maintainer needs to decide on it before anything is planned\.\n/);
   assert.match(decision.body, /<details><summary>Maintainer options<\/summary>/);
   assert.match(decision.body, /\| `\/accept` \| Plan it: removes `needs-decision` and hands the issue to the plan worker\. \|/);
@@ -160,6 +160,29 @@ test('optionsFor: it names the role the commands need, and says when a personal 
 
 const menu = (id, kind = 'decision', body = `${OPTIONS_MARKER} kind=${kind} -->\nwords`, ageMs) => comment(id, body, BOT, ageMs);
 const want = (kind = 'decision', body = `${OPTIONS_MARKER} kind=${kind} -->\nwords`) => ({ kind, body });
+
+// The options comment carries the product's name; a menu written by an earlier version is still the bot's menu.
+const LEGACY_BODY = (kind = 'decision') => `<!-- concierge:options kind=${kind} -->\nwords`;
+
+test('menuKind reads the kind from the new line and from the older one', () => {
+  assert.equal(menuKind({ body: '<!-- issue-concierge:options kind=plan.work-item -->\nx' }), 'plan.work-item');
+  assert.equal(menuKind({ body: LEGACY_BODY('decision') }), 'decision');
+  assert.equal(menuKind({ body: 'no marker kind=decision' }), null);
+});
+
+test('optionsFor writes the new line and never the older one', () => {
+  const o = optionsFor(issue(['needs-decision']), { comments: [], settings: SETTINGS, repo: REPO, now: NOW });
+  assert.ok(o.body.startsWith('<!-- issue-concierge:options kind=decision -->'));
+  assert.ok(!o.body.includes('<!-- concierge:options'));
+});
+
+test('planMenu: a menu from an earlier version is found, replaced by the same kind with new words and so carries the new line from then on', () => {
+  const legacy = comment(2, LEGACY_BODY(), BOT);
+  assert.deepEqual(planMenu({ desired: null, comments: [comment(1, 'hi'), legacy] }), [{ op: 'delete', id: 2 }], 'it is deleted when nothing is wanted');
+  assert.deepEqual(planMenu({ desired: want(), comments: [comment(1, 'hi'), legacy] }), [{ op: 'edit', id: 2, body: want().body }], 'it is edited in place, so there is still one');
+  assert.deepEqual(planMenu({ desired: want('plan'), comments: [comment(1, 'hi'), legacy] }), [{ op: 'delete', id: 2 }, { op: 'post', body: want('plan').body }]);
+  assert.deepEqual(planMenu({ desired: want(), comments: [legacy, comment(3, 'later'), menu(4)] }), [{ op: 'delete', id: 2 }], 'an old menu and a new one are not two menus');
+});
 
 test('planMenu: nothing is wanted, so every options comment goes', () => {
   assert.deepEqual(planMenu({ desired: null, comments: [comment(1, 'hi'), menu(2), menu(3)] }), [{ op: 'delete', id: 2 }, { op: 'delete', id: 3 }]);
@@ -301,7 +324,9 @@ test('/accept records the decision in a comment of the bot, with a marker, namin
   const order = api.calls.map((c) => c[0]);
   assert.ok(order.indexOf('reply') > -1 && order.indexOf('reply') < order.indexOf('addLabelSignal'), 'the record comes first, so nothing the hand-over starts can miss it');
   const body = api.calls.find((c) => c[0] === 'reply')[2];
-  assert.equal(ACCEPT_MARKER, '<!-- concierge:accepted -->');
+  assert.equal(ACCEPT_MARKER, '<!-- issue-concierge:accepted -->');
+  assert.equal(LEGACY_ACCEPT_MARKER, '<!-- concierge:accepted -->');
+  assert.ok(!body.includes(LEGACY_ACCEPT_MARKER), 'the older line is never written');
   assert.ok(body.startsWith(`${ACCEPT_MARKER}\n`), 'the marker opens the comment');
   assert.match(body, /Accepted by @volker with \/accept\. The request goes to planning now\.$/);
   assert.doesNotMatch(body, /needs-decision|issue-triage-handoff|plan-approval-required/, 'the reporter reads it: no internal labels');

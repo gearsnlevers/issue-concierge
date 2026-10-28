@@ -34,7 +34,8 @@ async function readFile(repo, file, ref) {
 }
 
 const GENERATED = /^\s*(github-token|allowed-repos|CROSS_REPO|CROSS_REPO_TOKEN):/;
-const MARKER = /^\s*# concierge:cross-repo(-env)?\s*$/;
+// Both spellings: the delivered files carry the older one until every deployment's updater reads both.
+const MARKER = /^\s*# (?:issue-)?concierge:cross-repo(-env)?\s*$/;
 /** A definition or plain workflow with the cross-repository settings left out, to compare source and deployed copy. */
 export const withoutCrossRepo = (text) => text.split('\n').filter((l) => !GENERATED.test(l) && !MARKER.test(l)).join('\n');
 

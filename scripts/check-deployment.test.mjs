@@ -97,6 +97,17 @@ test('the closer must exist, write to the related repository and use its secret'
   assert.equal(checkDeployment(RELATED(), neither).errors.length, 2);
 });
 
+test('the newer spelling of the marker, left in a closer, is the same warning to finish', () => {
+  const locks = healthy();
+  locks['related-repo-closer.yml'] = 'env:\n  GH_TOKEN: x\n  # issue-concierge:cross-repo-env\n';
+  const { errors, warnings } = checkDeployment(RELATED(), locks);
+  assert.deepEqual(errors, []);
+  assert.equal(warnings.length, 1);
+  assert.match(warnings[0], /still has the # issue-concierge:cross-repo-env marker/);
+  locks['related-repo-closer.yml'] = 'env:\n  # issue-concierge:cross-repo-env\n  CROSS_REPO: rockcarver/frodo-cli\n  CROSS_REPO_TOKEN: ${{ secrets.CLI_TOKEN }}\n';
+  assert.deepEqual(checkDeployment(RELATED(), locks).warnings, [], 'a marker beside the generated lines is not a leftover');
+});
+
 test('a closer the previous updater installed, with the marker not yet replaced, is a warning to finish, not an error', () => {
   const locks = healthy();
   locks['related-repo-closer.yml'] = 'env:\n  GH_TOKEN: x\n  # concierge:cross-repo-env\n';

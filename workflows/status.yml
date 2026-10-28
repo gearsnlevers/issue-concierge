@@ -1,6 +1,6 @@
 # Issue Concierge status. Plain GitHub Actions, no LLM. See docs/multi-phase-design.md, "The maintainer's view".
 #
-# Keeps one pinned issue, "Concierge status", up to date: what waits for a maintainer, the reporter replies nobody
+# Keeps one pinned issue, "Issue Concierge status", up to date: what waits for a maintainer, the reporter replies nobody
 # has answered, which issues the Concierge manages and which it does not, the health of the gates and what they
 # cost. It runs when a label that matters is applied, when someone comments, every hour, and by hand. A label being
 # removed starts nothing here (only the issue worker and the plan approval resume start on a removal): every way a

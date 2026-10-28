@@ -87,9 +87,17 @@ export function labelledAt(events, label) {
   return times.length ? Math.max(...times) : null;
 }
 
-/** The hidden line the options comment starts with (scripts/commands.mjs). It is the bot's, and not anybody's reply. */
-export const OPTIONS_MARKER = '<!-- concierge:options';
-export const isOptionsComment = (comment) => Boolean(comment.user && comment.user.login === BOT && String(comment.body || '').includes(OPTIONS_MARKER));
+/**
+ * The hidden line the options comment starts with (scripts/commands.mjs). It is the bot's, and not anybody's reply. New menus
+ * are written with the product's name; a menu written by an earlier version has the older line and is still the bot's menu
+ * (the next sync edits it, so it carries the new line from then on).
+ */
+export const OPTIONS_MARKER = '<!-- issue-concierge:options';
+export const LEGACY_OPTIONS_MARKER = '<!-- concierge:options';
+export const isOptionsComment = (comment) => {
+  const body = String(comment.body || '');
+  return Boolean(comment.user && comment.user.login === BOT && (body.includes(OPTIONS_MARKER) || body.includes(LEGACY_OPTIONS_MARKER)));
+};
 
 /**
  * Reporter replies nobody has answered: the latest comment of an open issue is from a person who is not a maintainer

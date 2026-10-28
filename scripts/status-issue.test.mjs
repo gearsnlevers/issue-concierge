@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { LIST_CAP, MARKER, MENTION_CAP, MENTION_MARKER, TITLE, collect, findStatusIssue, main, maintainersOf, normalise, nudge, overdue, planMention, reconcile, render, renderMention, summarize } from './status-issue.mjs';
+import { LEGACY_MARKER, LEGACY_MENTION_MARKER, LEGACY_TITLE, LIST_CAP, MARKER, MENTION_CAP, MENTION_MARKER, TITLE, collect, hasStatusMarker, findStatusIssue, main, maintainersOf, normalise, nudge, overdue, planMention, reconcile, render, renderMention, summarize } from './status-issue.mjs';
 import { DEFAULTS } from './issue-concierge-settings.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -381,6 +381,39 @@ test('findStatusIssue picks the bot\'s issue with the marker, open or closed, an
   assert.equal(findStatusIssue(fakeCtx({ botIssues: [issue(3, [])] }), REPO), null);
 });
 
+test('the page and its mentions carry the product\'s name, and the older lines and title are what an earlier version wrote', () => {
+  assert.deepEqual([TITLE, MARKER, MENTION_MARKER], ['Issue Concierge status', '<!-- issue-concierge:status -->', '<!-- issue-concierge:mention -->']);
+  assert.deepEqual([LEGACY_TITLE, LEGACY_MARKER, LEGACY_MENTION_MARKER], ['Concierge status', '<!-- concierge:status -->', '<!-- concierge:mention -->']);
+  assert.equal(hasStatusMarker(`${MARKER}\nx`), true);
+  assert.equal(hasStatusMarker(`${LEGACY_MARKER}\nx`), true);
+  assert.equal(hasStatusMarker('x'), false);
+  assert.equal(hasStatusMarker(undefined), false);
+});
+
+test('findStatusIssue finds the page by either marker, and by either title when the marker is gone; it never takes another issue of the bot', () => {
+  for (const marker of [MARKER, LEGACY_MARKER]) {
+    assert.equal(findStatusIssue(fakeCtx({ botIssues: [issue(3, [], { body: 'an [aw] failure' }), issue(9, [], { body: `${marker}\nbody` })] }), REPO).number, 9, marker);
+  }
+  for (const title of [TITLE, LEGACY_TITLE]) {
+    assert.equal(findStatusIssue(fakeCtx({ botIssues: [issue(3, [], { body: 'an [aw] failure' }), issue(8, [], { title, body: 'no marker any more' })] }), REPO).number, 8, title);
+  }
+  const both = fakeCtx({ botIssues: [issue(8, [], { title: LEGACY_TITLE, body: 'no marker' }), issue(9, [], { title: 'Whatever', body: `${LEGACY_MARKER}\nbody` })] });
+  assert.equal(findStatusIssue(both, REPO).number, 9, 'the marker wins over a title');
+  assert.equal(findStatusIssue(fakeCtx({ botIssues: [issue(3, [], { title: 'Concierge status of something else' })] }), REPO), null, 'a title that only resembles one is not the page');
+  assert.equal(findStatusIssue(fakeCtx({ botIssues: [issue(4, [], { title: TITLE, pull_request: {} })] }), REPO), null, 'a pull request is not the page');
+});
+
+test('collect does not count the page as an issue, whichever marker it carries', () => {
+  for (const marker of [MARKER, LEGACY_MARKER]) {
+    const ctx = fakeCtx({
+      issues: [issue(1, ['needs-decision']), issue(50, [], { body: `${marker}\n# page`, user: { login: 'github-actions[bot]', type: 'Bot' } })],
+      comments: [],
+      files: { '.github/concierge.yml': 'source: o/concierge\nversion: v1.8.0\nchannel: stable\n' },
+    });
+    assert.deepEqual(collect(ctx, REPO, SETTINGS, 'tok').issues.map((i) => i.number), [1], marker);
+  }
+});
+
 // ---------------------------------------------------------------- reconcile
 
 const build = (note) => `${MARKER}\n# ${TITLE}\nLast changed 2026-10-27 12:00 UTC · [x](y)\nbody${note ? `\n> ⚠ This issue is not pinned: ${note}` : ''}`;
@@ -414,6 +447,28 @@ test('reconcile edits the body when it changed, and reopens a closed status issu
   assert.equal(out.action, 'reopened');
   assert.deepEqual(ctx2.calls.write[0], { method: 'PATCH', path: 'repos/o/r/issues/7', body: { state: 'open' } });
   assert.deepEqual(ctx2.calls.graphql.map((g) => g.kind), ['isPinned', 'pin'], 'and pins it again');
+});
+
+test('reconcile renames the page an earlier version opened, in the same edit, and opens no second one', () => {
+  const old = issue(7, [], { title: LEGACY_TITLE, body: build(null).replace(MARKER, LEGACY_MARKER).replace(`# ${TITLE}`, `# ${LEGACY_TITLE}`) });
+  const ctx = fakeCtx({ pinned: true });
+  const out = reconcile(ctx, REPO, SETTINGS, old, build, 's');
+  assert.equal(out.action, 'updated');
+  assert.equal(out.number, 7);
+  assert.deepEqual(ctx.calls.write.map((w) => [w.method, w.path, Object.keys(w.body).sort()]), [['PATCH', 'repos/o/r/issues/7', ['body', 'title']]], 'one edit, no POST');
+  assert.equal(ctx.calls.write[0].body.title, TITLE);
+  assert.ok(ctx.calls.write[0].body.body.startsWith(MARKER), 'the body carries the new marker from then on');
+
+  // the same page, already current: nothing to write
+  const current = fakeCtx({ pinned: true });
+  assert.equal(reconcile(current, REPO, SETTINGS, issue(7, [], { title: TITLE, body: build(null) }), build, 's').action, 'unchanged');
+  assert.deepEqual(current.calls.write, []);
+});
+
+test('reconcile leaves a title a maintainer chose alone', () => {
+  const ctx = fakeCtx({ pinned: true });
+  reconcile(ctx, REPO, SETTINGS, issue(7, [], { title: 'Our robot', body: `${build(null)}\nmore` }), build, 's');
+  assert.deepEqual(ctx.calls.write.map((w) => Object.keys(w.body)), [['body']]);
 });
 
 test('reconcile says so on the page when the issue cannot be pinned, and takes the note away once it can', () => {
@@ -595,7 +650,7 @@ test('nudge: something waited a week, so the maintainers are mentioned once on t
   assert.match(log, /^mention: mentioned 2 people about 1 issue$/);
   const [post] = written(ctx, 'POST');
   assert.equal(post.path, 'repos/o/r/issues/99/comments');
-  assert.match(post.body.body, /^<!-- concierge:mention -->\n@alice @bob\n/);
+  assert.match(post.body.body, /^<!-- issue-concierge:mention -->\n@alice @bob\n/);
   assert.deepEqual(ctx.calls.collaboratorTokens, ['workflow'], 'the workflow token was enough');
 });
 
@@ -624,6 +679,22 @@ test('nudge: a mention newer than the period is the only one, an older one is re
   assert.equal(nudge(settled, REPO, 99, waiting(3), NUDGE, 's'), 'mention: nothing has waited that long');
   assert.deepEqual(settled.calls.write.map((w) => [w.method, w.path]), [['DELETE', 'repos/o/r/issues/comments/5']]);
   assert.equal(settled.calls.collaboratorTokens, undefined, 'nobody is looked up when nothing waits');
+});
+
+test('nudge: a mention an earlier version wrote is the previous one, and the new mention carries the new line', () => {
+  const legacy = (id, daysAgo) => botComment(id, daysAgo, `${LEGACY_MENTION_MARKER}\n@amy\n\nold`);
+  const recent = ctxWith({ issueComments: { 99: [legacy(5, 2)] } });
+  assert.match(nudge(recent, REPO, 99, waiting(9), NUDGE, 's'), /the last mention is newer than the period/, 'an older line counts, so nobody is mentioned twice');
+  assert.deepEqual(recent.calls.write, []);
+  const old = ctxWith({ issueComments: { 99: [legacy(5, 9)] } });
+  nudge(old, REPO, 99, waiting(9), NUDGE, 's');
+  assert.deepEqual(old.calls.write.map((w) => [w.method, w.path]), [['DELETE', 'repos/o/r/issues/comments/5'], ['POST', 'repos/o/r/issues/99/comments']]);
+  assert.ok(written(old, 'POST')[0].body.body.startsWith(`${MENTION_MARKER}\n`));
+  assert.ok(!written(old, 'POST')[0].body.body.includes(LEGACY_MENTION_MARKER), 'the older line is never written');
+  const person = { id: 8, user: { login: 'a-person' }, body: `${LEGACY_MENTION_MARKER}\ntyped by hand`, created_at: ago(30 * D) };
+  const typed = ctxWith({ issueComments: { 99: [person] } });
+  nudge(typed, REPO, 99, waiting(9), NUDGE, 's');
+  assert.deepEqual(written(typed, 'DELETE'), [], 'the older line in a person\'s comment is only words');
 });
 
 test('nudge: only the bot\'s own mention comment is the previous one, and duplicates are cleaned up', () => {

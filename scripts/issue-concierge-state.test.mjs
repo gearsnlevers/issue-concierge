@@ -4,8 +4,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
-  CONCIERGE_LABELS, GATE_LABELS, QUEUES, STUCK_AFTER_MINUTES, aicOf, ago, classify, compareVersions, isAnalysis, isConciergeLabel,
-  GATE_PREFIX, labelledAt, latestRelease, queueOf, readPin, reporterReplies, runHealth, safeText, shortGateName, spend, tokenExpiry,
+  CONCIERGE_LABELS, GATE_LABELS, LEGACY_OPTIONS_MARKER, OPTIONS_MARKER, QUEUES, STUCK_AFTER_MINUTES, aicOf, ago, classify, compareVersions, isAnalysis, isConciergeLabel,
+  GATE_PREFIX, isOptionsComment, labelledAt, latestRelease, queueOf, readPin, reporterReplies, runHealth, safeText, shortGateName, spend, tokenExpiry,
 } from './issue-concierge-state.mjs';
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -101,13 +101,28 @@ test('reporterReplies: only the latest comment of an issue counts, and it must b
   assert.equal(out[0].url, 'https://x/2#reporter');
 });
 
-test('reporterReplies: the options comment is the last comment of an issue that waits, and a reply under it is still a reply', () => {
-  const menuComment = { ...reply(1, 'github-actions[bot]', '2026-10-27T11:00:00Z', 'NONE', { type: 'Bot' }), body: '<!-- concierge:options kind=decision -->\nwords' };
-  const out = reporterReplies([reply(1, 'reporter', '2026-10-27T10:00:00Z'), menuComment], { now: NOW, days: 14, openNumbers: open });
-  assert.deepEqual(out.map((r) => [r.number, r.login]), [[1, 'reporter']]);
-  const answered = reporterReplies([reply(1, 'reporter', '2026-10-27T09:00:00Z'), reply(1, 'maintainer', '2026-10-27T10:00:00Z', 'OWNER'), menuComment], { now: NOW, days: 14, openNumbers: open });
-  assert.deepEqual(answered, [], 'a maintainer answered before the menu was posted again');
+test('the options comment is the bot\'s, whichever line it carries, and nobody else\'s', () => {
+  assert.equal(OPTIONS_MARKER, '<!-- issue-concierge:options');
+  assert.equal(LEGACY_OPTIONS_MARKER, '<!-- concierge:options');
+  const bot = { login: 'github-actions[bot]', type: 'Bot' };
+  for (const marker of [OPTIONS_MARKER, LEGACY_OPTIONS_MARKER]) {
+    assert.equal(isOptionsComment({ user: bot, body: `${marker} kind=decision -->\nwords` }), true, marker);
+    assert.equal(isOptionsComment({ user: { login: 'someone', type: 'User' }, body: `${marker} kind=decision -->` }), false, `${marker} in a person's comment is only words`);
+  }
+  assert.equal(isOptionsComment({ user: bot, body: 'an answer' }), false);
+  assert.equal(isOptionsComment({ user: bot }), false);
+  assert.equal(isOptionsComment({ body: OPTIONS_MARKER }), false);
 });
+
+for (const marker of [OPTIONS_MARKER, LEGACY_OPTIONS_MARKER]) {
+  test(`reporterReplies: the options comment (${marker}) is the last comment of an issue that waits, and a reply under it is still a reply`, () => {
+    const menuComment = { ...reply(1, 'github-actions[bot]', '2026-10-27T11:00:00Z', 'NONE', { type: 'Bot' }), body: `${marker} kind=decision -->\nwords` };
+    const out = reporterReplies([reply(1, 'reporter', '2026-10-27T10:00:00Z'), menuComment], { now: NOW, days: 14, openNumbers: open });
+    assert.deepEqual(out.map((r) => [r.number, r.login]), [[1, 'reporter']]);
+    const answered = reporterReplies([reply(1, 'reporter', '2026-10-27T09:00:00Z'), reply(1, 'maintainer', '2026-10-27T10:00:00Z', 'OWNER'), menuComment], { now: NOW, days: 14, openNumbers: open });
+    assert.deepEqual(answered, [], 'a maintainer answered before the menu was posted again');
+  });
+}
 
 test('reporterReplies: a contributor or a first-time commenter is a reporter, a closed issue and an old reply are not listed, newest first', () => {
   const out = reporterReplies(

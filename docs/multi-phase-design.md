@@ -273,7 +273,7 @@ The labels say where one issue is. A maintainer asks other questions: what waits
 
 ### The status issue
 
-`Issue Concierge 5a ▸ Status` (plain Actions, no model) keeps one pinned issue, "Concierge status". The bot opens it, it carries `no-auto-processing`, and every gate skips both, so the Concierge never acts on it. The workflow runs when a label that matters changes, when someone comments, every hour and by hand, one run behind the other, and it edits the page only when its content changed. The page, in order:
+`Issue Concierge 5a ▸ Status` (plain Actions, no model) keeps one pinned issue, "Issue Concierge status" (an earlier version called it "Concierge status"; it is renamed, never duplicated). The bot opens it, it carries `no-auto-processing`, and every gate skips both, so the Concierge never acts on it. The workflow runs when a label that matters changes, when someone comments, every hour and by hand, one run behind the other, and it edits the page only when its content changed. The page, in order:
 
 - **Needs you.** The issues whose next move is a maintainer's, each queue with a count, the oldest waiting first and how long: held because the request changes what exists (`needs-decision`), held because it may not fit the scope (`scope-review`), and a plan waiting for approval (`plan-approval-required`). Whose move it is comes from the labels, in one place (`scripts/issue-concierge-state.mjs`).
 - **Reporter replies waiting.** An open issue whose latest comment is from someone who is not a maintainer (`OWNER`, `MEMBER`, `COLLABORATOR`) and not a bot, from the last `reporter-replies-days` days. It includes opted-out issues, marked as such, because nobody else is watching them. It shows the login and a link and never the text of the comment.

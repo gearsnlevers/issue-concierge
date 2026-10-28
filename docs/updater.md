@@ -35,6 +35,8 @@ The product is named for its kind, Issue Concierge, because more than one kind o
 | `.github/concierge.yml` | `.github/issue-concierge.yml` | the pin is written in the new place and the old file is removed |
 | `.github/agentic-workflows/` (`scope.md`, `related-repos.md`, `settings.yml` and the other optional files) | `.github/issue-concierge/` | each file is moved with its content unchanged |
 | the secret `CONCIERGE_TOKEN` | `ISSUE_CONCIERGE_TOKEN` | the workflow uses the new secret and falls back to the old one; create the new one when it suits you, no run stops meanwhile |
+| the pinned issue "Concierge status" | "Issue Concierge status" | the status workflow finds the issue by its marker (either spelling) or by the old title, renames it and rewrites it; there is never a second one |
+| the hidden lines of the Concierge's own comments (`<!-- concierge:options`, `:status`, `:mention`, `:accepted`, `:resolution`) | the same with `issue-concierge:` in front | new comments are written with the new lines; **every reader accepts both**, because the comments an earlier version wrote stay in the issues (an options menu is rewritten with the new line at its next edit) |
 | the branch `concierge/update`, titled `chore: update Repo Concierge ...` | `issue-concierge/update`, titled `chore: update Issue Concierge ...` | a pull request still open from the old branch is closed with a comment that points to the new one, and the old branch is deleted |
 
 The move happens in the first update pull request that the new updater makes. The update that first installs the new updater is made by the updater the deployment already has, which leaves the old places alone, so the next run (the daily one, or a dispatch) opens one more pull request, titled `chore: move the Issue Concierge's files to their new places`, with the version unchanged. It only moves files; merge it.
@@ -45,7 +47,7 @@ Until the files are moved, the gates and scripts read the old places, so nothing
 
 Two workflows write to another repository: the issue worker (`create-issue`) and the related-repo closer.
 
-The issue worker is a gh-aw definition. A safe output can only write to another repository when it has both a `github-token` and an `allowed-repos` list. In the harness the place carries a `# concierge:cross-repo` marker. The updater replaces it with
+The issue worker is a gh-aw definition. A safe output can only write to another repository when it has both a `github-token` and an `allowed-repos` list. In the harness the place carries a `# concierge:cross-repo` marker (the updater also accepts `# issue-concierge:cross-repo`; see the note after the closer's marker below). The updater replaces it with
 
 ```yaml
 github-token: ${{ secrets.<secret> }}
@@ -60,6 +62,8 @@ CROSS_REPO_TOKEN: ${{ secrets.<secret> }}
 ```
 
 Both come from the related repository in `related-repos.md` that names a `secret`, and a marker is removed when there is none. One related repository with a secret is supported (a safe output takes one token); two is an error. `check-deployment` verifies the compiled result of the first and the generated lines of the second.
+
+**The two spellings.** The updater accepts both `# concierge:cross-repo` and `# issue-concierge:cross-repo` (and the `-env` pair), and treats a file with the older marker exactly as one with the newer, so comparing a deployment with the previous release's files shows no false local changes. The workflow files the Concierge delivers keep the older spelling for now, for the reason in the next paragraph: an update is made by the updater the deployment already has, and one that does not know the newer spelling would leave the line in the file and write no `CROSS_REPO`. The delivered files take the newer spelling in the release after every deployment can read both.
 
 A marker takes effect one release late. The update that first installs a marker is made by the updater the deployment already has, the previous release's, which does not know it: the file arrives with the marker line left in and nothing generated, and `check-deployment` says so as a warning. Run the updater once more with the pinned release as the target (`gh workflow run issue-concierge-updater.yml -f target=vX.Y.Z`): the updater that the first update installed writes the lines, in a second pull request. A deployment without a related repository needs no second run, and its marker line is only a comment until the next update removes it.
 

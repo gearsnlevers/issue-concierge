@@ -418,7 +418,7 @@ Run it on demand from the Actions tab, optionally with an issue number.
 
 ### Status issue
 
-A plain Actions workflow (no LLM) keeps one pinned issue, "Concierge status", up to date: what waits for a maintainer, the reporter replies nobody has answered, which issues the Concierge manages and which it does not, the health of the gates and what they cost. It is on by default. Install it with the other plain workflows (the updater does it).
+A plain Actions workflow (no LLM) keeps one pinned issue, "Issue Concierge status", up to date: what waits for a maintainer, the reporter replies nobody has answered, which issues the Concierge manages and which it does not, the health of the gates and what they cost. It is on by default. Install it with the other plain workflows (the updater does it).
 
 | From this repository | To the consuming repository |
 |----------------------|-----------------------------|
@@ -715,7 +715,7 @@ Nothing here is required: the Concierge reads the old names as well as the new o
 - [ ] Janitor installed (`janitor.yml` and `janitor.mjs`)
 - [ ] Pause tried: with the repository variable `ISSUE_CONCIERGE_PAUSED` set to `true`, a new comment starts no gate (the runs are skipped), the status issue shows the banner after its next run, and deleting the variable ends it
 - [ ] Commands installed (`commands.yml` and `commands.mjs`; needs `SIGNAL_TOKEN`; the updater does it); on an issue that carries `needs-decision` the last comment is the options comment, and `/accept` from a collaborator with the role hands the issue to the plan worker
-- [ ] Status issue installed (`status.yml`, `status-issue.mjs`, `issue-concierge-settings.mjs` and `issue-concierge-state.mjs`; the updater does it); after the first run the "Concierge status" issue exists, is pinned, and its counts match the open issues
+- [ ] Status issue installed (`status.yml`, `status-issue.mjs`, `issue-concierge-settings.mjs` and `issue-concierge-state.mjs`; the updater does it); after the first run the "Issue Concierge status" issue exists, is pinned, and its counts match the open issues
 - [ ] PR ready signal installed (`pr-ready-signal.yml` and `pr-ready-signal.mjs`; needs `SIGNAL_TOKEN`)
 - [ ] Branch protection / ruleset configured (require PR, status checks, no force-push)
 - [ ] Auto-merge enabled (if low/low unattended merge is desired)

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { createGitHub, STATUS_MARKER } from './e2e/github.mjs';
+import { createGitHub, isStatusPage, LEGACY_STATUS_MARKER, STATUS_MARKER } from './e2e/github.mjs';
 import { MARKER as PAGE_MARKER } from '../scripts/status-issue.mjs';
 import { evaluateCheck, describeSnapshot, CHECK_TYPES } from './e2e/checks.mjs';
 import { cleanupStale, expand, loadConfig, loadScenarios, main, numberOf, readPinText, renderSummary, runScenario, runSuite, validateScenario } from './e2e/run.mjs';
@@ -584,6 +584,45 @@ test('lists are flattened from pages, and the shared lists are asked for once in
   assert.deepEqual(await gh.findStatusIssue('o/r'), { number: 4, body: `${STATUS_MARKER}\n# Concierge status` }, 'the status issue is found by its marker');
   assert.match(calls.find((c) => c.includes('/actions/runs')), /created=%3E%3D2026-10-27T10%3A00%3A00Z/);
   assert.match(calls.find((c) => c.includes('creator=')), /creator=github-actions%5Bbot%5D/);
+});
+
+test('the sandbox\'s status issue is the page under either marker: the runner finds it, and does not count it as a failure issue', async () => {
+  assert.deepEqual([STATUS_MARKER, LEGACY_STATUS_MARKER], ['<!-- issue-concierge:status -->', '<!-- concierge:status -->']);
+  assert.equal(STATUS_MARKER, PAGE_MARKER, 'the runner and the page write the same line');
+  assert.equal(isStatusPage(`${STATUS_MARKER}\nx`), true);
+  assert.equal(isStatusPage(`${LEGACY_STATUS_MARKER}\nx`), true);
+  assert.equal(isStatusPage('an [aw] failure'), false);
+  assert.equal(isStatusPage(undefined), false);
+  for (const marker of [STATUS_MARKER, LEGACY_STATUS_MARKER]) {
+    const run = (args) => JSON.stringify([[
+      { number: 4, created_at: '2026-10-27T10:06:00Z', body: `${marker}\n# page` },
+      { number: 6, created_at: '2026-10-27T10:07:00Z', body: 'an [aw] failure' },
+    ]]);
+    const gh = createGitHub({ run, sleep: async () => {}, now: () => 0, cacheMs: 0 });
+    assert.deepEqual((await gh.listBotIssues('o/r', '2026-10-27T10:00:00Z')).map((i) => i.number), [6], marker);
+    assert.equal((await gh.findStatusIssue('o/r')).number, 4, marker);
+  }
+});
+
+test('the scenarios\' patterns for the Concierge\'s own comments match both spellings, so a sandbox that is part way through the rename still passes', () => {
+  const scenarios = fs.readdirSync(new URL('./e2e/scenarios/', import.meta.url)).map((f) => JSON.parse(fs.readFileSync(new URL(`./e2e/scenarios/${f}`, import.meta.url), 'utf8')));
+  const patterns = [];
+  const walk = (v) => {
+    if (Array.isArray(v)) return v.forEach(walk);
+    if (v && typeof v === 'object') {
+      if (typeof v.match === 'string' && /concierge:/.test(v.match)) patterns.push(v.match);
+      Object.values(v).forEach(walk);
+    }
+  };
+  walk(scenarios);
+  assert.ok(patterns.length >= 5, 'the scenarios do check the options and the accepted comments');
+  for (const pattern of patterns) {
+    const name = /concierge:([a-z]+)/.exec(pattern)[1];
+    const kind = /kind=([a-z.]+)/.exec(pattern)?.[1] ?? 'decision';
+    const sample = (prefix) => `<!-- ${prefix}concierge:${name} kind=${kind} -->\n\`/accept\` \`/decline [reason]\` \`/approve\``;
+    assert.match(sample(''), new RegExp(pattern), `the older line: ${pattern}`);
+    assert.match(sample('issue-'), new RegExp(pattern), `the new line: ${pattern}`);
+  }
 });
 
 // ------------------------------------------------------------------ the status issue

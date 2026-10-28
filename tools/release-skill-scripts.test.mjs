@@ -130,6 +130,17 @@ test('withoutCrossRepo ignores the generated environment of a plain workflow and
   assert.notEqual(withoutCrossRepo(source), withoutCrossRepo(deployed.replace('GH_TOKEN: x', 'GH_TOKEN: z')));
 });
 
+test('withoutCrossRepo knows both spellings of both markers', () => {
+  const deployedEnv = 'env:\n  GH_TOKEN: x\n  CROSS_REPO: o/r\n  CROSS_REPO_TOKEN: ${{ secrets.X }}\nrun: y\n';
+  for (const marker of ['concierge:cross-repo-env', 'issue-concierge:cross-repo-env']) {
+    assert.equal(withoutCrossRepo(`env:\n  GH_TOKEN: x\n  # ${marker}\nrun: y\n`), withoutCrossRepo(deployedEnv), marker);
+  }
+  const deployed = 'create-issue:\n  max: 1\n  github-token: ${{ secrets.X }}\n  allowed-repos: ["o/r"]\nthreat-detection: on\n';
+  for (const marker of ['concierge:cross-repo', 'issue-concierge:cross-repo']) {
+    assert.equal(withoutCrossRepo(`create-issue:\n  max: 1\n  # ${marker}\nthreat-detection: on\n`), withoutCrossRepo(deployed), marker);
+  }
+});
+
 test('withoutCrossRepo ignores the generated settings and the marker, nothing else', () => {
   const source = 'create-issue:\n  max: 1\n  # concierge:cross-repo\nthreat-detection: on\n';
   const deployed = 'create-issue:\n  max: 1\n  github-token: ${{ secrets.X }}\n  allowed-repos: ["o/r"]\nthreat-detection: on\n';

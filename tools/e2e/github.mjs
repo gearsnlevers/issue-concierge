@@ -9,8 +9,13 @@ import { execFileSync } from 'node:child_process';
 // second issue if the first one went through; every issue the runner files carries the hold or the opt-out label, and
 // --cleanup-stale closes what is left, so a repeat is the lesser harm.
 const TRANSIENT = /HTTP 5\d\d|timed? ?out|ECONN|socket hang up|EAI_AGAIN|temporar|secondary rate limit|unexpected end of JSON|unexpected EOF/i;
-/** The hidden line scripts/status-issue.mjs puts first in the status issue (a test keeps the two equal). */
-export const STATUS_MARKER = '<!-- concierge:status -->';
+/**
+ * The hidden line scripts/status-issue.mjs puts first in the status issue (a test keeps the two equal), and the line an earlier
+ * version put there: the sandbox keeps the status issue it was given until an update renames it.
+ */
+export const STATUS_MARKER = '<!-- issue-concierge:status -->';
+export const LEGACY_STATUS_MARKER = '<!-- concierge:status -->';
+export const isStatusPage = (body) => [STATUS_MARKER, LEGACY_STATUS_MARKER].some((m) => String(body ?? '').includes(m));
 
 export function ghRunner(env = process.env) {
   return (args, input) =>
@@ -79,13 +84,13 @@ export function createGitHub({ run = ghRunner(), sleep = (ms) => new Promise((r)
     listBotIssues: (repo, since) =>
       cached(`bot ${repo} ${since}`, async () => {
         const issues = await api('GET', `/repos/${repo}/issues?state=all&creator=${enc('github-actions[bot]')}&since=${enc(since)}&per_page=100`, undefined, { paginate: true });
-        return issues.filter((i) => !i.pull_request && i.created_at >= since && !(i.body ?? '').includes(STATUS_MARKER));
+        return issues.filter((i) => !i.pull_request && i.created_at >= since && !isStatusPage(i.body));
       }),
     /** The status issue the Concierge keeps pinned, or null before its first run. */
     findStatusIssue: (repo) =>
       cached(`status ${repo}`, async () => {
         const issues = await api('GET', `/repos/${repo}/issues?state=all&creator=${enc('github-actions[bot]')}&per_page=100`, undefined, { paginate: true });
-        const found = issues.find((i) => !i.pull_request && (i.body ?? '').includes(STATUS_MARKER));
+        const found = issues.find((i) => !i.pull_request && isStatusPage(i.body));
         return found ? { number: found.number, body: found.body } : null;
       }),
     listOpenIssues: (repo) => api('GET', `/repos/${repo}/issues?state=open&per_page=100`, undefined, { paginate: true }).then((all) => all.filter((i) => !i.pull_request)),

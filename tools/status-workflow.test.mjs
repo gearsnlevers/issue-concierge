@@ -77,7 +77,8 @@ test('every script it imports is delivered too, so that an install runs', () => 
 test('the status issue is invisible to the gates: opened by the bot and marked with the opt-out label', () => {
   const source = read('scripts/status-issue.mjs');
   assert.match(source, /labels: \[LABEL_OPT_OUT\]/);
-  assert.match(source, /export const MARKER = '<!-- concierge:status -->'/);
+  assert.match(source, /export const MARKER = '<!-- issue-concierge:status -->'/);
+  assert.match(source, /export const LEGACY_MARKER = '<!-- concierge:status -->'/, 'the page an earlier version opened is still found');
   // the workflow token authors the issue, and a bot-authored issue starts no gate
   for (const gate of ['issue-worker', 'issue-triage', 'plan-worker']) {
     assert.match(read(`workflows/${gate}.md`), /github\.event\.issue\.user\.type != 'Bot'/, `${gate} skips bot-authored issues`);
@@ -91,7 +92,7 @@ test('the docs, the record and the checklist say the same', () => {
   assert.match(read('docs/deployment.md'), /^### Status issue$/m);
   assert.match(read('docs/deployment.md'), /- \[ \] Status issue installed \(`status\.yml`, `status-issue\.mjs`, `issue-concierge-settings\.mjs` and `issue-concierge-state\.mjs`; the updater does it\)/);
   assert.match(read('docs/deployment.md'), /\| `settings\.yml` \| No \|/);
-  assert.match(read('README.md'), /Every repository that runs the Concierge gets a pinned issue, "Concierge status"/);
+  assert.match(read('README.md'), /Every repository that runs the Concierge gets a pinned issue, "Issue Concierge status"/);
   assert.match(read('README.md'), /- `settings\.yml`: what the Concierge does in this repository/);
   assert.match(design, /\*\*The nudge\.\*\* With `mention-after-days` above 0 \(off by default\), the same workflow mentions the people who have the maintain or admin role/);
   assert.match(design, /`mention-after-days` \(0, never\) is the nudge above\./);
