@@ -1,5 +1,12 @@
 # Changelog
 
+## [v2.0.1] - 2026-10-28
+
+### What's Changed
+* fix: a maintainer's /accept is recorded by the bot, and issue triage stands down for the record by @vscheuber in https://github.com/gearsnlevers/issue-concierge/pull/73
+
+**Full Changelog**: https://github.com/gearsnlevers/issue-concierge/compare/v2.0.0...v2.0.1
+
 ## [v2.0.0] - 2026-10-28
 
 ### What's Changed
