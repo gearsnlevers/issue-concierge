@@ -27,7 +27,7 @@ Two independent axes are applied by the triage agents:
 
 ## Workflow names
 
-The Actions sidebar sorts workflows by display name, so the names carry the order. They are all in the form `Issue Concierge <phase><step> [▸ ]<Name>`:
+The Actions sidebar sorts workflows by display name, so the names carry the order. They are all in the form `Issue Concierge <phase><step> [▸ ]<Name>` ([record 0038](decisions/0038-everything-the-issue-concierge-puts-in-a-repository-is-named-for-the-product.md) says why the product is named for its kind):
 
 - **`Issue Concierge`** names the product, kind first, because a repository can run more than one kind of concierge: each would have its own prefix, and the workflows of each stay together in the sidebar. The prefix does not put the harness ahead of the repository's own workflows; it only keeps them side by side. Before the product took its name the prefix was `Concierge`, and runs from that time keep the old name in the run history.
 - **The code** (a digit for the phase, a letter for the step) puts the workflows in the order they run. Workers and triages come first in each phase; the helpers that serve a phase sit after them; phase 4 holds what is not tied to one gate.

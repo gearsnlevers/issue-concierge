@@ -28,7 +28,7 @@ To customize, use the places that are yours: `.github/issue-concierge/` (complex
 
 ## Names that changed, and how the updater moves them
 
-The product is named for its kind, Issue Concierge, because more than one kind of concierge may share a repository. A deployment that was set up under the earlier names keeps working, and **nothing is asked of its maintainers**. The updater does the moving, in the pull request you already review:
+The product is named for its kind, Issue Concierge, because more than one kind of concierge may share a repository ([record 0038](decisions/0038-everything-the-issue-concierge-puts-in-a-repository-is-named-for-the-product.md)). A deployment that was set up under the earlier names keeps working, and **nothing is asked of its maintainers**. The updater does the moving, in the pull request you already review:
 
 | Was | Is | How it moves |
 | --- | -- | ------------ |
