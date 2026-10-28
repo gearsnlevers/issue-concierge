@@ -47,7 +47,7 @@ jobs:
     # only when merged. Closed issues, releases, pushes and the schedule
     # evaluate every waiting issue.
     if: >-
-      (vars.CONCIERGE_PAUSED != 'true' || github.event_name == 'workflow_dispatch')
+      (vars.ISSUE_CONCIERGE_PAUSED != 'true' && vars.CONCIERGE_PAUSED != 'true' || github.event_name == 'workflow_dispatch')
       && ((github.event_name != 'issues' && github.event_name != 'pull_request_target')
       || (github.event_name == 'issues'
           && (github.event.action == 'closed'

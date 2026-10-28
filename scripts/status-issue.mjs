@@ -15,7 +15,7 @@ import fs from 'node:fs';
 import { SETTINGS_PATH, parseSettings, readSettingsText } from './issue-concierge-settings.mjs';
 import {
   BOT, QUEUES, STUCK_AFTER_MINUTES, GATE_LABELS, ago, classify, compareVersions, isAnalysis, labelledAt, latestRelease,
-  readPin, reporterReplies, runHealth, safeText, spend, tokenExpiry,
+  pausedBy, readPin, reporterReplies, runHealth, safeText, spend, tokenExpiry,
 } from './issue-concierge-state.mjs';
 import { LABEL_OPT_OUT, labelNames } from './opt-out.mjs';
 
@@ -114,7 +114,7 @@ export function render(m) {
 
   L.push(MARKER, `# ${TITLE}`, '', `Last changed ${minute(m.now)} · [What is this page?](${MAINTAINER_DOCS})`, '');
   if (m.paused) {
-    L.push(`> ⏸ **Paused**${m.paused.since ? ` since ${minute(Date.parse(m.paused.since))}` : ''}. No gate, sweep, closer or notifier touches an issue or a pull request, and runs that are already in flight finish. To resume, delete the repository variable \`CONCIERGE_PAUSED\` or set it to anything but \`true\`: [Settings › Variables](https://github.com/${repo}/settings/variables/actions). An issue that was in a gate meanwhile may need \`/retry\` afterwards.`, '');
+    L.push(`> ⏸ **Paused**${m.paused.since ? ` since ${minute(Date.parse(m.paused.since))}` : ''}. No gate, sweep, closer or notifier touches an issue or a pull request, and runs that are already in flight finish. To resume, delete the repository variable \`ISSUE_CONCIERGE_PAUSED\` (and \`CONCIERGE_PAUSED\`, its older name, if it is set) or set it to anything but \`true\`: [Settings › Variables](https://github.com/${repo}/settings/variables/actions). An issue that was in a gate meanwhile may need \`/retry\` afterwards.`, '');
   }
   if (m.pinNote) L.push(`> ⚠ This issue is not pinned: ${m.pinNote}`, '');
 
@@ -343,7 +343,7 @@ export function realContext(env = process.env) {
 }
 
 /** Collect the facts. Returns null when the issues cannot be read: the page is not rewritten from nothing. */
-export function collect(ctx, repo, settings, signalToken, paused = false) {
+export function collect(ctx, repo, settings, signalToken, pausedVariables = []) {
   const now = ctx.now;
   const issues = ctx.list(`repos/${repo}/issues?state=open`);
   if (!issues) return null;
@@ -377,9 +377,15 @@ export function collect(ctx, repo, settings, signalToken, paused = false) {
     if (releases.status === 200) latest = latestRelease(releases.data, pin.channel);
   }
   const runs = ctx.runs(new Date(now - 7 * 86400000).toISOString().slice(0, 10)) ?? [];
-  // When the variable was last set is the nearest thing to "paused since"; the workflow token may not be allowed to read it.
-  const variable = paused ? ctx.get(`repos/${repo}/actions/variables/CONCIERGE_PAUSED`) : null;
-  const pausedSince = variable && variable.status === 200 && variable.data ? variable.data.updated_at ?? null : null;
+  // When a pause variable was last set is the nearest thing to "paused since"; the workflow token may not be allowed to read it.
+  // With both set, the pause began with the earlier one.
+  const paused = pausedVariables.length > 0;
+  const stamps = pausedVariables
+    .map((name) => ctx.get(`repos/${repo}/actions/variables/${name}`))
+    .map((variable) => (variable && variable.status === 200 && variable.data ? variable.data.updated_at ?? null : null))
+    .filter(Boolean)
+    .sort();
+  const pausedSince = stamps[0] ?? null;
   return { repo, issues: candidates, comments, analysed, events, runs, pin, latest, token: ctx.probe(signalToken), paused: paused ? { since: pausedSince } : null };
 }
 
@@ -456,7 +462,7 @@ export function main(env = process.env, ctx = realContext(env)) {
     console.log(out.action === 'closed' ? 'status-issue is false: the status issue was closed and unpinned' : 'status-issue is false: nothing to do');
     return 0;
   }
-  const raw = collect(ctx, repo, settings, signalToken, env.CONCIERGE_PAUSED === 'true');
+  const raw = collect(ctx, repo, settings, signalToken, pausedBy(env));
   if (!raw) {
     console.log('::error::the open issues could not be listed; the status issue is left as it is');
     return 1;

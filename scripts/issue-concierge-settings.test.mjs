@@ -76,7 +76,8 @@ test('the starter file parses without a problem to exactly the defaults, and doc
 test('the starter file says that the pause is not a setting, and how to pause', () => {
   const starter = fs.readFileSync(path.join(ROOT, 'shared/settings.yml'), 'utf8');
   assert.match(starter, /NOT HERE: the pause switch\. A gate must be able to check it without starting a run, and only a repository\n# variable can be read that way\./);
-  assert.match(starter, /create the repository variable CONCIERGE_PAUSED with the\n# value true/);
+  assert.match(starter, /create the repository variable\n# ISSUE_CONCIERGE_PAUSED with the value true/);
+  assert.match(starter, /CONCIERGE_PAUSED, still pauses/, 'the older name is said to work');
   assert.ok(!('CONCIERGE_PAUSED' in SCHEMA) && !('paused' in SCHEMA));
 });
 

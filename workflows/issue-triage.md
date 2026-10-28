@@ -11,7 +11,7 @@ description: |
 # record: GitHub shows a member with private membership as a CONTRIBUTOR to the workflow token. Because this `if:` reads
 # a pre-activation output (`needs.`), gh-aw applies it to the activation job only: the pre-activation job now starts for
 # every label event, so the step carries its own conditions and does nothing, and posts nothing, for any other label.
-if: ${{ (vars.CONCIERGE_PAUSED != 'true' || github.event_name == 'workflow_dispatch') && github.event.issue.state == 'open' && github.event.issue.user.type != 'Bot' && !contains(github.event.issue.labels.*.name, 'no-auto-processing') && needs.pre_activation.outputs.accepted_result != 'failure' }}
+if: ${{ (vars.ISSUE_CONCIERGE_PAUSED != 'true' && vars.CONCIERGE_PAUSED != 'true' || github.event_name == 'workflow_dispatch') && github.event.issue.state == 'open' && github.event.issue.user.type != 'Bot' && !contains(github.event.issue.labels.*.name, 'no-auto-processing') && needs.pre_activation.outputs.accepted_result != 'failure' }}
 on:
   # The pre-activation job runs before the agent and gets no repository permissions by default.
   permissions:
@@ -25,7 +25,7 @@ on:
     # this request, do not triage it", and the `if:` above reads it.
     - name: Stand down when a maintainer has already accepted the request
       id: accepted
-      if: (vars.CONCIERGE_PAUSED != 'true' || github.event_name == 'workflow_dispatch') && github.event.label.name == 'issue-worker-ready' && github.event.issue.state == 'open' && github.event.issue.user.type != 'Bot' && !contains(github.event.issue.labels.*.name, 'no-auto-processing')
+      if: (vars.ISSUE_CONCIERGE_PAUSED != 'true' && vars.CONCIERGE_PAUSED != 'true' || github.event_name == 'workflow_dispatch') && github.event.label.name == 'issue-worker-ready' && github.event.issue.state == 'open' && github.event.issue.user.type != 'Bot' && !contains(github.event.issue.labels.*.name, 'no-auto-processing')
       continue-on-error: true
       uses: actions/github-script@v9
       with:

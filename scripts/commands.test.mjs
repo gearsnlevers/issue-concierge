@@ -263,7 +263,7 @@ test('while the Concierge is paused a command that would hand an issue on is ref
     const api = fakeApi();
     const result = runCommand({ name, argument: '' }, { issue: issue(labels), actor: 'maint', api, paused: true });
     assert.equal(result.ok, false, name);
-    assert.match(result.reason, /The Concierge is paused \(the repository variable `CONCIERGE_PAUSED` is `true`\), so nothing would start\. Resume it first/, name);
+    assert.match(result.reason, /The Concierge is paused \(the repository variable `ISSUE_CONCIERGE_PAUSED` is `true`, or `CONCIERGE_PAUSED`, its older name\), so nothing would start\. Resume it first/, name);
     assert.deepEqual(api.calls, [], name);
   }
   for (const name of ['decline', 'help']) {
@@ -273,15 +273,19 @@ test('while the Concierge is paused a command that would hand an issue on is ref
   }
 });
 
-test('main: the variable reaches the commands through the environment', () => {
+test('main: either pause variable reaches the commands through the environment, in any case, and neither alone does when it is not true', () => {
   const { env } = eventEnv('issue_comment', commentEvent('/accept'));
-  const api = fakeApi({ ...held, roles: { maint: 'admin' } });
-  assert.equal(main({ ...env, CONCIERGE_PAUSED: 'true' }, api, () => {}), 0);
-  assert.ok(!api.calls.some((c) => c[0] === 'removeLabel' || c[0] === 'addLabelSignal'));
-  assert.match(api.calls.find((c) => c[0] === 'reply')[2], /The Concierge is paused/);
-  const running = fakeApi({ ...held, roles: { maint: 'admin' } });
-  main({ ...env, CONCIERGE_PAUSED: '' }, running, () => {});
-  assert.ok(running.calls.some((c) => c[0] === 'removeLabel'));
+  for (const vars of [{ ISSUE_CONCIERGE_PAUSED: 'true' }, { CONCIERGE_PAUSED: 'true' }, { ISSUE_CONCIERGE_PAUSED: 'true', CONCIERGE_PAUSED: 'true' }, { ISSUE_CONCIERGE_PAUSED: 'TRUE' }, { ISSUE_CONCIERGE_PAUSED: 'false', CONCIERGE_PAUSED: 'true' }]) {
+    const api = fakeApi({ ...held, roles: { maint: 'admin' } });
+    assert.equal(main({ ...env, ...vars }, api, () => {}), 0, JSON.stringify(vars));
+    assert.ok(!api.calls.some((c) => c[0] === 'removeLabel' || c[0] === 'addLabelSignal'), JSON.stringify(vars));
+    assert.match(api.calls.find((c) => c[0] === 'reply')[2], /The Concierge is paused/, JSON.stringify(vars));
+  }
+  for (const vars of [{}, { CONCIERGE_PAUSED: '' }, { ISSUE_CONCIERGE_PAUSED: '' }, { ISSUE_CONCIERGE_PAUSED: 'false', CONCIERGE_PAUSED: 'false' }]) {
+    const running = fakeApi({ ...held, roles: { maint: 'admin' } });
+    main({ ...env, ...vars }, running, () => {});
+    assert.ok(running.calls.some((c) => c[0] === 'removeLabel'), JSON.stringify(vars));
+  }
 });
 
 const ACCEPTED = (actor = 'maint') => ['reply', 7, `${ACCEPT_MARKER}\nAccepted by @${actor} with /accept. The request goes to planning now.`];

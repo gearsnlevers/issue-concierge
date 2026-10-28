@@ -12,6 +12,16 @@ import { isOptedOut, labelNames } from './opt-out.mjs';
 
 export const BOT = 'github-actions[bot]';
 
+/**
+ * The repository variables that pause the Concierge (docs/decisions/0037): the name of the product, and the name it had
+ * before, which still works so that a pause set under it does not lift when the Concierge is updated. Either one set to
+ * `true` pauses; the workflow conditions read both (tools/pause.test.mjs keeps the two readings together).
+ */
+export const PAUSE_VARIABLES = ['ISSUE_CONCIERGE_PAUSED', 'CONCIERGE_PAUSED'];
+
+/** The pause variables that are `true` in `env`, the environment a workflow fills from `vars`. Any case: a workflow condition compares strings without regard to case. */
+export const pausedBy = (env = {}) => PAUSE_VARIABLES.filter((name) => String(env[name] ?? '').toLowerCase() === 'true');
+
 /** The people whose answer is a maintainer's: a reply from anyone else is a reporter's. */
 export const MAINTAINER_ASSOCIATIONS = new Set(['OWNER', 'MEMBER', 'COLLABORATOR']);
 
