@@ -61,6 +61,17 @@ if ! activation_if "$tmp/.github/workflows/pr-worker.lock.yml" | grep -q "needs.
   echo "::error::pr-worker does not read the existing_fix outcome in its compiled activation condition"
   exit 1
 fi
+# A maintainer's /accept is recorded by a comment of the bot, and issue triage stands down for it in a deterministic
+# pre-activation step (docs/multi-phase-design.md, "A command is not a reply"). Read the compiled lock: the step must
+# survive compilation, and the activation condition must read its outcome, or a late issue worker run puts the hold back.
+if ! activation_if "$tmp/.github/workflows/issue-triage.lock.yml" | tr '\n' ' ' | tr -s ' ' | grep -qF "needs.pre_activation.outputs.accepted_result != 'failure'"; then
+  echo "::error::issue-triage does not read the accepted outcome in its compiled activation condition"
+  exit 1
+fi
+if ! grep -q "id: accepted" "$tmp/.github/workflows/issue-triage.lock.yml" || ! grep -qF "const MARKER = '<!-- concierge:accepted -->';" "$tmp/.github/workflows/issue-triage.lock.yml"; then
+  echo "::error::issue-triage lost its accepted step in the compiled lock"
+  exit 1
+fi
 # Gate labels are applied, not suggested (docs/multi-phase-design.md, "Gate labels are applied, not suggested"):
 # gh-aw holds a label below confidence HIGH as a suggestion, so no label event starts the next gate (frodo-lib#803).
 # Read the compiled locks: the setting must survive into the safe-output configuration. The issue worker is the one
@@ -103,8 +114,9 @@ for name in issue-worker issue-triage plan-worker plan-triage pr-worker pr-triag
 done
 # The pause switch (docs/multi-phase-design.md, "The maintainer's view"): while the repository variable CONCIERGE_PAUSED is
 # 'true' no gate starts, so every gate must read it in its compiled ACTIVATION condition, where it stops a run before it
-# starts. The two gates with a deterministic pre-activation step that writes (the PR worker takes a void label away, the
-# release closer swaps labels and comments) must read it in that step too, or a paused repository would still be written to.
+# starts. The gates with a deterministic pre-activation step that writes (the PR worker and issue triage take a void label
+# away, the release closer swaps labels and comments) must read it in that step too, or a paused repository would still be
+# written to.
 # Flatten the whitespace first: gh-aw wraps the condition.
 for name in issue-worker issue-triage plan-worker plan-triage pr-worker pr-triage release-closer; do
   if ! activation_if "$tmp/.github/workflows/$name.lock.yml" | tr '\n' ' ' | tr -s ' ' | grep -qF "vars.CONCIERGE_PAUSED != 'true'"; then
@@ -112,7 +124,7 @@ for name in issue-worker issue-triage plan-worker plan-triage pr-worker pr-triag
     exit 1
   fi
 done
-for name in pr-worker release-closer; do
+for name in pr-worker issue-triage release-closer; do
   if [ "$(grep -cF "vars.CONCIERGE_PAUSED != 'true'" "$tmp/.github/workflows/$name.lock.yml")" -lt 2 ]; then
     echo "::error::$name does not stop at CONCIERGE_PAUSED in its deterministic pre-activation step"
     exit 1

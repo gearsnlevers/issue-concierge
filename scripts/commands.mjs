@@ -26,6 +26,13 @@ export const LABEL_DECLINED = 'declined';
 export const LABEL_HANDOFF = 'issue-triage-handoff';
 export const LABEL_APPROVAL = 'plan-approval-required';
 export const LABEL_PLAN_HANDOFF = 'plan-triage-handoff';
+/**
+ * The record of `/accept`, a comment of the bot. The labels that show the decision are removed as the issue moves on, and
+ * the author association of the maintainer's own comment is not a record: GitHub shows a member with private membership
+ * as a CONTRIBUTOR to the workflow token. workflows/issue-triage.md reads this string in its pre-activation step and in its
+ * prompt; a test keeps the three equal.
+ */
+export const ACCEPT_MARKER = '<!-- concierge:accepted -->';
 
 /** The labels that stop an issue at the first gate; a maintainer accepts it by removing them. */
 export const STOP_LABELS = ['needs-decision', 'scope-review', 'backlog', 'out-of-scope', LABEL_DECLINED, 'needs-info'];
@@ -220,6 +227,8 @@ export function runCommand(cmd, { issue, actor, api, paused = false }) {
       }
       for (const l of stops) api.removeLabel(n, l);
       if (issue.state !== 'open') api.reopen(n);
+      // The record comes before the label that hands the issue on, so that nothing the hand-over starts can miss it.
+      api.reply(n, `${ACCEPT_MARKER}\nAccepted by @${actor} with /accept. The request goes to planning now.`);
       api.addLabelSignal(n, LABEL_HANDOFF);
       return done(`removed ${stops.join(', ')} and handed the issue to the plan worker`);
     }
