@@ -101,6 +101,6 @@ test('the docs, the record and the checklist say the same', () => {
   assert.match(read('docs/deployment.md'), /^### Commands$/m);
   assert.match(read('docs/deployment.md'), /- \[ \] Commands installed \(`commands\.yml` and `commands\.mjs`; needs `SIGNAL_TOKEN`; the updater does it\)/);
   assert.match(read('README.md'), /An issue that waits for a maintainer carries the command they need next\./);
-  assert.match(read('docs/decisions/README.md'), /\| 0036 \| \[A maintainer decides by command, from the issue\]\(0036-a-maintainer-decides-by-command-from-the-issue\.md\) \| proposed \|/);
-  assert.match(read('docs/decisions/0036-a-maintainer-decides-by-command-from-the-issue.md'), /^status: proposed$/m);
+  assert.match(read('docs/decisions/README.md'), /\| 0036 \| \[A maintainer decides by command, from the issue\]\(0036-a-maintainer-decides-by-command-from-the-issue\.md\) \| accepted \|/);
+  assert.match(read('docs/decisions/0036-a-maintainer-decides-by-command-from-the-issue.md'), /^status: accepted$/m);
 });

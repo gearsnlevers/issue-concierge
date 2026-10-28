@@ -176,8 +176,8 @@ test('shared/guard.md is a template with the three sections, says it is not scop
 
 test('the record and the docs say the same thing', () => {
   const record = read('docs/decisions/0034-a-request-that-changes-what-exists-is-held-for-a-maintainer.md');
-  assert.match(record, /^status: proposed$/m);
-  assert.match(read('docs/decisions/README.md'), /\| 0034 \| \[A request that changes what exists is held for a maintainer\]\(0034-a-request-that-changes-what-exists-is-held-for-a-maintainer\.md\) \| proposed \|/);
+  assert.match(record, /^status: accepted$/m);
+  assert.match(read('docs/decisions/README.md'), /\| 0034 \| \[A request that changes what exists is held for a maintainer\]\(0034-a-request-that-changes-what-exists-is-held-for-a-maintainer\.md\) \| accepted \|/);
   const design = read('docs/multi-phase-design.md');
   assert.match(design, /^#### A change to what exists$/m);
   assert.match(design, /\*\*Breaking change\.\*\* The issue gate holds a request that changes what exists before any plan/);
