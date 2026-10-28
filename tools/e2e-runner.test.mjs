@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import { createGitHub, STATUS_MARKER } from './e2e/github.mjs';
 import { MARKER as PAGE_MARKER } from '../scripts/status-issue.mjs';
 import { evaluateCheck, describeSnapshot, CHECK_TYPES } from './e2e/checks.mjs';
-import { cleanupStale, expand, loadConfig, loadScenarios, main, numberOf, renderSummary, runScenario, runSuite, validateScenario } from './e2e/run.mjs';
+import { cleanupStale, expand, loadConfig, loadScenarios, main, numberOf, readPinText, renderSummary, runScenario, runSuite, validateScenario } from './e2e/run.mjs';
 
 const config = loadConfig();
 const scenarios = loadScenarios();
@@ -612,4 +612,11 @@ test('statusIssue: the page must match, or must not, and a repository without on
   assert.equal(none.ok, false);
   assert.match(none.detail, /there is no status issue yet/);
   assert.match(evaluateCheck({ type: 'statusIssue', match: '\\n- #13 ' }, snap2(page)).detail, /status issue #7 does not match .*, which it must/);
+});
+
+test('the version a sandbox repository is pinned at is read from the new pin file, or from the old one before the repository has been updated', async () => {
+  const gh = (files) => ({ readFile: async (repo, file) => { if (!(file in files)) throw new Error(`HTTP 404 ${file}`); return files[file]; } });
+  assert.equal(await readPinText(gh({ '.github/issue-concierge.yml': 'version: v2.1.0\n', '.github/concierge.yml': 'version: v2.0.1\n' }), 'o/r'), 'version: v2.1.0\n');
+  assert.equal(await readPinText(gh({ '.github/concierge.yml': 'version: v2.0.1\n' }), 'o/r'), 'version: v2.0.1\n');
+  await assert.rejects(readPinText(gh({}), 'o/r'), /HTTP 404 \.github\/concierge\.yml/);
 });

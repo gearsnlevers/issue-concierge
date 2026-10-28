@@ -46,7 +46,7 @@ Run the lint and test commands before you finish. <Say which step must come firs
 - **Always:** <for example run the checks, follow the naming rules in `.github/instructions/`>
 - **Ask first:** <for example change a public API, add a dependency, change the CI pipeline>
 - **Never:** commit secrets or keys, edit generated files, <anything else that must not happen>.
-- **Never edit the Issue Concierge's files** (its workflow definitions, scripts and the pin in `.github/concierge.yml`).
+- **Never edit the Issue Concierge's files** (its workflow definitions, scripts and the pin in `.github/issue-concierge.yml`).
   The updater overwrites them. They are listed with their destinations in `release-manifest.json` of the pinned release.
 
 ## Decisions

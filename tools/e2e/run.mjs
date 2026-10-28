@@ -14,6 +14,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { LEGACY_PIN_PATH, PIN_PATH } from '../../scripts/issue-concierge-paths.mjs';
 import { createGitHub } from './github.mjs';
 import { CHECK_TYPES, FAIL_FAST, describeSnapshot, evaluateChecks } from './checks.mjs';
 
@@ -27,6 +28,15 @@ const QUIESCE_MINUTES = 5;
 const CLOCK_SKEW_MS = 2000;
 
 // ------------------------------------------------------------------ data
+
+/** The pin file of a sandbox repository: in the new place, or else in the old one while the repository has not been updated yet. */
+export async function readPinText(gh, repo) {
+  try {
+    return await gh.readFile(repo, PIN_PATH);
+  } catch {
+    return gh.readFile(repo, LEGACY_PIN_PATH);
+  }
+}
 
 export function loadConfig(file = path.join(HERE, 'config.json')) {
   return JSON.parse(fs.readFileSync(file, 'utf8'));
@@ -427,7 +437,7 @@ export async function main(argv = process.argv.slice(2), env = process.env, io =
     const runner = (await gh.user()).login;
     const pins = {};
     for (const p of profiles) {
-      const pin = (await gh.readFile(`${owner}/${config.profiles[p].lib}`, '.github/concierge.yml')).match(/^version:\s*(\S+)/m);
+      const pin = (await readPinText(gh, `${owner}/${config.profiles[p].lib}`)).match(/^version:\s*(\S+)/m);
       pins[p] = pin ? pin[1] : 'unknown';
     }
     const ctx = {
