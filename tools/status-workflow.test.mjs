@@ -98,8 +98,8 @@ test('the docs, the record and the checklist say the same', () => {
   assert.match(read('docs/deployment.md'), /`mention-after-days`, off by default; it lists the collaborators with the workflow token and then with `SIGNAL_TOKEN`/);
   assert.match(read('README.md'), /mention the maintainers about what has waited for them too long \(`mention-after-days`\)/);
   assert.match(read('docs/decisions/0035-each-repository-has-a-status-view-of-its-own.md'), /With `mention-after-days` above 0 \(off by default\) it also mentions the people who have the maintain or admin role/);
-  assert.match(read('docs/decisions/README.md'), /\| 0035 \| \[Each repository has a status view of its own\]\(0035-each-repository-has-a-status-view-of-its-own\.md\) \| proposed \|/);
-  assert.match(read('docs/decisions/0035-each-repository-has-a-status-view-of-its-own.md'), /^status: proposed$/m);
+  assert.match(read('docs/decisions/README.md'), /\| 0035 \| \[Each repository has a status view of its own\]\(0035-each-repository-has-a-status-view-of-its-own\.md\) \| accepted \|/);
+  assert.match(read('docs/decisions/0035-each-repository-has-a-status-view-of-its-own.md'), /^status: accepted$/m);
 });
 
 test('no heading in the docs is written twice in a row (an insertion once repeated the one it was placed before)', () => {

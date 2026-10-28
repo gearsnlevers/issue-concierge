@@ -134,6 +134,6 @@ test('the docs, the record and the checklist say the same', () => {
   assert.match(read('docs/deployment.md'), /- \[ \] Pause tried: with the repository variable `CONCIERGE_PAUSED` set to `true`/);
   assert.match(read('README.md'), /To stop the Concierge in a repository, create the repository variable `CONCIERGE_PAUSED`/);
   assert.match(read('shared/settings.yml'), /NOT HERE: the pause switch/);
-  assert.match(read('docs/decisions/README.md'), /\| 0037 \| \[The Concierge is paused by a repository variable\]\(0037-the-concierge-is-paused-by-a-repository-variable\.md\) \| proposed \|/);
-  assert.match(read('docs/decisions/0037-the-concierge-is-paused-by-a-repository-variable.md'), /^status: proposed$/m);
+  assert.match(read('docs/decisions/README.md'), /\| 0037 \| \[The Concierge is paused by a repository variable\]\(0037-the-concierge-is-paused-by-a-repository-variable\.md\) \| accepted \|/);
+  assert.match(read('docs/decisions/0037-the-concierge-is-paused-by-a-repository-variable.md'), /^status: accepted$/m);
 });
