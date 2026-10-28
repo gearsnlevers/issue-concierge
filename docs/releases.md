@@ -38,7 +38,7 @@ The release workflow (`Actions > Release`) is modeled on the release workflows o
 5. Release notes and `CHANGELOG.md`: `ai-changelog-action` when the repository secret `LLM_API_KEY` is set, otherwise GitHub's generated release notes.
 6. Commit `CHANGELOG.md` and `package.json`, build and verify `release-manifest.json` for that commit, create the annotated tag, publish the GitHub release with the manifest attached (as a prerelease when the version is one). The release is created as a draft, the manifest is uploaded, and only then is it published, because an immutable release cannot take assets after publication.
 
-The steps around the workflow (what to check on main, how to verify the published release, dispatching the updater in every deployment, inspecting and merging the update pull requests, verifying the default branches) are written as the maintainer-only skill [`cut-a-concierge-release`](../.claude/skills/cut-a-concierge-release/SKILL.md), with read-only scripts for the checks.
+The steps around the workflow (what to check on main, how to verify the published release, dispatching the updater in every deployment, inspecting and merging the update pull requests, verifying the default branches) are written as the maintainer-only skill [`cut-an-issue-concierge-release`](../.claude/skills/cut-an-issue-concierge-release/SKILL.md), with read-only scripts for the checks.
 
 **Dry run.** Enable the `dry-run` input to compute everything without committing, tagging or publishing. The manifest, notes and changelog are uploaded as the `release-dry-run` artifact and the run summary shows the version it would cut.
 

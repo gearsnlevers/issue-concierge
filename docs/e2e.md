@@ -11,7 +11,7 @@ Two pairs of tiny repositories in the organisation `gearsnlevers`, each pair a l
 | `public` | `e2e-lib` | `e2e-app` | The baseline. It mirrors the deployments, which are public. |
 | `private` | `e2e-lib-private` | `e2e-app-private` | Shows what breaks when the workflow token cannot read the other repository: the related-repo closer, route back, spawn and reporter notify read it with that token. |
 
-Each repository is a deployment like any other: a pin in `.github/concierge.yml`, the gates, `AGENTS.md`, instruction files, decision records (one of them `proposed`, so the gates must ignore it), a scope with an out-of-scope item, and a `related-repos.md` that names the other half. The files come from `tools/e2e/sandbox/lib` and `tools/e2e/sandbox/app`. To seed or reseed a repository:
+Each repository is a deployment like any other: a pin in `.github/issue-concierge.yml`, the gates, `AGENTS.md`, instruction files, decision records (one of them `proposed`, so the gates must ignore it), a scope with an out-of-scope item, and a `related-repos.md` that names the other half. The files come from `tools/e2e/sandbox/lib` and `tools/e2e/sandbox/app`. To seed or reseed a repository:
 
 ```bash
 node tools/e2e/seed-sandbox.mjs --role lib --this gearsnlevers/e2e-lib --other gearsnlevers/e2e-app \
@@ -25,7 +25,7 @@ A reseed overwrites the template's files and leaves the rest. The Concierge itse
 | Secret | Permissions (fine-grained, owner `gearsnlevers`, only the repositories named) |
 | ------ | ----------- |
 | `SIGNAL_TOKEN` | Issues and Pull requests: read and write |
-| `CONCIERGE_TOKEN` | Contents, Pull requests and Workflows: read and write |
+| `ISSUE_CONCIERGE_TOKEN` (the sandbox repositories still have it under the old name `CONCIERGE_TOKEN`, which works) | Contents, Pull requests and Workflows: read and write |
 | `E2E_APP_ISSUES_TOKEN` (on the libraries) / `E2E_LIB_ISSUES_TOKEN` (on the apps) | Issues: read and write, on the other half of the pair |
 | `COPILOT_GITHUB_TOKEN` | Copilot Requests: read, owned by a personal account with a Copilot subscription |
 

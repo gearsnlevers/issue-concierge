@@ -1,4 +1,4 @@
-// Read-only check of a published Repo Concierge release. Changes nothing.
+// Read-only check of a published Issue Concierge release. Changes nothing.
 //
 //   node verify-release.mjs <tag> [--previous <tag>] [--repo <owner/name>]
 //
