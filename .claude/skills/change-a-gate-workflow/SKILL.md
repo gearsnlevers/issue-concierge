@@ -1,6 +1,6 @@
 ---
 name: change-a-gate-workflow
-description: Change a Repo Concierge gate workflow safely: edit the source in workflows/ (never a lock file), keep the rendered prompt intact, respect the trust and hold rules, pin the behaviour with a test and prove the test catches the regression, run the compile smoke, update the docs and budgets. Use when asked to change what a gate (issue, plan, PR, triage, closer, janitor, updater) does, add a workflow, add a label, or fix a gate that misbehaved. A change here reaches every deployment only after a release.
+description: Change a Issue Concierge gate workflow safely: edit the source in workflows/ (never a lock file), keep the rendered prompt intact, respect the trust and hold rules, pin the behaviour with a test and prove the test catches the regression, run the compile smoke, update the docs and budgets. Use when asked to change what a gate (issue, plan, PR, triage, closer, janitor, updater) does, add a workflow, add a label, or fix a gate that misbehaved. A change here reaches every deployment only after a release.
 ---
 
 A gate is a workflow in `workflows/` that reacts to a label or an event. The files there are **sources**: a deployment compiles the gh-aw definitions (`*.md`) into lock files itself, when the updater installs a release, so this repository holds no lock files and you never edit one. Plain workflows (`*.yml`) and scripts are copied as they are.
@@ -33,7 +33,7 @@ Read before you change anything:
 
 3. **Wire new things in.**
    - A new deployable file (workflow, script or shared template) goes in `aw.yml`; the unit tests and the release build refuse a file under `workflows/`, `scripts/` or `shared/` that is not listed.
-   - A new workflow takes the next free step letter in its phase for its `name:` (`Concierge <phase><step> [▸ ]<Name>`, the `▸` only when it has `workflow_dispatch`): `tools/workflow-names.test.mjs`.
+   - A new workflow takes the next free step letter in its phase for its `name:` (`Issue Concierge <phase><step> [▸ ]<Name>`, the `▸` only when it has `workflow_dispatch`): `tools/workflow-names.test.mjs`.
    - A new label goes in `requirements.json` and the label table in `docs/deployment.md`; a test keeps them identical. GitHub caps a label description at 100 characters.
    - A plain workflow starts with a header comment saying what it does, how to install it and which secrets it needs (copy the shape of `workflows/janitor.yml`), and gets the smallest `permissions:` that work.
 

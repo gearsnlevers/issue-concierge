@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { collectPins, findBehind, ISSUE_TITLE, latestTag, levelBehind, MARKER, parseUses, pinnedVersion, renderIssue, syncIssue } from './check-currency.mjs';
+import { collectPins, findBehind, ISSUE_TITLE, latestTag, LEGACY_ISSUE_TITLE, LEGACY_MARKER, levelBehind, MARKER, parseUses, pinnedVersion, renderIssue, syncIssue } from './check-currency.mjs';
 
 test('parseUses reads tags, SHAs with a version comment and nested action paths, and skips local and docker uses', () => {
   const uses = parseUses(
@@ -140,6 +140,32 @@ test('syncIssue updates the open issue instead of opening another, and ignores o
   const { gh, calls } = fakeGh([{ number: 7, title: 'something else' }, { number: 9, title: ISSUE_TITLE }]);
   assert.equal(syncIssue(behind, gh), 'updated #9');
   assert.deepEqual(calls.at(-1).slice(0, 3), ['issue', 'edit', '9']);
+});
+
+test('the issue carries the product\'s name, and the older title and line are what an earlier version wrote', () => {
+  assert.equal(ISSUE_TITLE, 'Issue Concierge currency: actions and gh-aw are behind their latest release');
+  assert.equal(MARKER, '<!-- issue-concierge-currency -->');
+  assert.equal(LEGACY_ISSUE_TITLE, 'Concierge currency: actions and gh-aw are behind their latest release');
+  assert.equal(LEGACY_MARKER, '<!-- concierge-currency -->');
+  const body = renderIssue({ behind: behind.behind, unknown: [] });
+  assert.ok(body.includes(MARKER) && !body.includes(LEGACY_MARKER), 'the older line is never written');
+});
+
+test('syncIssue takes the issue an earlier version opened under the old title as the one issue, renames it when it updates it, and closes it when nothing is behind', () => {
+  const old = fakeGh([{ number: 57, title: LEGACY_ISSUE_TITLE }]);
+  assert.equal(syncIssue(behind, old.gh), 'updated #57');
+  const edit = old.calls.find((c) => c[0] === 'issue' && c[1] === 'edit');
+  assert.deepEqual(edit.slice(0, 5), ['issue', 'edit', '57', '--title', ISSUE_TITLE], 'renamed in the same edit');
+  assert.ok(!old.calls.some((c) => c[1] === 'create'), 'no second issue');
+
+  const current = fakeGh([{ number: 9, title: ISSUE_TITLE }]);
+  syncIssue(behind, current.gh);
+  assert.ok(!current.calls.find((c) => c[1] === 'edit').includes('--title'), 'nothing to rename');
+
+  const closing = fakeGh([{ number: 57, title: LEGACY_ISSUE_TITLE }]);
+  assert.equal(syncIssue({ behind: [], unknown: [] }, closing.gh), 'closed #57');
+  const similar = fakeGh([{ number: 5, title: 'Concierge currency of something else' }]);
+  assert.equal(syncIssue(behind, similar.gh), 'created the issue', 'a title that only resembles the issue is not the issue');
 });
 
 test('syncIssue closes the open issue when nothing is behind, and does nothing when none is open', () => {

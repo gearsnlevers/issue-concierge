@@ -27,7 +27,7 @@ test('it is a plain workflow: no gh-aw definition, no engine, no model', () => {
 test('it starts on a closed issue, or by hand for one issue with an optional dry run', () => {
   assert.match(workflow, /^on:\n {2}issues:\n {4}types: \[closed\]\n {2}workflow_dispatch:\n {4}inputs:\n {6}issue_number:\n(?: {8}.*\n)*? {8}required: true\n/m);
   assert.match(workflow, / {6}dry_run:\n(?: {8}.*\n)*? {8}type: boolean\n {8}default: false\n/);
-  assert.match(workflow, /^name: "Concierge 4c ▸ Waiting for Release"$/m, 'the marker is on the workflows that can be run by hand, and the code keeps its place');
+  assert.match(workflow, /^name: "Issue Concierge 4c ▸ Waiting for Release"$/m, 'the marker is on the workflows that can be run by hand, and the code keeps its place');
 });
 
 test('the workflow token may write labels and comments, read pull requests and releases, and nothing more', () => {
@@ -97,7 +97,7 @@ test('the release closer reads the line this workflow writes, and only when the 
 
 test('no gh-aw gate of the pipeline is named Waiting for Release any more, and the docs say who writes the comment', () => {
   const design = read('docs/multi-phase-design.md');
-  assert.match(design, /`Concierge 4c ▸ Waiting for Release`/);
-  assert.doesNotMatch(design, /`Concierge 4c Waiting for Release`/);
+  assert.match(design, /`Issue Concierge 4c ▸ Waiting for Release`/);
+  assert.doesNotMatch(design, /`Issue Concierge 4c Waiting for Release`/);
   assert.match(design, /## The resolution/);
 });

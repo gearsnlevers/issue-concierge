@@ -1,6 +1,6 @@
-# Deploying Repo Concierge
+# Deploying Issue Concierge
 
-Step-by-step instructions for installing Repo Concierge in a consuming repository.
+Step-by-step instructions for installing Issue Concierge in a consuming repository.
 
 ## Prerequisites
 
@@ -32,7 +32,7 @@ Commit the files on a branch and open a pull request.
 
 ## 2. Optional shared configuration
 
-The files under `shared/` in the harness repository are templates. They are **not** required for a working deployment. Copy only the ones you need into `.github/agentic-workflows/` of the consuming repository.
+The files under `shared/` in the harness repository are templates. They are **not** required for a working deployment. Copy only the ones you need into `.github/issue-concierge/` of the consuming repository.
 
 | File | Required? | Purpose |
 |------|-----------|---------|
@@ -49,15 +49,16 @@ The files under `shared/` in the harness repository are templates. They are **no
 | `safety-policy.md` | No | Reference only; not read by workflows |
 
 If `complexity.md` or `risk.md` are absent, plan triage uses built-in defaults.  
-If `related-repos.md` is absent, no linked-issue routing occurs.
+If `related-repos.md` is absent, no linked-issue routing occurs.  
+A repository that has not been updated yet keeps these files in `.github/agentic-workflows/`, the folder's old name; they are read from there until they are moved (see "Moving to the new names").
 
 ### Repository guidance (`AGENTS.md`)
 
-Optional, and read from the repository's own files rather than from `.github/agentic-workflows/`: `AGENTS.md` at the root (start from `shared/agents.md`), `.github/copilot-instructions.md`, and `.github/instructions/*.instructions.md` with `applyTo` globs. The Copilot coding agent loads them itself, the plan worker lists the rules that apply in its plan, and PR triage adds a "Repository rules:" line to its comment. Both gates read the default branch only, so a pull request cannot loosen the rules it is judged by. Keep `AGENTS.md` at 60 lines or fewer: it is loaded into every agent run. `check-deployment` prints a notice, and never fails, when neither `AGENTS.md` nor `.github/copilot-instructions.md` exists.
+Optional, and read from the repository's own files rather than from `.github/issue-concierge/`: `AGENTS.md` at the root (start from `shared/agents.md`), `.github/copilot-instructions.md`, and `.github/instructions/*.instructions.md` with `applyTo` globs. The Copilot coding agent loads them itself, the plan worker lists the rules that apply in its plan, and PR triage adds a "Repository rules:" line to its comment. Both gates read the default branch only, so a pull request cannot loosen the rules it is judged by. Keep `AGENTS.md` at 60 lines or fewer: it is loaded into every agent run. `check-deployment` prints a notice, and never fails, when neither `AGENTS.md` nor `.github/copilot-instructions.md` exists.
 
 ### Decision records (`docs/decisions/` or `decisions/`)
 
-Optional, and read from the repository's own folder rather than from `.github/agentic-workflows/`: one file `NNNN-short-title.md` per decision in `docs/decisions/` (start from `shared/decision-record.md`) and an index `docs/decisions/README.md`. A repository whose `docs/` is generated output that gets rewritten (typedoc, for example) keeps them in `decisions/` at the repository root instead, with the index `decisions/README.md`. The gates look for `docs/decisions/README.md` first and then for `decisions/README.md`; the first one found wins, and records from both folders are never merged. Each record has frontmatter with `status:`, `date:`, `decision-makers:` and optionally `applies-to:` (path globs) and `issues:`; only `accepted` records bind, until a newer record supersedes them. The plan worker lists the ones that apply to a request under "Decisions that apply" (and a request that conflicts with one under "Conflicts with NNNN", which makes plan triage add the `plan-approval-required` hold), the PR worker tells the coding agent to follow them, and PR triage adds a "Decisions:" line to its comment. Both gates read the default branch only. Records are as public as the repository: no secrets. `check-deployment` prints a notice, and never fails, when neither `docs/decisions/` nor `decisions/` exists.
+Optional, and read from the repository's own folder rather than from `.github/issue-concierge/`: one file `NNNN-short-title.md` per decision in `docs/decisions/` (start from `shared/decision-record.md`) and an index `docs/decisions/README.md`. A repository whose `docs/` is generated output that gets rewritten (typedoc, for example) keeps them in `decisions/` at the repository root instead, with the index `decisions/README.md`. The gates look for `docs/decisions/README.md` first and then for `decisions/README.md`; the first one found wins, and records from both folders are never merged. Each record has frontmatter with `status:`, `date:`, `decision-makers:` and optionally `applies-to:` (path globs) and `issues:`; only `accepted` records bind, until a newer record supersedes them. The plan worker lists the ones that apply to a request under "Decisions that apply" (and a request that conflicts with one under "Conflicts with NNNN", which makes plan triage add the `plan-approval-required` hold), the PR worker tells the coding agent to follow them, and PR triage adds a "Decisions:" line to its comment. Both gates read the default branch only. Records are as public as the repository: no secrets. `check-deployment` prints a notice, and never fails, when neither `docs/decisions/` nor `decisions/` exists.
 
 ### related-repos.md schema
 
@@ -417,18 +418,18 @@ Run it on demand from the Actions tab, optionally with an issue number.
 
 ### Status issue
 
-A plain Actions workflow (no LLM) keeps one pinned issue, "Concierge status", up to date: what waits for a maintainer, the reporter replies nobody has answered, which issues the Concierge manages and which it does not, the health of the gates and what they cost. It is on by default. Install it with the other plain workflows (the updater does it).
+A plain Actions workflow (no LLM) keeps one pinned issue, "Issue Concierge status", up to date: what waits for a maintainer, the reporter replies nobody has answered, which issues the Concierge manages and which it does not, the health of the gates and what they cost. It is on by default. Install it with the other plain workflows (the updater does it).
 
 | From this repository | To the consuming repository |
 |----------------------|-----------------------------|
 | `workflows/status.yml` | `.github/workflows/status.yml` |
 | `scripts/status-issue.mjs` | `.github/scripts/status-issue.mjs` |
-| `scripts/concierge-settings.mjs` | `.github/scripts/concierge-settings.mjs` |
-| `scripts/concierge-state.mjs` | `.github/scripts/concierge-state.mjs` |
+| `scripts/issue-concierge-settings.mjs` | `.github/scripts/issue-concierge-settings.mjs` |
+| `scripts/issue-concierge-state.mjs` | `.github/scripts/issue-concierge-state.mjs` |
 
 It imports `janitor.mjs` and `opt-out.mjs`, so install those too. It writes the issue with the workflow token (`Issues: write`, as `github-actions[bot]`), reads the runs (`Actions: read`) and uses `SIGNAL_TOKEN` for two things only: pinning the issue, and asking GitHub when that token expires. Without the secret the issue is still written, unpinned, and says so. The workflow is skipped for an issue that carries `no-auto-processing`, and the hourly run counts it.
 
-To turn it off, to change how far back it looks for reporter replies, or to have the maintainers mentioned on the status issue about what has waited for them for a number of days (`mention-after-days`, off by default; it lists the collaborators with the workflow token and then with `SIGNAL_TOKEN`), copy `shared/settings.yml` to `.github/agentic-workflows/settings.yml` and edit it; `status-issue: false` closes and unpins the issue. A repository can hold three pinned issues; if there are three already, the status issue is created unpinned and the page says why.
+To turn it off, to change how far back it looks for reporter replies, or to have the maintainers mentioned on the status issue about what has waited for them for a number of days (`mention-after-days`, off by default; it lists the collaborators with the workflow token and then with `SIGNAL_TOKEN`), copy `shared/settings.yml` to `.github/issue-concierge/settings.yml` and edit it; `status-issue: false` closes and unpins the issue. A repository can hold three pinned issues; if there are three already, the status issue is created unpinned and the page says why.
 
 ### Commands
 
@@ -439,24 +440,26 @@ A maintainer decides what becomes of an issue that waits for them by commenting 
 | `workflows/commands.yml` | `.github/workflows/commands.yml` |
 | `scripts/commands.mjs` | `.github/scripts/commands.mjs` |
 
-It imports `concierge-settings.mjs`, `concierge-state.mjs`, `plan-approval-resume.mjs`, `janitor.mjs` and `opt-out.mjs`, so install those too. It needs `SIGNAL_TOKEN` (Issues: Read and write): handing an issue on and closing it must start the next gate, which a change made with the workflow token does not. Comments, reactions and label removals use the workflow token (`Issues: write`).
+It imports `issue-concierge-settings.mjs`, `issue-concierge-state.mjs`, `plan-approval-resume.mjs`, `janitor.mjs` and `opt-out.mjs`, so install those too. It needs `SIGNAL_TOKEN` (Issues: Read and write): handing an issue on and closing it must start the next gate, which a change made with the workflow token does not. Comments, reactions and label removals use the workflow token (`Issues: write`).
 
-Who may use the commands is the setting `commands-need` in `.github/agentic-workflows/settings.yml` (template `shared/settings.yml`): `triage` by default, so that people who triage but do not write code can decide; `write`, `maintain` or `admin` narrow it. A personal repository has no triage role, so write is the lowest there. `commands: false` turns the commands and the options comment off. The new label `declined` (see [Create labels](#4-create-labels)) is what `/decline` adds.
+Who may use the commands is the setting `commands-need` in `.github/issue-concierge/settings.yml` (template `shared/settings.yml`): `triage` by default, so that people who triage but do not write code can decide; `write`, `maintain` or `admin` narrow it. A personal repository has no triage role, so write is the lowest there. `commands: false` turns the commands and the options comment off. The new label `declined` (see [Create labels](#4-create-labels)) is what `/decline` adds.
 
 ### Pause
 
-To stop the Concierge in a repository, create the repository variable `CONCIERGE_PAUSED` with the value `true`: Settings › Secrets and variables › Actions › Variables › New repository variable, or `gh variable set CONCIERGE_PAUSED --body true`. To resume, delete it (`gh variable delete CONCIERGE_PAUSED`) or set it to anything but `true`. In an organisation repository write access is enough. Nothing needs installing: the updater delivers the conditions with the workflows.
+To stop the Concierge in a repository, create the repository variable `ISSUE_CONCIERGE_PAUSED` with the value `true`: Settings › Secrets and variables › Actions › Variables › New repository variable, or `gh variable set ISSUE_CONCIERGE_PAUSED --body true`. To resume, delete it (`gh variable delete ISSUE_CONCIERGE_PAUSED`) or set it to anything but `true`. In an organisation repository write access is enough. Nothing needs installing: the updater delivers the conditions with the workflows.
+
+The variable was called `CONCIERGE_PAUSED` in v2.0.x. That name still pauses, so a pause set under it does not lift when the Concierge is updated, and either variable set to `true` is enough: to resume, delete both. Nothing has to be renamed.
 
 While it is set, no gate, sweep, closer or notifier touches an issue or a pull request: each run is skipped by its own condition, which costs nothing and uses no AI credits. The status issue shows a banner, a command that would hand an issue on is refused, and a run started by hand from the Actions tab still works. Runs already in flight finish. After resuming, an issue that was in a gate meanwhile may need `/retry`.
 
 ## Deployment check
 
-`check-deployment` catches the configuration mistakes that otherwise surface as a failed run weeks later. It reads the compiled `.lock.yml` of the issue worker and the text of the related-repo closer's workflow (what actually runs) and compares them with `.github/agentic-workflows/related-repos.md`. For every related repository that names a `secret`, it requires that:
+`check-deployment` catches the configuration mistakes that otherwise surface as a failed run weeks later. It reads the compiled `.lock.yml` of the issue worker and the text of the related-repo closer's workflow (what actually runs) and compares them with `.github/issue-concierge/related-repos.md`. For every related repository that names a `secret`, it requires that:
 
 - `issue-worker` has `create-issue` enabled with `allowed-repos` containing the repository and `github-token` set to that secret;
 - `related-repo-closer.yml` has `CROSS_REPO` set to the repository and `CROSS_REPO_TOKEN` set to that secret (the updater writes both).
 
-It reports a warning for a related repository without a secret, or for an allowed repository that `related-repos.md` does not list. It also prints notices, never failures, when the repository has neither `AGENTS.md` nor `.github/copilot-instructions.md` (see "Repository guidance" above) and when it has neither a `docs/decisions/` nor a `decisions/` folder (see "Decision records" above). It runs on pull requests that touch the workflows or `related-repos.md`, and on demand. Install it in every deployment, even those without related repositories (it then passes immediately). Copy three files:
+It reports a warning for a related repository without a secret, or for an allowed repository that `related-repos.md` does not list. It also prints notices, never failures, when the repository has neither `AGENTS.md` nor `.github/copilot-instructions.md` (see "Repository guidance" above) and when it has neither a `docs/decisions/` nor a `decisions/` folder (see "Decision records" above). It runs on pull requests that touch the workflows or the files of `.github/issue-concierge/`, and on demand. It also lists, as a notice, the files that are still in the old folder `.github/agentic-workflows/`, and warns about a file that is in both folders (the old one is ignored); neither fails the check in the 2.x releases. Install it in every deployment, even those without related repositories (it then passes immediately). Copy three files:
 
 | From this repository | To the consuming repository |
 |----------------------|-----------------------------|
@@ -671,6 +674,18 @@ git push
 
 `gh aw update` pulls the latest markdown from the central repository and preserves local edits via a 3-way merge. Always recompile after an update.
 
+### Moving to the new names
+
+Nothing here is required: the Concierge reads the old names as well as the new ones, so a repository that does nothing keeps working.
+
+**The folder of the repository's own files.** `.github/agentic-workflows/` is now `.github/issue-concierge/`, named for the product because more than one kind of concierge may share a repository. The files in it (`scope.md`, `guard.md`, `related-repos.md`, `settings.yml`, `complexity.md`, `risk.md`, `issue-completeness.md`) are yours, not the Concierge's.
+
+- Every gate and script looks for each file in the new folder first and in the old one second. A file that is in both places is read from the new folder, and the one in the old folder is ignored.
+- The update moves the files for you. Its pull request renames each file from the old folder to the new one and changes nothing else. An update is made by the updater the repository already has, so the pull request that brings this release does not know the move yet: the next run of the updater (it runs daily, or start it by hand under Actions) opens the pull request that does.
+- `Check Deployment` tells you where you stand. A notice lists the files that are still in the old folder, and a warning says that a file is in both places, so that you can delete the old one. Neither fails the check.
+- To move by hand, rename each file with `git mv .github/agentic-workflows/scope.md .github/issue-concierge/scope.md` (and so on), and commit all of them in one pull request.
+- Move before the next major release. It stops reading the old folder, and a `scope.md` or `guard.md` left there would silently stop applying.
+
 ## Organization vs user repositories
 
 - User-owned repositories work with a token or GitHub App installation on the user account.
@@ -684,7 +699,7 @@ git push
 - [ ] Issues enabled
 - [ ] `COPILOT_GITHUB_TOKEN` set (org secret for orgs, repo secret for user repos) or org Copilot billing enabled
 - [ ] Workflow `.md` files added (and, if split-repo routing is used, `related-repo-closer.yml` and its script, see above)
-- [ ] Optional `.github/agentic-workflows/` config files added only if needed
+- [ ] Optional `.github/issue-concierge/` config files added only if needed; none left in the old folder `.github/agentic-workflows/` (the update moves them, and Check Deployment lists what is left)
 - [ ] Issue template present (or optional completeness override)
 - [ ] `gh aw compile` run and lock files committed
 - [ ] All recommended labels created (including `related-repo`, `original-in-related-repo`, `no-auto-processing`, `dependency-required`, `dependency-satisfied`)
@@ -698,9 +713,9 @@ git push
 - [ ] Spawn work items installed where there is a `related-repos.md` (`spawn-work-items.yml` and `spawn-work-items.mjs`; needs `SIGNAL_TOKEN`; the updater does it and writes the token of the related repository)
 - [ ] Stalled issue sweep installed (`stalled-issue-sweep.yml` and `stalled-issue-sweep.mjs`; needs `SIGNAL_TOKEN`; the updater does it)
 - [ ] Janitor installed (`janitor.yml` and `janitor.mjs`)
-- [ ] Pause tried: with the repository variable `CONCIERGE_PAUSED` set to `true`, a new comment starts no gate (the runs are skipped), the status issue shows the banner after its next run, and deleting the variable ends it
+- [ ] Pause tried: with the repository variable `ISSUE_CONCIERGE_PAUSED` set to `true`, a new comment starts no gate (the runs are skipped), the status issue shows the banner after its next run, and deleting the variable ends it
 - [ ] Commands installed (`commands.yml` and `commands.mjs`; needs `SIGNAL_TOKEN`; the updater does it); on an issue that carries `needs-decision` the last comment is the options comment, and `/accept` from a collaborator with the role hands the issue to the plan worker
-- [ ] Status issue installed (`status.yml`, `status-issue.mjs`, `concierge-settings.mjs` and `concierge-state.mjs`; the updater does it); after the first run the "Concierge status" issue exists, is pinned, and its counts match the open issues
+- [ ] Status issue installed (`status.yml`, `status-issue.mjs`, `issue-concierge-settings.mjs` and `issue-concierge-state.mjs`; the updater does it); after the first run the "Issue Concierge status" issue exists, is pinned, and its counts match the open issues
 - [ ] PR ready signal installed (`pr-ready-signal.yml` and `pr-ready-signal.mjs`; needs `SIGNAL_TOKEN`)
 - [ ] Branch protection / ruleset configured (require PR, status checks, no force-push)
 - [ ] Auto-merge enabled (if low/low unattended merge is desired)

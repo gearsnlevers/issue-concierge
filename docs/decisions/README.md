@@ -45,7 +45,7 @@ Copy `template.md` to `NNNN-short-title.md` (the next number, starting at 0001),
 | 0020 | [Agents are read-only, and threat detection runs where untrusted text meets a write](0020-agents-are-read-only-and-threat-detection-runs-where-untrusted-text-meets-a-write.md) | accepted |
 | 0021 | [One secret per privilege](0021-one-secret-per-privilege.md) | accepted |
 | 0022 | [The environment agent is optional, and any worker may use it](0022-the-environment-agent-is-optional-and-any-worker-may-use-it.md) | accepted |
-| 0023 | [A repository tunes the gates with optional files, never by editing them](0023-a-repository-tunes-the-gates-with-optional-files-never-by-editing-them.md) | accepted |
+| 0023 | [A repository tunes the gates with optional files, never by editing them](0023-a-repository-tunes-the-gates-with-optional-files-never-by-editing-them.md) | superseded by 0038 |
 | 0024 | [A release contains a fix when git says so, not when the notes do](0024-a-release-contains-a-fix-when-git-says-so-not-when-the-notes-do.md) | accepted |
 | 0025 | [Both issues of a link carry a label](0025-both-issues-of-a-link-carry-a-label.md) | accepted |
 | 0026 | [The related-repo closer is code, not a model](0026-the-related-repo-closer-is-code-not-a-model.md) | superseded by 0027 |
@@ -60,3 +60,4 @@ Copy `template.md` to `NNNN-short-title.md` (the next number, starting at 0001),
 | 0035 | [Each repository has a status view of its own](0035-each-repository-has-a-status-view-of-its-own.md) | accepted |
 | 0036 | [A maintainer decides by command, from the issue](0036-a-maintainer-decides-by-command-from-the-issue.md) | accepted |
 | 0037 | [The Concierge is paused by a repository variable](0037-the-concierge-is-paused-by-a-repository-variable.md) | accepted |
+| 0038 | [Everything the Issue Concierge puts in a repository is named for the product](0038-everything-the-issue-concierge-puts-in-a-repository-is-named-for-the-product.md) | accepted |

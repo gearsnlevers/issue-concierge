@@ -2,10 +2,16 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   apply,
+  BEGIN,
   cap,
   closingFix,
   decide,
+  END,
   extractSection,
+  LEGACY_BEGIN,
+  LEGACY_END,
+  LEGACY_MARKER,
+  legacyMarkerFor,
   LABEL_RELEASED,
   LABEL_WAITING,
   MARKER,
@@ -245,7 +251,7 @@ test('a pull request without a usable section gets the old one-line comment', as
   const v = await decide(issue(), ctx);
   assert.equal(v.kind, 'plain');
   assert.equal(v.label, LABEL_WAITING);
-  assert.match(v.comment, /^Fixed in #45\. Waiting for a release that includes this\.\n\n<!-- concierge:resolution #45 -->$/);
+  assert.match(v.comment, /^Fixed in #45\. Waiting for a release that includes this\.\n\n<!-- issue-concierge:resolution #45 -->$/);
 });
 
 test('a pull request that a bot merged is not trusted for its text', async () => {
@@ -441,6 +447,45 @@ test('only a comment from the harness counts as already posted, not one a person
   const w = writes();
   apply(verdict(), issue({ labels: [{ name: LABEL_WAITING }] }), w, [{ user: PERSON, body: markerFor(pull(), THIS) }]);
   assert.deepEqual(w.log.map((x) => x[0]), ['comment']);
+});
+
+// The resolution comments of production were written by earlier versions and stay in the issues for good.
+test('the markers carry the product\'s name, and the older ones are what an earlier version wrote', () => {
+  assert.deepEqual([BEGIN, END, MARKER], ['<!-- issue-concierge:resolution:begin -->', '<!-- issue-concierge:resolution:end -->', '<!-- issue-concierge:resolution']);
+  assert.deepEqual([LEGACY_BEGIN, LEGACY_END, LEGACY_MARKER], ['<!-- concierge:resolution:begin -->', '<!-- concierge:resolution:end -->', '<!-- concierge:resolution']);
+  assert.equal(legacyMarkerFor(pull(), THIS), '<!-- concierge:resolution #45 -->');
+});
+
+test('a comment is written with the new lines and never the older ones', async () => {
+  const c = resolutionComment(pull(), { text: 'It works now.', cut: false }, THIS, '');
+  assert.ok(c.includes(BEGIN) && c.includes(END) && c.includes(markerFor(pull(), THIS)));
+  assert.ok(!c.includes('<!-- concierge:'), 'no older line in a new comment');
+  const { ctx } = world({ closing: closedBy(prCloser()), pulls: { [`${THIS}#45`]: prData({ body: 'Fixes #12' }) } });
+  const plain = await decide(issue(), ctx);
+  assert.ok(!plain.comment.includes('<!-- concierge:'), 'nor in the one-line comment');
+  assert.equal(plain.legacyMarker, legacyMarkerFor(pull(), THIS), 'the verdict knows the older line, to recognise an older comment');
+});
+
+test('the text of a comment an earlier version wrote is read, from its older lines', () => {
+  const old = `Fixed in #45.\n\n${LEGACY_BEGIN}\nIt worked before, too.\n${LEGACY_END}\n\nThis is merged.\n\n${LEGACY_MARKER} #45 -->`;
+  assert.equal(textOfComment(old), 'It worked before, too.');
+  assert.equal(textOfComment(`${LEGACY_BEGIN}\n${LEGACY_END}`), null, 'an empty older comment has no text');
+  assert.equal(textOfComment(`${BEGIN}\nNew words.\n${END}`), 'New words.');
+  assert.equal(textOfComment(`${LEGACY_BEGIN}\nold\n${END}`), null, 'lines of two spellings do not make a comment');
+});
+
+test('a comment an earlier version posted counts as posted: a run after the update does not post a second one', () => {
+  const real = { ...verdict(), legacyMarker: legacyMarkerFor(pull(), THIS) };
+  const w = writes();
+  const did = apply(real, issue({ labels: [{ name: LABEL_WAITING }] }), w, [{ user: BOT, body: `Fixed in #45.\n\n${legacyMarkerFor(pull(), THIS)}` }]);
+  assert.deepEqual(w.log, []);
+  assert.deepEqual(did, []);
+  const person = writes();
+  apply(real, issue({ labels: [{ name: LABEL_WAITING }] }), person, [{ user: PERSON, body: legacyMarkerFor(pull(), THIS) }]);
+  assert.deepEqual(person.log.map((x) => x[0]), ['comment'], 'the older line in a person\'s comment is only words');
+  const other = writes();
+  apply(real, issue({ labels: [{ name: LABEL_WAITING }] }), other, [{ user: BOT, body: legacyMarkerFor(pull({ number: 46 }), THIS) }]);
+  assert.deepEqual(other.log.map((x) => x[0]), ['comment'], 'an older comment about another pull request is not this one');
 });
 
 test('a second pull request that closes the issue again gets its own comment', () => {

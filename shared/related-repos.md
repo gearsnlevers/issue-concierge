@@ -2,7 +2,7 @@
 
 Optional configuration for split-repo projects.
 
-Copy this file to `.github/agentic-workflows/related-repos.md` in a consuming repository when issues are frequently reported in the wrong place.
+Copy this file to `.github/issue-concierge/related-repos.md` in a consuming repository when issues are frequently reported in the wrong place.
 
 ## Schema
 

@@ -13,6 +13,7 @@ import {
   renderComment,
   STATUS,
   BOT_MARKER,
+  readRelatedText,
 } from './dependency-watch.mjs';
 
 const RELATED = parseRelatedRepos(`
@@ -260,4 +261,49 @@ test('the watcher skips an opted-out issue that waits on a dependency: no read o
   assert.ok(r.calls.some((c) => c.target === 'repos/o/r/issues/2/comments?per_page=100'));
   assert.ok(r.calls.some((c) => c.method === 'POST' && c.target === 'repos/o/r/issues/2/labels'), 'the control is relabelled');
   assert.ok(!r.calls.some((c) => c.method !== 'GET' && /issues\/1\//.test(c.target)), 'no write to the opted-out issue');
+});
+
+// The folder of a repository's own files was `.github/agentic-workflows/` until the update moves it to
+// `.github/issue-concierge/`; both are read, the new one first.
+function repoWith(files) {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'dep-watch-related-'));
+  for (const [name, text] of Object.entries(files)) {
+    fs.mkdirSync(path.dirname(path.join(dir, name)), { recursive: true });
+    fs.writeFileSync(path.join(dir, name), text);
+  }
+  return dir;
+}
+const relatedFile = (repo) => `this: rockcarver/frodo-cli\nrelated:\n  - role: library\n    repo: ${repo}\n`;
+
+test('related-repos.md is read from the new folder, or from the old one in a repository that has not been updated yet', () => {
+  const only = (file) => { const dir = repoWith({ [file]: relatedFile('rockcarver/frodo-lib') }); try { return readRelatedText(dir); } finally { fs.rmSync(dir, { recursive: true, force: true }); } };
+  assert.match(only('.github/issue-concierge/related-repos.md'), /repo: rockcarver\/frodo-lib/);
+  assert.match(only('.github/agentic-workflows/related-repos.md'), /repo: rockcarver\/frodo-lib/);
+  assert.equal(parseRelatedRepos(only('.github/agentic-workflows/related-repos.md')).related[0].repo, 'rockcarver/frodo-lib');
+});
+
+test('with related-repos.md in both folders the new one wins, and with neither the text is empty', () => {
+  const both = repoWith({
+    '.github/issue-concierge/related-repos.md': relatedFile('rockcarver/new-one'),
+    '.github/agentic-workflows/related-repos.md': relatedFile('rockcarver/old-one'),
+  });
+  const none = repoWith({ 'README.md': 'x' });
+  try {
+    assert.match(readRelatedText(both), /new-one/);
+    assert.doesNotMatch(readRelatedText(both), /old-one/);
+    assert.equal(readRelatedText(none), '');
+    assert.deepEqual(parseRelatedRepos(readRelatedText(none)).related, []);
+  } finally {
+    fs.rmSync(both, { recursive: true, force: true });
+    fs.rmSync(none, { recursive: true, force: true });
+  }
+});
+
+test('an empty related-repos.md in the new folder is a file: it is not replaced by one in the old folder', () => {
+  const dir = repoWith({ '.github/issue-concierge/related-repos.md': '', '.github/agentic-workflows/related-repos.md': relatedFile('rockcarver/old-one') });
+  try {
+    assert.equal(readRelatedText(dir), '');
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
 });

@@ -25,7 +25,7 @@ const workerComment = (id, repo = THIS) => ({
 /** A fake read-only GitHub keyed by path (query ignored); `over` replaces entries. */
 function world(over = {}) {
   const base = {
-    [`repos/${THIS}/contents/.github/agentic-workflows/related-repos.md`]: {
+    [`repos/${THIS}/contents/.github/issue-concierge/related-repos.md`]: {
       status: 200,
       data: { content: Buffer.from(CONFIG).toString('base64') },
     },
@@ -189,7 +189,7 @@ test('an error status is an error even when the response carries a body', () => 
   let w = world({ 'repos/rockcarver/frodo-cli/issues/887': { status: 403, data: valid } });
   assert.equal(notify(issue(), w.ctx).notified, false);
   w = world({
-    [`repos/${THIS}/contents/.github/agentic-workflows/related-repos.md`]: { status: 500, data: { content: Buffer.from(CONFIG).toString('base64') } },
+    [`repos/${THIS}/contents/.github/issue-concierge/related-repos.md`]: { status: 500, data: { content: Buffer.from(CONFIG).toString('base64') } },
   });
   assert.equal(notify(issue(), w.ctx).notified, false);
   w = world({ [`repos/${THIS}/issues/783/comments`]: { status: 502, data: [workerComment(100)] } });
@@ -247,8 +247,42 @@ test('a link to a repository the config does not list is not followed', () => {
 });
 
 test('without related-repos.md nothing can be confirmed', () => {
-  const w = world({ [`repos/${THIS}/contents/.github/agentic-workflows/related-repos.md`]: { status: 404, data: null } });
+  const w = world({ [`repos/${THIS}/contents/.github/issue-concierge/related-repos.md`]: { status: 404, data: null } });
   assert.equal(notify(issue(), w.ctx).notified, false);
+});
+
+// The folder of a repository's own files was `.github/agentic-workflows/` until the update moves it to
+// `.github/issue-concierge/`. Both places are read, the new one first, and only a 404 on the new one sends the read on.
+const NEW_RELATED = `repos/${THIS}/contents/.github/issue-concierge/related-repos.md`;
+const OLD_RELATED = `repos/${THIS}/contents/.github/agentic-workflows/related-repos.md`;
+const configAnswer = (status = 200) => ({ status, data: { content: Buffer.from(CONFIG).toString('base64') } });
+const configReads = (w) => w.reads.filter((p) => p.endsWith('related-repos.md'));
+
+test('a repository that has not been updated yet keeps related-repos.md in the old folder, and it is read from there', () => {
+  const w = world({ [NEW_RELATED]: { status: 404, data: null }, [OLD_RELATED]: configAnswer() });
+  assert.equal(notify(issue(), w.ctx).notified, true);
+  assert.deepEqual(configReads(w), [NEW_RELATED, OLD_RELATED]);
+});
+
+test('with the file in both folders the new one is used and the old one is not even read', () => {
+  const w = world({ [OLD_RELATED]: { status: 200, data: { content: Buffer.from('related:\n  - repo: some/other\n').toString('base64') } } });
+  assert.equal(notify(issue(), w.ctx).notified, true, 'the new file lists the related repository, the old one does not');
+  assert.deepEqual(configReads(w), [NEW_RELATED]);
+});
+
+test('an error on the new folder is the answer: a file in the old folder does not stand in for it', () => {
+  for (const status of [403, 500, 502]) {
+    const w = world({ [NEW_RELATED]: { status, data: null }, [OLD_RELATED]: configAnswer() });
+    const r = notify(issue(), w.ctx);
+    assert.equal(r.notified, false, `status ${status}`);
+    assert.deepEqual(configReads(w), [NEW_RELATED], `status ${status}: the old folder is not read`);
+  }
+});
+
+test('neither folder has the file: nothing can be confirmed', () => {
+  const w = world({ [NEW_RELATED]: { status: 404, data: null } });
+  assert.equal(notify(issue(), w.ctx).notified, false);
+  assert.deepEqual(configReads(w), [NEW_RELATED, OLD_RELATED]);
 });
 
 test('only an open issue that is waiting for information', () => {

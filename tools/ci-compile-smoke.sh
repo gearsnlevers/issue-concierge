@@ -68,7 +68,7 @@ if ! activation_if "$tmp/.github/workflows/issue-triage.lock.yml" | tr '\n' ' ' 
   echo "::error::issue-triage does not read the accepted outcome in its compiled activation condition"
   exit 1
 fi
-if ! grep -q "id: accepted" "$tmp/.github/workflows/issue-triage.lock.yml" || ! grep -qF "const MARKER = '<!-- concierge:accepted -->';" "$tmp/.github/workflows/issue-triage.lock.yml"; then
+if ! grep -q "id: accepted" "$tmp/.github/workflows/issue-triage.lock.yml" || ! grep -qF "const MARKERS = ['<!-- issue-concierge:accepted -->', '<!-- concierge:accepted -->'];" "$tmp/.github/workflows/issue-triage.lock.yml"; then
   echo "::error::issue-triage lost its accepted step in the compiled lock"
   exit 1
 fi
@@ -112,21 +112,25 @@ for name in issue-worker issue-triage plan-worker plan-triage pr-worker pr-triag
     exit 1
   fi
 done
-# The pause switch (docs/multi-phase-design.md, "The maintainer's view"): while the repository variable CONCIERGE_PAUSED is
-# 'true' no gate starts, so every gate must read it in its compiled ACTIVATION condition, where it stops a run before it
-# starts. The gates with a deterministic pre-activation step that writes (the PR worker and issue triage take a void label
-# away, the release closer swaps labels and comments) must read it in that step too, or a paused repository would still be
-# written to.
+# The pause switch (docs/multi-phase-design.md, "The maintainer's view"): while the repository variable ISSUE_CONCIERGE_PAUSED
+# is 'true' no gate starts, and so does CONCIERGE_PAUSED, the name it had in v2.0.x, because a pause that lifted when the
+# Concierge was updated would be worse than none. Every gate must read both in its compiled ACTIVATION condition, where it
+# stops a run before it starts. The gates with a deterministic pre-activation step that writes (the PR worker and issue triage
+# take a void label away, the release closer swaps labels and comments) must read both in that step too, or a paused
+# repository would still be written to. The step is checked in the compiled pre_activation JOB: the lock repeats the
+# frontmatter in a comment at its top, so a count of lines in the whole file would pass without the step.
 # Flatten the whitespace first: gh-aw wraps the condition.
+PAUSE_TERM="vars.ISSUE_CONCIERGE_PAUSED != 'true' && vars.CONCIERGE_PAUSED != 'true'"
+pre_activation_job() { awk '/^  pre_activation:/{f=1;print;next} f&&/^  [a-z_]+:/{exit} f{print}' "$1"; }
 for name in issue-worker issue-triage plan-worker plan-triage pr-worker pr-triage release-closer; do
-  if ! activation_if "$tmp/.github/workflows/$name.lock.yml" | tr '\n' ' ' | tr -s ' ' | grep -qF "vars.CONCIERGE_PAUSED != 'true'"; then
-    echo "::error::$name does not stop at CONCIERGE_PAUSED in its compiled activation condition"
+  if ! activation_if "$tmp/.github/workflows/$name.lock.yml" | tr '\n' ' ' | tr -s ' ' | grep -qF "$PAUSE_TERM"; then
+    echo "::error::$name does not stop at ISSUE_CONCIERGE_PAUSED and CONCIERGE_PAUSED in its compiled activation condition"
     exit 1
   fi
 done
 for name in pr-worker issue-triage release-closer; do
-  if [ "$(grep -cF "vars.CONCIERGE_PAUSED != 'true'" "$tmp/.github/workflows/$name.lock.yml")" -lt 2 ]; then
-    echo "::error::$name does not stop at CONCIERGE_PAUSED in its deterministic pre-activation step"
+  if ! pre_activation_job "$tmp/.github/workflows/$name.lock.yml" | tr '\n' ' ' | tr -s ' ' | grep -qF "$PAUSE_TERM"; then
+    echo "::error::$name does not stop at ISSUE_CONCIERGE_PAUSED and CONCIERGE_PAUSED in its deterministic pre-activation step"
     exit 1
   fi
 done

@@ -16,11 +16,11 @@ const REPO = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 test('the skills in this repository are valid', () => {
   assert.deepEqual(validateSkills(REPO), []);
   const names = fs.readdirSync(path.join(REPO, '.claude/skills'));
-  for (const expected of ['cut-a-concierge-release', 'change-a-gate-workflow']) assert.ok(names.includes(expected), `${expected} is missing`);
+  for (const expected of ['cut-an-issue-concierge-release', 'change-a-gate-workflow']) assert.ok(names.includes(expected), `${expected} is missing`);
 });
 
 test('the release skill is maintainer-only and says so first', () => {
-  const { meta, body } = parseSkill(fs.readFileSync(path.join(REPO, '.claude/skills/cut-a-concierge-release/SKILL.md'), 'utf8'));
+  const { meta, body } = parseSkill(fs.readFileSync(path.join(REPO, '.claude/skills/cut-an-issue-concierge-release/SKILL.md'), 'utf8'));
   assert.equal(meta['disable-model-invocation'], 'true');
   assert.equal(body.split('\n').find((l) => l.trim()), MAINTAINER_LINE);
 });

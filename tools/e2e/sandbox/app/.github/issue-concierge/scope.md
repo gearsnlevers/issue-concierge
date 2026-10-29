@@ -2,7 +2,7 @@
 
 ## Purpose
 
-{{name}} is a small sandbox command line app that reads a JSON file, calls a function of the library `{{other}}` and prints the result. It exists to test the Repo Concierge and is not used for anything else.
+{{name}} is a small sandbox command line app that reads a JSON file, calls a function of the library `{{other}}` and prints the result. It exists to test the Issue Concierge and is not used for anything else.
 
 ## In scope
 

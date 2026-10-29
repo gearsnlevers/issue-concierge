@@ -1,5 +1,5 @@
 manifest-version: "1"
-name: Repo Concierge
+name: Issue Concierge
 description: Agentic issue-to-release harness for GitHub: gated triage, planning and tiered fixing, dependency gating and release tracking.
 emoji: "🤖"
 min-version: v0.40.0
@@ -26,8 +26,9 @@ files:
   - workflows/commands.yml
   - scripts/stalled-issue-sweep.mjs
   - scripts/status-issue.mjs
-  - scripts/concierge-settings.mjs
-  - scripts/concierge-state.mjs
+  - scripts/issue-concierge-paths.mjs
+  - scripts/issue-concierge-settings.mjs
+  - scripts/issue-concierge-state.mjs
   - scripts/commands.mjs
   - workflows/related-repo-closer.yml
   - scripts/related-repo-closer.mjs
@@ -38,8 +39,8 @@ files:
   - workflows/janitor.yml
   - scripts/janitor.mjs
   - scripts/opt-out.mjs
-  - workflows/concierge-updater.yml
-  - scripts/concierge-updater.mjs
+  - workflows/issue-concierge-updater.yml
+  - scripts/issue-concierge-updater.mjs
   - workflows/pr-ready-signal.yml
   - scripts/pr-ready-signal.mjs
   - shared/dependencies.md

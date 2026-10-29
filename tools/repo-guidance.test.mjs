@@ -139,12 +139,12 @@ test('template: shared/agents.md is short and covers the six areas, the three bo
   assert.match(t, /\*\*Always:\*\*/);
   assert.match(t, /\*\*Ask first:\*\*/);
   assert.match(t, /\*\*Never:\*\*/);
-  assert.match(t, /Never edit the Repo Concierge's files/);
+  assert.match(t, /Never edit the Issue Concierge's files/);
   assert.match(flat(t), /`release-manifest\.json` of the pinned release/);
   assert.match(flat(t), /every token costs credits/);
   assert.match(t, /\.github\/instructions\/<name>\.instructions\.md/);
   assert.match(t, /applyTo/);
-  assert.match(t, /ROOT of the consuming repository \(not under \.github\/agentic-workflows\/\)/);
+  assert.match(t, /ROOT of the consuming repository \(not under \.github\/issue-concierge\/\)/);
 });
 
 test('manifest: shared/agents.md is listed in aw.yml and shipped as a reference, not installed', () => {

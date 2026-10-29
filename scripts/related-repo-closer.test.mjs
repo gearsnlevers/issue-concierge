@@ -64,7 +64,7 @@ function github(over = {}) {
   const routes = {
     [base]: { status: 200, data: original() },
     [`${base}/comments?per_page=100&page=1`]: { status: 200, data: [pointer()] },
-    [`repos/${RELATED}/contents/.github/agentic-workflows/related-repos.md`]: {
+    [`repos/${RELATED}/contents/.github/issue-concierge/related-repos.md`]: {
       status: 200,
       data: { content: Buffer.from(RELATED_REPOS(true)).toString('base64') },
     },
@@ -109,7 +109,7 @@ test('an original whose repository needs a release waits for one: label and comm
 
 test('an original whose repository needs no release is commented and closed', () => {
   const gh = github({
-    [`repos/${RELATED}/contents/.github/agentic-workflows/related-repos.md`]: {
+    [`repos/${RELATED}/contents/.github/issue-concierge/related-repos.md`]: {
       status: 200,
       data: { content: Buffer.from(RELATED_REPOS(false)).toString('base64') },
     },
@@ -201,7 +201,7 @@ test('a run that stopped after the label still posts the comment, and one after 
 test('a close that stopped after the comment still closes, without commenting again', () => {
   const base = `repos/${RELATED}/issues/922`;
   const gh = github({
-    [`repos/${RELATED}/contents/.github/agentic-workflows/related-repos.md`]: {
+    [`repos/${RELATED}/contents/.github/issue-concierge/related-repos.md`]: {
       status: 200,
       data: { content: Buffer.from(RELATED_REPOS(false)).toString('base64') },
     },
@@ -214,7 +214,7 @@ test('a close that stopped after the comment still closes, without commenting ag
 
 test('a dry run of a close decides everything and writes nothing', () => {
   const gh = github({
-    [`repos/${RELATED}/contents/.github/agentic-workflows/related-repos.md`]: {
+    [`repos/${RELATED}/contents/.github/issue-concierge/related-repos.md`]: {
       status: 200,
       data: { content: Buffer.from(RELATED_REPOS(false)).toString('base64') },
     },
@@ -312,15 +312,53 @@ test('two links that both confirm are ambiguous: nothing is done', () => {
 });
 
 test('when the original repository cannot be read, whether it waits for a release is unknown: an error, nothing is changed', () => {
-  const gh = github({ [`repos/${RELATED}/contents/.github/agentic-workflows/related-repos.md`]: { status: 404, data: null } });
+  const gh = github({ [`repos/${RELATED}/contents/.github/issue-concierge/related-repos.md`]: { status: 404, data: null } });
   const verdict = decide(canonical(), ctxFor(gh));
   assert.equal(verdict.action, 'error');
   assert.match(verdict.reason, /could not read related-repos\.md of rockcarver\/frodo-cli \(HTTP 404\)/);
 });
 
+// The original's repository is another repository, and it may be on either side of the move of the folder
+// `.github/agentic-workflows/` to `.github/issue-concierge/`: the new place first, the old one only on a 404.
+const NEW_ORIGINAL_CONFIG = `repos/${RELATED}/contents/.github/issue-concierge/related-repos.md`;
+const OLD_ORIGINAL_CONFIG = `repos/${RELATED}/contents/.github/agentic-workflows/related-repos.md`;
+const configOf = (requires) => ({ status: 200, data: { content: Buffer.from(RELATED_REPOS(requires)).toString('base64') } });
+const configReadsOf = (gh) => gh.reads.filter((p) => p.endsWith('related-repos.md'));
+
+test('an original repository that has not been updated yet is read from the old folder', () => {
+  const gh = github({ [NEW_ORIGINAL_CONFIG]: { status: 404, data: null }, [OLD_ORIGINAL_CONFIG]: configOf(false) });
+  const verdict = decide(canonical(), ctxFor(gh));
+  assert.equal(verdict.action, 'close', 'its file says no release is needed, so the original is closed');
+  assert.deepEqual(configReadsOf(gh), [NEW_ORIGINAL_CONFIG, OLD_ORIGINAL_CONFIG]);
+});
+
+test('an original repository that has been updated is read from the new folder, and the old one is not read', () => {
+  const gh = github({ [OLD_ORIGINAL_CONFIG]: configOf(true), [NEW_ORIGINAL_CONFIG]: configOf(false) });
+  assert.equal(decide(canonical(), ctxFor(gh)).action, 'close', 'the new file wins over a stale old one');
+  assert.deepEqual(configReadsOf(gh), [NEW_ORIGINAL_CONFIG]);
+});
+
+test('a refusal or a server error on the new folder is an error: a stale file in the old folder cannot decide whether a release is awaited', () => {
+  for (const status of [403, 500, 502]) {
+    const gh = github({ [NEW_ORIGINAL_CONFIG]: { status, data: null }, [OLD_ORIGINAL_CONFIG]: configOf(true) });
+    const verdict = decide(canonical(), ctxFor(gh));
+    assert.equal(verdict.action, 'error', `status ${status}`);
+    assert.match(verdict.reason, new RegExp(`could not read related-repos\\.md of rockcarver/frodo-cli \\(HTTP ${status}\\)`));
+    assert.deepEqual(configReadsOf(gh), [NEW_ORIGINAL_CONFIG]);
+  }
+});
+
+test('neither folder of the original repository has the file: an error that names the new place first', () => {
+  const gh = github({ [NEW_ORIGINAL_CONFIG]: { status: 404, data: null } });
+  const verdict = decide(canonical(), ctxFor(gh));
+  assert.equal(verdict.action, 'error');
+  assert.match(verdict.reason, /\(HTTP 404\)/);
+  assert.deepEqual(configReadsOf(gh), [NEW_ORIGINAL_CONFIG, OLD_ORIGINAL_CONFIG]);
+});
+
 test('an original repository that does not list this one is left alone', () => {
   const gh = github({
-    [`repos/${RELATED}/contents/.github/agentic-workflows/related-repos.md`]: {
+    [`repos/${RELATED}/contents/.github/issue-concierge/related-repos.md`]: {
       status: 200,
       data: { content: Buffer.from('this: rockcarver/frodo-cli\n\nrelated:\n  - role: other\n    repo: someone/else\n    secret: X\n').toString('base64') },
     },
@@ -417,7 +455,7 @@ const mainRoutes = (requires = true) => ({
   graphql: handClose,
   [`repos/${RELATED}/issues/922`]: { status: 200, data: original() },
   [`repos/${RELATED}/issues/922/comments?per_page=100&page=1`]: { status: 200, data: [pointer()] },
-  [`repos/${RELATED}/contents/.github/agentic-workflows/related-repos.md`]: {
+  [`repos/${RELATED}/contents/.github/issue-concierge/related-repos.md`]: {
     status: 200,
     data: { content: Buffer.from(RELATED_REPOS(requires)).toString('base64') },
   },
@@ -565,7 +603,7 @@ test('main: the issue that cannot be read, and an unreadable related-repos.md, f
   assert.match(a.out, /could not read the issue \(HTTP 404\)/);
 
   const noConfig = mainRoutes(true);
-  delete noConfig[`repos/${RELATED}/contents/.github/agentic-workflows/related-repos.md`];
+  delete noConfig[`repos/${RELATED}/contents/.github/issue-concierge/related-repos.md`];
   const b = runMain(noConfig);
   assert.equal(b.status, 1);
   assert.match(b.out, /could not read related-repos\.md of rockcarver\/frodo-cli \(HTTP 404\).*Nothing changed/);

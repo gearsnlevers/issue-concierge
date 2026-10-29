@@ -1,6 +1,6 @@
 # What the Concierge does: its flows and workflows
 
-This page lists everything Repo Concierge does for a repository that runs it. A **flow** is something that can happen to an issue or a pull request, from the first comment to the release. A **workflow** is one of the GitHub Actions workflows that carry the flows out. Both are numbered, so that "flow 4" here and "scenario 10" in [e2e.md](e2e.md), which tests some of the flows live, each mean one thing.
+This page lists everything Issue Concierge does for a repository that runs it. A **flow** is something that can happen to an issue or a pull request, from the first comment to the release. A **workflow** is one of the GitHub Actions workflows that carry the flows out. Both are numbered, so that "flow 4" here and "scenario 10" in [e2e.md](e2e.md), which tests some of the flows live, each mean one thing.
 
 How it fits together: every issue goes through three gates, issue, plan and pull request. Each gate has a worker that produces something and a triage that classifies it, and a label hands the issue from one to the next ([README](../README.md#architecture), [multi-phase-design.md](multi-phase-design.md)). The Concierge only processes work from people, never merges, and never lifts a hold on its own: a maintainer does, by command or by label.
 
@@ -23,8 +23,8 @@ A workflow is either **model** (a gh-aw agent that reads, decides and writes lab
 | 11 | Work sent back | By hand: a maintainer runs Route Back for the linked issue when the fix belongs where the original was filed after all. The original is held and handed to the plan gate there, and the linked issue is closed as not planned. | 4g | none |
 | 12 | A fix that needs two repositories | The plan lists `Work item:` lines and plan triage holds it. By hand, a maintainer runs Spawn Work Items, which creates the work items in the related repository (held) and makes this issue wait for the ones that must come first. | 2a, 2b, 2d | none |
 | 13 | A maintainer decides by command | A comment that starts with `/accept`, `/decline [reason]`, `/approve`, `/replan [what to change]`, `/retry` or `/help`, from a person with the role the repository sets (`triage` by default), does what that person could do with the labels by hand. An issue that waits for a maintainer carries one comment of the bot that says what is needed and is always the last comment. | 5b | 10, 11 |
-| 14 | The status issue | A pinned issue, "Concierge status", written by a plain workflow: what waits for a maintainer, reporter replies nobody answered, which issues the Concierge manages and which not, how the gates are doing and what they cost, with the same numbers as JSON for a dashboard. It can mention maintainers about what has waited too long. | 5a | 9 |
-| 15 | Pausing the Concierge | The repository variable `CONCIERGE_PAUSED` set to `true` makes every gate and every workflow that acts on an issue skip its run. The status issue, the updater and the deployment check still run, and the commands that would start a gate are refused. | all | none |
+| 14 | The status issue | A pinned issue, "Issue Concierge status", written by a plain workflow: what waits for a maintainer, reporter replies nobody answered, which issues the Concierge manages and which not, how the gates are doing and what they cost, with the same numbers as JSON for a dashboard. It can mention maintainers about what has waited too long. | 5a | 9 |
+| 15 | Pausing the Concierge | The repository variable `ISSUE_CONCIERGE_PAUSED` set to `true` (or `CONCIERGE_PAUSED`, its older name) makes every gate and every workflow that acts on an issue skip its run. The status issue, the updater and the deployment check still run, and the commands that would start a gate are refused. | all | none |
 | 16 | After the merge | When a pull request closes an issue, the reporter gets the `## Resolution` text of the pull request, and the issue gets `waiting-for-release`. When a release is published, the issues it contains are marked `released` with a comment that says which release, decided by git and not by the release notes. | 4c, 4d | none |
 | 17 | An issue that stalled | An issue the worker analysed but that never reached triage is given the gate label again by a sweep, a bounded number of times. The sweep never lifts a hold and never comments. | 1e | none |
 | 18 | Labels and runs kept tidy | An issue shows where it is, not where it has been: when the next gate label exists the earlier one goes, and when an issue closes the labels that describe open work go. Runs the coding agent leaves waiting for approval, which could only become skipped runs, are deleted. | 4a | none |
@@ -34,7 +34,7 @@ A workflow is either **model** (a gh-aw agent that reads, decides and writes lab
 
 ## Workflows
 
-They are named `Concierge <code> [▸ ]<Name>` so that the Actions sidebar lists them in the order they run, and `▸` marks the ones that can also be started by hand ([naming](multi-phase-design.md#workflow-names)). Each flow above lists the codes of the workflows it uses.
+They are named `Issue Concierge <code> [▸ ]<Name>` so that the Actions sidebar lists them in the order they run, and `▸` marks the ones that can also be started by hand ([naming](multi-phase-design.md#workflow-names)). Each flow above lists the codes of the workflows it uses.
 
 | Code | Name | File | Kind | Starts when | Flows |
 | ---- | ---- | ---- | ---- | ----------- | ----- |
@@ -45,7 +45,7 @@ They are named `Concierge <code> [▸ ]<Name>` so that the Actions sidebar lists
 | 1e | Stalled Issue Sweep | `stalled-issue-sweep.yml` | plain | hourly, and by hand for one issue or all | 17 |
 | 2a | Plan Worker | `plan-worker.md` | model | `issue-triage-handoff` | 1, 12 |
 | 2b | Plan Triage | `plan-triage.md` | model | `plan-worker-ready` | 1, 4, 9, 12 |
-| 2c | Plan Approval Resume | `plan-approval-resume.yml` | plain | a maintainer removes `plan-approval-required`, and by hand | 9 |
+| 2c | Approval Resume | `plan-approval-resume.yml` | plain | a maintainer removes `plan-approval-required`, and by hand | 9 |
 | 2d | Spawn Work Items | `spawn-work-items.yml` | plain | by hand, for an issue whose plan lists work in the related repository | 12 |
 | 3a | PR Worker | `pr-worker.md` | model | `plan-triage-handoff` | 1 |
 | 3b | PR Ready Signal | `pr-ready-signal.yml` | plain | the coding agent finishes, and by hand for one pull request | 1 |
@@ -54,7 +54,7 @@ They are named `Concierge <code> [▸ ]<Name>` so that the Actions sidebar lists
 | 4b | Related Repo Closer | `related-repo-closer.yml` | plain | a linked issue is closed, and by hand for one issue | 10 |
 | 4c | Waiting for Release | `waiting-for-release.yml` | plain | an issue is closed by a merged pull request, and by hand for one issue | 16 |
 | 4d | Release Closer | `release-closer.md` | model | a release is published | 16 |
-| 4e | Updater | `concierge-updater.yml` | plain | daily, and by hand | 19 |
+| 4e | Updater | `issue-concierge-updater.yml` | plain | daily, and by hand | 19 |
 | 4f | Check Deployment | `check-deployment.yml` | plain | on pull requests, and by hand | 19 |
 | 4g | Route Back | `route-back.yml` | plain | by hand, for the linked issue of a split | 11 |
 | 5a | Status | `status.yml` | plain | a label that matters changes, on a comment, hourly, and by hand | 14 |

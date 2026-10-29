@@ -1,6 +1,6 @@
 # Project scope
 
-Optional, repository-specific boundaries for the issue worker. Copy this file to `.github/agentic-workflows/scope.md` in the consuming repository and fill it in. Without that file the scope check is off and every request counts as in scope.
+Optional, repository-specific boundaries for the issue worker. Copy this file to `.github/issue-concierge/scope.md` in the consuming repository and fill it in. Without that file the scope check is off and every request counts as in scope.
 
 The issue worker compares each request with this file as written. It does not invent boundaries. Two outcomes matter:
 

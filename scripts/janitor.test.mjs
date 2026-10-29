@@ -241,7 +241,7 @@ test('the workflow needs no secret and only the permissions it uses', () => {
 
 const held = (extra = {}) => ({
   id: 1,
-  name: 'Concierge 1a ▸ Issue Worker',
+  name: 'Issue Concierge 1a ▸ Issue Worker',
   path: '.github/workflows/issue-worker.lock.yml',
   event: 'issue_comment',
   status: 'completed',
@@ -358,7 +358,7 @@ test('the sweep deletes the disposable held runs and leaves every other run alon
   assert.deepEqual(await sweepHeldRuns({}, f.ctx), [1, 4]);
   assert.deepEqual(f.deleted, [1, 4]);
   assert.equal(f.logs.length, 2);
-  assert.match(f.logs[0], /run 1 \(Concierge 1a ▸ Issue Worker, issue_comment by Copilot, "Add a thing"\): deleted/);
+  assert.match(f.logs[0], /run 1 \(Issue Concierge 1a ▸ Issue Worker, issue_comment by Copilot, "Add a thing"\): deleted/);
 });
 
 test('a dry run deletes nothing and says what it would delete', async () => {
@@ -497,7 +497,7 @@ test('a pull request run is stale when its pull request is closed or has moved p
 test('the sweep keeps the pipeline run of the head and every run it cannot judge', async () => {
   const keep = {
     'the pipeline run for the current head': pushRun({ id: 1 }),
-    'an unrelated workflow of the agent on the current head': pushRun({ id: 2, name: 'Concierge 3c PR Triage', path: '.github/workflows/pr-triage.lock.yml' }),
+    'an unrelated workflow of the agent on the current head': pushRun({ id: 2, name: 'Issue Concierge 3c PR Triage', path: '.github/workflows/pr-triage.lock.yml' }),
     "a contributor's run on a fork pull request (no pull request in the run)": pushRun({ id: 3, actor: { login: 'TJShowerHandel' }, pull_requests: [], head_sha: 'old' }),
     'a stale run caused by a human': pushRun({ id: 4, actor: { login: 'vscheuber' }, head_sha: 'old' }),
     'a run of the agent without a pull request': pushRun({ id: 5, pull_requests: [], head_sha: 'old' }),

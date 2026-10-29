@@ -34,7 +34,7 @@ const design = flat(read('docs/multi-phase-design.md'));
 const deployment = flat(read('docs/deployment.md'));
 
 test('workflow: started by hand and by nothing else, for one issue, with a dry run', () => {
-  assert.match(code, /^name: "Concierge 2d ▸ Spawn Work Items"$/m);
+  assert.match(code, /^name: "Issue Concierge 2d ▸ Spawn Work Items"$/m);
   assert.match(code, /^on:\n {2}workflow_dispatch:\n {4}inputs:\n {6}issue_number:\n(?: {8}.*\n)*? {8}required: true\n/m);
   assert.match(code, / {6}dry_run:\n(?: {8}.*\n)*? {8}type: boolean\n {8}default: false\n/);
   const triggers = code.match(/^on:\n((?: {2,}.*\n|\n)+)/m)[1];
@@ -66,7 +66,7 @@ test('script: it creates, comments and gates, and never closes, unlabels, lifts 
 test('plan worker: work items are written only after reading both sides, in one exact form, naming only a listed repository', () => {
   const text = rendered(read('workflows/plan-worker.md'));
   const items = section(text, '## Work items');
-  assert.match(items, /Only in a repository with `\.github\/agentic-workflows\/related-repos\.md`, and only when you read the code on both sides and found that the fix needs a change in this repository and a change in the related repository/);
+  assert.match(items, /Only in a repository with `\.github\/issue-concierge\/related-repos\.md`, and only when you read the code on both sides and found that the fix needs a change in this repository and a change in the related repository/);
   assert.match(items, /If the whole fix is in one repository, write no work items and say nothing about them\./);
   assert.match(items, /Work item: \{owner\}\/\{repo\} \| \{what changes, in one sentence\} \| where: \{the file or function you read\} \| order: \{first, independent or this\}/);
   assert.match(items, /`order: this` is the line for this repository\./);
@@ -103,7 +103,7 @@ test('installed by the updater and documented where an operator looks', () => {
   assert.match(deployment, /\| `workflows\/spawn-work-items\.yml` \| `\.github\/workflows\/spawn-work-items\.yml` \|/);
   assert.match(deployment, /\| `scripts\/spawn-work-items\.mjs` \| `\.github\/scripts\/spawn-work-items\.mjs` \|/);
   assert.match(deployment, /\[ \] Spawn work items installed where there is a `related-repos\.md`/);
-  assert.match(design, /\| `Concierge 2d ▸ Spawn Work Items` \|/);
+  assert.match(design, /\| `Issue Concierge 2d ▸ Spawn Work Items` \|/);
   assert.match(design, /## Work in more than one repository/);
   assert.match(design, /\*\*Intake does not split\.\*\*/);
 });

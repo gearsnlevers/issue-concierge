@@ -5,10 +5,10 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
-  ACCEPT_MARKER, STOP_LABELS, effectiveNeed, main, mayUse, menuCandidates, menuKind, neutralizeMentions, optionsFor, parseCommand, planMenu, planReason,
+  ACCEPT_MARKER, LEGACY_ACCEPT_MARKER, STOP_LABELS, effectiveNeed, main, mayUse, menuCandidates, menuKind, neutralizeMentions, optionsFor, parseCommand, planMenu, planReason,
   runCommand, situationOf, syncOptions,
 } from './commands.mjs';
-import { OPTIONS_MARKER, isOptionsComment } from './concierge-state.mjs';
+import { OPTIONS_MARKER, isOptionsComment } from './issue-concierge-state.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const NOW = Date.parse('2026-10-27T12:00:00Z');
@@ -113,7 +113,7 @@ test('optionsFor: what is needed in plain words, then the commands for this situ
   const o = (labels, comments = []) => optionsFor(issue(labels), { comments, settings: SETTINGS, repo: REPO, now: NOW });
   const decision = o(['needs-decision']);
   assert.equal(decision.kind, 'decision');
-  assert.equal(decision.body.split('\n')[0], '<!-- concierge:options kind=decision -->');
+  assert.equal(decision.body.split('\n')[0], '<!-- issue-concierge:options kind=decision -->');
   assert.match(decision.body, /\nThis request changes something that already exists, so a maintainer needs to decide on it before anything is planned\.\n/);
   assert.match(decision.body, /<details><summary>Maintainer options<\/summary>/);
   assert.match(decision.body, /\| `\/accept` \| Plan it: removes `needs-decision` and hands the issue to the plan worker\. \|/);
@@ -160,6 +160,29 @@ test('optionsFor: it names the role the commands need, and says when a personal 
 
 const menu = (id, kind = 'decision', body = `${OPTIONS_MARKER} kind=${kind} -->\nwords`, ageMs) => comment(id, body, BOT, ageMs);
 const want = (kind = 'decision', body = `${OPTIONS_MARKER} kind=${kind} -->\nwords`) => ({ kind, body });
+
+// The options comment carries the product's name; a menu written by an earlier version is still the bot's menu.
+const LEGACY_BODY = (kind = 'decision') => `<!-- concierge:options kind=${kind} -->\nwords`;
+
+test('menuKind reads the kind from the new line and from the older one', () => {
+  assert.equal(menuKind({ body: '<!-- issue-concierge:options kind=plan.work-item -->\nx' }), 'plan.work-item');
+  assert.equal(menuKind({ body: LEGACY_BODY('decision') }), 'decision');
+  assert.equal(menuKind({ body: 'no marker kind=decision' }), null);
+});
+
+test('optionsFor writes the new line and never the older one', () => {
+  const o = optionsFor(issue(['needs-decision']), { comments: [], settings: SETTINGS, repo: REPO, now: NOW });
+  assert.ok(o.body.startsWith('<!-- issue-concierge:options kind=decision -->'));
+  assert.ok(!o.body.includes('<!-- concierge:options'));
+});
+
+test('planMenu: a menu from an earlier version is found, replaced by the same kind with new words and so carries the new line from then on', () => {
+  const legacy = comment(2, LEGACY_BODY(), BOT);
+  assert.deepEqual(planMenu({ desired: null, comments: [comment(1, 'hi'), legacy] }), [{ op: 'delete', id: 2 }], 'it is deleted when nothing is wanted');
+  assert.deepEqual(planMenu({ desired: want(), comments: [comment(1, 'hi'), legacy] }), [{ op: 'edit', id: 2, body: want().body }], 'it is edited in place, so there is still one');
+  assert.deepEqual(planMenu({ desired: want('plan'), comments: [comment(1, 'hi'), legacy] }), [{ op: 'delete', id: 2 }, { op: 'post', body: want('plan').body }]);
+  assert.deepEqual(planMenu({ desired: want(), comments: [legacy, comment(3, 'later'), menu(4)] }), [{ op: 'delete', id: 2 }], 'an old menu and a new one are not two menus');
+});
 
 test('planMenu: nothing is wanted, so every options comment goes', () => {
   assert.deepEqual(planMenu({ desired: null, comments: [comment(1, 'hi'), menu(2), menu(3)] }), [{ op: 'delete', id: 2 }, { op: 'delete', id: 3 }]);
@@ -263,7 +286,7 @@ test('while the Concierge is paused a command that would hand an issue on is ref
     const api = fakeApi();
     const result = runCommand({ name, argument: '' }, { issue: issue(labels), actor: 'maint', api, paused: true });
     assert.equal(result.ok, false, name);
-    assert.match(result.reason, /The Concierge is paused \(the repository variable `CONCIERGE_PAUSED` is `true`\), so nothing would start\. Resume it first/, name);
+    assert.match(result.reason, /The Concierge is paused \(the repository variable `ISSUE_CONCIERGE_PAUSED` is `true`, or `CONCIERGE_PAUSED`, its older name\), so nothing would start\. Resume it first/, name);
     assert.deepEqual(api.calls, [], name);
   }
   for (const name of ['decline', 'help']) {
@@ -273,15 +296,19 @@ test('while the Concierge is paused a command that would hand an issue on is ref
   }
 });
 
-test('main: the variable reaches the commands through the environment', () => {
+test('main: either pause variable reaches the commands through the environment, in any case, and neither alone does when it is not true', () => {
   const { env } = eventEnv('issue_comment', commentEvent('/accept'));
-  const api = fakeApi({ ...held, roles: { maint: 'admin' } });
-  assert.equal(main({ ...env, CONCIERGE_PAUSED: 'true' }, api, () => {}), 0);
-  assert.ok(!api.calls.some((c) => c[0] === 'removeLabel' || c[0] === 'addLabelSignal'));
-  assert.match(api.calls.find((c) => c[0] === 'reply')[2], /The Concierge is paused/);
-  const running = fakeApi({ ...held, roles: { maint: 'admin' } });
-  main({ ...env, CONCIERGE_PAUSED: '' }, running, () => {});
-  assert.ok(running.calls.some((c) => c[0] === 'removeLabel'));
+  for (const vars of [{ ISSUE_CONCIERGE_PAUSED: 'true' }, { CONCIERGE_PAUSED: 'true' }, { ISSUE_CONCIERGE_PAUSED: 'true', CONCIERGE_PAUSED: 'true' }, { ISSUE_CONCIERGE_PAUSED: 'TRUE' }, { ISSUE_CONCIERGE_PAUSED: 'false', CONCIERGE_PAUSED: 'true' }]) {
+    const api = fakeApi({ ...held, roles: { maint: 'admin' } });
+    assert.equal(main({ ...env, ...vars }, api, () => {}), 0, JSON.stringify(vars));
+    assert.ok(!api.calls.some((c) => c[0] === 'removeLabel' || c[0] === 'addLabelSignal'), JSON.stringify(vars));
+    assert.match(api.calls.find((c) => c[0] === 'reply')[2], /The Concierge is paused/, JSON.stringify(vars));
+  }
+  for (const vars of [{}, { CONCIERGE_PAUSED: '' }, { ISSUE_CONCIERGE_PAUSED: '' }, { ISSUE_CONCIERGE_PAUSED: 'false', CONCIERGE_PAUSED: 'false' }]) {
+    const running = fakeApi({ ...held, roles: { maint: 'admin' } });
+    main({ ...env, ...vars }, running, () => {});
+    assert.ok(running.calls.some((c) => c[0] === 'removeLabel'), JSON.stringify(vars));
+  }
 });
 
 const ACCEPTED = (actor = 'maint') => ['reply', 7, `${ACCEPT_MARKER}\nAccepted by @${actor} with /accept. The request goes to planning now.`];
@@ -297,7 +324,9 @@ test('/accept records the decision in a comment of the bot, with a marker, namin
   const order = api.calls.map((c) => c[0]);
   assert.ok(order.indexOf('reply') > -1 && order.indexOf('reply') < order.indexOf('addLabelSignal'), 'the record comes first, so nothing the hand-over starts can miss it');
   const body = api.calls.find((c) => c[0] === 'reply')[2];
-  assert.equal(ACCEPT_MARKER, '<!-- concierge:accepted -->');
+  assert.equal(ACCEPT_MARKER, '<!-- issue-concierge:accepted -->');
+  assert.equal(LEGACY_ACCEPT_MARKER, '<!-- concierge:accepted -->');
+  assert.ok(!body.includes(LEGACY_ACCEPT_MARKER), 'the older line is never written');
   assert.ok(body.startsWith(`${ACCEPT_MARKER}\n`), 'the marker opens the comment');
   assert.match(body, /Accepted by @volker with \/accept\. The request goes to planning now\.$/);
   assert.doesNotMatch(body, /needs-decision|issue-triage-handoff|plan-approval-required/, 'the reporter reads it: no internal labels');
@@ -486,10 +515,25 @@ test('main: when GitHub does not tell the role, a collaborator is told so, and n
 });
 
 test('main: the setting decides the role, and a personal repository needs write', () => {
-  const need = (value) => ({ ...held, roles: { maint: 'triage' }, files: { '.github/agentic-workflows/settings.yml': `commands-need: ${value}\n` } });
+  const need = (value) => ({ ...held, roles: { maint: 'triage' }, files: { '.github/issue-concierge/settings.yml': `commands-need: ${value}\n` } });
   assert.ok(go('issue_comment', commentEvent('/accept'), need('triage')).api.calls.some((c) => c[0] === 'removeLabel'));
   assert.ok(!go('issue_comment', commentEvent('/accept'), need('write')).api.calls.some((c) => c[0] === 'removeLabel'));
   assert.ok(!go('issue_comment', commentEvent('/accept', { owner: 'User' }), need('triage')).api.calls.some((c) => c[0] === 'removeLabel'), 'triage does not exist in a personal repository');
+});
+
+test('main: settings.yml is read from the old folder in a repository that has not been updated yet, and the new folder wins when both have it', () => {
+  const OLD = '.github/agentic-workflows/settings.yml';
+  const NEW = '.github/issue-concierge/settings.yml';
+  const withFiles = (files) => ({ ...held, roles: { maint: 'admin' }, files });
+  const old = go('issue_comment', commentEvent('/accept'), withFiles({ [OLD]: 'commands: false\n' }));
+  assert.deepEqual(old.api.calls, [], 'the setting in the old folder switches the commands off');
+  assert.ok(old.out.some((l) => l.startsWith('commands is false')));
+  const both = go('issue_comment', commentEvent('/accept'), withFiles({ [OLD]: 'commands: false\n', [NEW]: 'commands: true\n' }));
+  assert.ok(both.api.calls.some((c) => c[0] === 'removeLabel'), 'the new folder wins');
+  const need = go('issue_comment', commentEvent('/accept'), { ...held, roles: { maint: 'triage' }, files: { [OLD]: 'commands-need: write\n' } });
+  assert.ok(!need.api.calls.some((c) => c[0] === 'removeLabel'), 'commands-need in the old folder applies as well');
+  const none = go('issue_comment', commentEvent('/accept'), withFiles({}));
+  assert.ok(none.api.calls.some((c) => c[0] === 'removeLabel'), 'no file in either folder: the defaults apply');
 });
 
 test('main: a comment that is no command keeps the menu last on an issue that waits, and costs nothing on one that does not', () => {
@@ -504,7 +548,7 @@ test('main: a pull request comment, a bot\'s comment and the setting off do noth
   assert.deepEqual(go('issue_comment', commentEvent('/accept', { pr: true }), held).api.calls, []);
   const bot = go('issue_comment', commentEvent('/accept', { login: 'github-actions[bot]', type: 'Bot' }), { ...held, comments: { 7: [comment(1, 'x'), menu(2)] } });
   assert.ok(!bot.api.calls.some((c) => c[0] === 'removeLabel' || c[0] === 'react'));
-  const off = go('issue_comment', commentEvent('/accept'), { ...held, roles: { maint: 'admin' }, files: { '.github/agentic-workflows/settings.yml': 'commands: false\n' } });
+  const off = go('issue_comment', commentEvent('/accept'), { ...held, roles: { maint: 'admin' }, files: { '.github/issue-concierge/settings.yml': 'commands: false\n' } });
   assert.deepEqual(off.api.calls, []);
   assert.ok(off.out.some((l) => l.startsWith('commands is false')));
 });

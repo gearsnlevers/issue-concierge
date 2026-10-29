@@ -1,6 +1,6 @@
 # Change guard
 
-Optional, repository-specific. Copy this file to `.github/agentic-workflows/guard.md` in the consuming repository and fill it in.
+Optional, repository-specific. Copy this file to `.github/issue-concierge/guard.md` in the consuming repository and fill it in.
 
 The Concierge holds every request that changes what already exists for a maintainer to decide, before anything is planned and before a coding agent is started. A change to what exists removes, renames or replaces a command, an option, an alias, an exported function or a file or data format; changes an interface so that something that works today stops working or reads differently to a script (a signature, the meaning of an option, an output format or an exit code someone may parse, a default that changes what a command does); or changes the architecture. A fix, an addition, and a refinement inside what the project documents and tests are not held. That holds with or without this file. The file sharpens the check for your project: it names what you protect, and it names what you are happy to have taken on without asking.
 

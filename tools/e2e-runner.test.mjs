@@ -1,10 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { createGitHub, STATUS_MARKER } from './e2e/github.mjs';
+import { createGitHub, isStatusPage, LEGACY_STATUS_MARKER, STATUS_MARKER } from './e2e/github.mjs';
 import { MARKER as PAGE_MARKER } from '../scripts/status-issue.mjs';
 import { evaluateCheck, describeSnapshot, CHECK_TYPES } from './e2e/checks.mjs';
-import { cleanupStale, expand, loadConfig, loadScenarios, main, numberOf, renderSummary, runScenario, runSuite, validateScenario } from './e2e/run.mjs';
+import { cleanupStale, expand, loadConfig, loadScenarios, main, numberOf, readPinText, renderSummary, runScenario, runSuite, validateScenario } from './e2e/run.mjs';
 
 const config = loadConfig();
 const scenarios = loadScenarios();
@@ -70,12 +70,12 @@ function happyGates({ w, gate, run }) {
     if (issue.state !== 'open' || !issue.title.includes('listWidgets: sort numbers')) return;
     if (issue.ticks === 2) {
       gate(issue, 'issue-worker');
-      run(issue, 'Concierge 1a ▸ Issue Worker');
-      run(issue, 'Concierge 1b Issue Triage');
+      run(issue, 'Issue Concierge 1a ▸ Issue Worker');
+      run(issue, 'Issue Concierge 1b Issue Triage');
     }
     if (issue.ticks === 3) {
       gate(issue, 'plan-worker', '## Decisions that apply\n## Repository rules that apply');
-      run(issue, 'Concierge 2a Plan Worker');
+      run(issue, 'Issue Concierge 2a Plan Worker');
       issue.labels.push('complexity/low', 'risk/low');
     }
   };
@@ -252,7 +252,7 @@ test('a scenario that passes only on the second attempt is flaky, not failed', a
       Object.assign(issue, { state: 'closed', state_reason: 'not_planned' });
       issue.labels.push('out-of-scope');
       gateComment(issue);
-      wd.run(issue, 'Concierge 1a ▸ Issue Worker');
+      wd.run(issue, 'Issue Concierge 1a ▸ Issue Worker');
     }
   };
   const gateComment = (issue) => wd.gate(issue, 'issue-worker', 'Declined.');
@@ -267,7 +267,7 @@ test('a failed run stops the wait at once, without waiting for the deadline', as
   const wd = world();
   const started = wd.w.now;
   wd.w.onTick = (issue) => {
-    if (issue.ticks === 2) wd.run(issue, 'Concierge 1a ▸ Issue Worker', 'failure');
+    if (issue.ticks === 2) wd.run(issue, 'Issue Concierge 1a ▸ Issue Worker', 'failure');
   };
   const result = await runScenario({ ...byId('out-of-scope-closes'), retry: false }, 'public', wd.ctx);
   assert.equal(result.status, 'fail');
@@ -280,7 +280,7 @@ test('a failed run stops the wait at once, without waiting for the deadline', as
 test('a run, or a failure issue, from before the scenario started is not its business', async () => {
   const wd = world();
   happyGates(wd);
-  wd.w.runs.push({ id: 1, name: 'Concierge 1a ▸ Issue Worker', status: 'completed', conclusion: 'failure', created_at: '2026-10-27T09:30:00Z' });
+  wd.w.runs.push({ id: 1, name: 'Issue Concierge 1a ▸ Issue Worker', status: 'completed', conclusion: 'failure', created_at: '2026-10-27T09:30:00Z' });
   wd.w.bot.push({ repo: 'o/e2e-lib', number: 50, title: '[aw] earlier failure', created_at: '2026-10-27T09:30:00Z' });
   const result = await runScenario(byId('happy-path-to-the-hold'), 'public', wd.ctx);
   assert.equal(result.status, 'pass');
@@ -292,11 +292,11 @@ test('a gate run that fails while the scenario runs fails it, although the run s
   const inner = wd.w.onTick;
   wd.w.onTick = (issue, w) => {
     inner(issue, w);
-    if (issue.ticks === 2) wd.run(issue, 'Concierge 1a ▸ Issue Worker', 'failure');
+    if (issue.ticks === 2) wd.run(issue, 'Issue Concierge 1a ▸ Issue Worker', 'failure');
   };
   const failed = await runScenario({ ...byId('happy-path-to-the-hold'), retry: false }, 'public', wd.ctx);
   assert.equal(failed.status, 'fail');
-  assert.match(failed.attempts[0].checks.find((c) => c.name === 'no run failed').detail, /Concierge 1a ▸ Issue Worker \(failure\)/);
+  assert.match(failed.attempts[0].checks.find((c) => c.name === 'no run failed').detail, /Issue Concierge 1a ▸ Issue Worker \(failure\)/);
 });
 
 test('a failure issue the bot opens while the scenario runs, in either repository of the pair, fails it', async () => {
@@ -322,7 +322,7 @@ test('the next scenario starts only when the runs that closing the issue started
     inner(issue, w);
     if (issue.state === 'closed' && !w.closingRun) {
       w.closingRun = true;
-      wd.run(issue, 'Concierge 4a ▸ Janitor', null, 'in_progress');
+      wd.run(issue, 'Issue Concierge 4a ▸ Janitor', null, 'in_progress');
       w.closingRunTicks = 0;
     } else if (w.closingRun && wd.w.runs.at(-1).status !== 'completed' && ++w.closingRunTicks === 2) {
       Object.assign(wd.w.runs.at(-1), { status: 'completed', conclusion: 'success' });
@@ -348,7 +348,7 @@ test('the dependency scenario closes the other issue, then starts the watcher fo
     const dep = wd.w.issues.find((i) => i.title.includes('Define the order'));
     if (dep.state === 'open' && issue.ticks === 2) {
       issue.labels.push('dependency-required');
-      wd.run(issue, 'Concierge 1b Issue Triage');
+      wd.run(issue, 'Issue Concierge 1b Issue Triage');
     }
     if (dep.state === 'closed' && !issue.satisfied) {
       issue.satisfied = true;
@@ -373,7 +373,7 @@ test('the opt-out scenario adds the hold before it removes the opt-out label', a
   wd.w.onTick = (issue) => {
     if (issue.labels.includes('no-auto-processing') || issue.comments.length) return;
     wd.gate(issue, 'issue-worker', 'analysis');
-    wd.run(issue, 'Concierge 1a ▸ Issue Worker');
+    wd.run(issue, 'Issue Concierge 1a ▸ Issue Worker');
   };
   const result = await runScenario(byId('opt-out-then-hand-over'), 'public', wd.ctx);
   assert.equal(result.status, 'pass', JSON.stringify(result.attempts[0].checks.filter((c) => !c.ok)));
@@ -383,7 +383,7 @@ test('the opt-out scenario adds the hold before it removes the opt-out label', a
 test('the quiet period ends only when the runs of the issue have finished, so that a late failure is seen', async () => {
   const wd = world();
   wd.w.onTick = (issue) => {
-    if (issue.ticks === 1) wd.run(issue, 'Concierge 1a ▸ Issue Worker', null, 'in_progress'); // still running when the 6 quiet minutes are over
+    if (issue.ticks === 1) wd.run(issue, 'Issue Concierge 1a ▸ Issue Worker', null, 'in_progress'); // still running when the 6 quiet minutes are over
     if (issue.ticks === 3) Object.assign(wd.w.runs[0], { status: 'completed', conclusion: 'failure' });
   };
   const result = await runScenario({ ...byId('opt-out-then-hand-over'), retry: false }, 'public', wd.ctx);
@@ -416,7 +416,7 @@ test('the suite runs each scenario on each profile it names, the pairs side by s
       Object.assign(issue, { state: 'closed', state_reason: 'not_planned' });
       issue.labels.push('out-of-scope');
       wd.gate(issue, 'issue-worker', 'Declined.');
-      wd.run(issue, 'Concierge 1a ▸ Issue Worker');
+      wd.run(issue, 'Issue Concierge 1a ▸ Issue Worker');
     }
   };
   const single = { ...byId('out-of-scope-closes'), profiles: ['public', 'private'] };
@@ -434,7 +434,7 @@ test('the summary shows each result, the reason for each failure and what cleanu
     { id: 'b', profile: 'private', status: 'fail', flaky: false, attempts: [{ seconds: 5, issues: [], error: undefined, checks: [{ phase: 'step 1 wait', name: 'one analysis', ok: false, warn: false, detail: '0 issue-worker comments, wanted exactly 1' }], cleanupErrors: ['issue o/x#1: HTTP 403'] }] },
   ];
   const text = renderSummary(results, { runId: 'r9', owner: 'o', pins: { public: 'v1.8.0' } });
-  assert.match(text, /## Concierge end-to-end run r9/);
+  assert.match(text, /## Issue Concierge end-to-end run r9/);
   assert.match(text, /1 of 2 scenarios passed.*public pair pinned at v1\.8\.0/);
   assert.match(text, /\| a \| public \| pass \| 1 \| 61 s \| \[e2e-lib#3\]\(https:\/\/github.com\/o\/e2e-lib\/issues\/3\) \|/);
   assert.match(text, /### b \(private\): fail\n- step 1 wait: \*\*one analysis\*\*: 0 issue-worker comments, wanted exactly 1/);
@@ -586,6 +586,45 @@ test('lists are flattened from pages, and the shared lists are asked for once in
   assert.match(calls.find((c) => c.includes('creator=')), /creator=github-actions%5Bbot%5D/);
 });
 
+test('the sandbox\'s status issue is the page under either marker: the runner finds it, and does not count it as a failure issue', async () => {
+  assert.deepEqual([STATUS_MARKER, LEGACY_STATUS_MARKER], ['<!-- issue-concierge:status -->', '<!-- concierge:status -->']);
+  assert.equal(STATUS_MARKER, PAGE_MARKER, 'the runner and the page write the same line');
+  assert.equal(isStatusPage(`${STATUS_MARKER}\nx`), true);
+  assert.equal(isStatusPage(`${LEGACY_STATUS_MARKER}\nx`), true);
+  assert.equal(isStatusPage('an [aw] failure'), false);
+  assert.equal(isStatusPage(undefined), false);
+  for (const marker of [STATUS_MARKER, LEGACY_STATUS_MARKER]) {
+    const run = (args) => JSON.stringify([[
+      { number: 4, created_at: '2026-10-27T10:06:00Z', body: `${marker}\n# page` },
+      { number: 6, created_at: '2026-10-27T10:07:00Z', body: 'an [aw] failure' },
+    ]]);
+    const gh = createGitHub({ run, sleep: async () => {}, now: () => 0, cacheMs: 0 });
+    assert.deepEqual((await gh.listBotIssues('o/r', '2026-10-27T10:00:00Z')).map((i) => i.number), [6], marker);
+    assert.equal((await gh.findStatusIssue('o/r')).number, 4, marker);
+  }
+});
+
+test('the scenarios\' patterns for the Concierge\'s own comments match both spellings, so a sandbox that is part way through the rename still passes', () => {
+  const scenarios = fs.readdirSync(new URL('./e2e/scenarios/', import.meta.url)).map((f) => JSON.parse(fs.readFileSync(new URL(`./e2e/scenarios/${f}`, import.meta.url), 'utf8')));
+  const patterns = [];
+  const walk = (v) => {
+    if (Array.isArray(v)) return v.forEach(walk);
+    if (v && typeof v === 'object') {
+      if (typeof v.match === 'string' && /concierge:/.test(v.match)) patterns.push(v.match);
+      Object.values(v).forEach(walk);
+    }
+  };
+  walk(scenarios);
+  assert.ok(patterns.length >= 5, 'the scenarios do check the options and the accepted comments');
+  for (const pattern of patterns) {
+    const name = /concierge:([a-z]+)/.exec(pattern)[1];
+    const kind = /kind=([a-z.]+)/.exec(pattern)?.[1] ?? 'decision';
+    const sample = (prefix) => `<!-- ${prefix}concierge:${name} kind=${kind} -->\n\`/accept\` \`/decline [reason]\` \`/approve\``;
+    assert.match(sample(''), new RegExp(pattern), `the older line: ${pattern}`);
+    assert.match(sample('issue-'), new RegExp(pattern), `the new line: ${pattern}`);
+  }
+});
+
 // ------------------------------------------------------------------ the status issue
 
 test('the runner and the status script mark the page with the same line', () => {
@@ -612,4 +651,11 @@ test('statusIssue: the page must match, or must not, and a repository without on
   assert.equal(none.ok, false);
   assert.match(none.detail, /there is no status issue yet/);
   assert.match(evaluateCheck({ type: 'statusIssue', match: '\\n- #13 ' }, snap2(page)).detail, /status issue #7 does not match .*, which it must/);
+});
+
+test('the version a sandbox repository is pinned at is read from the new pin file, or from the old one before the repository has been updated', async () => {
+  const gh = (files) => ({ readFile: async (repo, file) => { if (!(file in files)) throw new Error(`HTTP 404 ${file}`); return files[file]; } });
+  assert.equal(await readPinText(gh({ '.github/issue-concierge.yml': 'version: v2.1.0\n', '.github/concierge.yml': 'version: v2.0.1\n' }), 'o/r'), 'version: v2.1.0\n');
+  assert.equal(await readPinText(gh({ '.github/concierge.yml': 'version: v2.0.1\n' }), 'o/r'), 'version: v2.0.1\n');
+  await assert.rejects(readPinText(gh({}), 'o/r'), /HTTP 404 \.github\/concierge\.yml/);
 });

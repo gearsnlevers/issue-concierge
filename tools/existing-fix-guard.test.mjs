@@ -79,7 +79,7 @@ test('pr-worker: the guard step runs in pre-activation, never blocks the job its
   assert.match(fm, /^ {2}steps:\n/m, 'on.steps');
   assert.match(fm, /id: existing_fix\n/);
   // outcome `failure` is what the `if:` reads; continue-on-error keeps the job green (no red run, no failure report)
-  assert.match(fm, /id: existing_fix\n\s+if: \(vars\.CONCIERGE_PAUSED != 'true' \|\| github\.event_name == 'workflow_dispatch'\) && github\.event\.label\.name == 'plan-triage-handoff' && github\.event\.issue\.state == 'open' && !contains\(github\.event\.issue\.labels\.\*\.name, 'no-auto-processing'\)\n\s+continue-on-error: true\n/);
+  assert.match(fm, /id: existing_fix\n\s+if: \(vars\.ISSUE_CONCIERGE_PAUSED != 'true' && vars\.CONCIERGE_PAUSED != 'true' \|\| github\.event_name == 'workflow_dispatch'\) && github\.event\.label\.name == 'plan-triage-handoff' && github\.event\.issue\.state == 'open' && !contains\(github\.event\.issue\.labels\.\*\.name, 'no-auto-processing'\)\n\s+continue-on-error: true\n/);
   assert.match(fm, /uses: actions\/github-script@v9/);
   // the pre-activation job needs write access only to post the one comment, read access to see pull requests
   assert.match(fm, /^ {2}permissions:\n {4}issues: write\n {4}pull-requests: read\n/m);

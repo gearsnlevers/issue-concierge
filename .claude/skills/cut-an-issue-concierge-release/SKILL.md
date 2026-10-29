@@ -1,6 +1,6 @@
 ---
-name: cut-a-concierge-release
-description: Cut a Repo Concierge release and roll it out to every repository that consumes it. Verify main, run the Release workflow, verify the published release, dispatch the Concierge updater in each deployment, check the update pull requests, merge them, then verify every default branch. Use when a maintainer asks to release, ship or deploy a new version of the harness, or to check that a rollout went through. Maintainer-only: it publishes an immutable release and merges pull requests.
+name: cut-an-issue-concierge-release
+description: Cut an Issue Concierge release and roll it out to every repository that consumes it. Verify main, run the Release workflow, verify the published release, dispatch the Issue Concierge updater in each deployment, check the update pull requests, merge them, then verify every default branch. Use when a maintainer asks to release, ship or deploy a new version of the harness, or to check that a rollout went through. Maintainer-only: it publishes an immutable release and merges pull requests.
 disable-model-invocation: true
 ---
 
@@ -20,13 +20,15 @@ Read first: [docs/releases.md](../../../docs/releases.md) (what a release contai
 ```bash
 for owner in <owner> [<another-owner> ...]; do
   for r in $(gh repo list "$owner" --no-archived --source -L 200 --json nameWithOwner -q '.[].nameWithOwner'); do
-    gh api -H 'Accept: application/vnd.github.raw+json' "repos/$r/contents/.github/concierge.yml" 2>/dev/null \
-      | grep -qE '^source: (gearsnlevers/issue-concierge|vscheuber/repo-concierge)' && echo "$r"
+    for pin in .github/issue-concierge.yml .github/concierge.yml; do
+      gh api -H 'Accept: application/vnd.github.raw+json' "repos/$r/contents/$pin" 2>/dev/null \
+        | grep -qE '^source: (gearsnlevers/issue-concierge|vscheuber/repo-concierge)' && { echo "$r"; break; }
+    done
   done
 done
 ```
 
-A deployment that has not yet followed the move of the Concierge still names its old home (`vscheuber/repo-concierge`), which redirects; the pattern above finds both. Compare the result with the maintainer's list. A deployment missing from one of them is a question to ask, not to settle yourself. GitHub code search does not index these files, so do not rely on it.
+A deployment that has not yet followed the move of the Concierge still names its old home (`vscheuber/repo-concierge`), which redirects, and one that has not had an update by an updater of this naming still keeps its pin in the file `concierge.yml` of the `.github` folder, where the updater moves it to `issue-concierge.yml`; the loop above finds both. Compare the result with the maintainer's list. A deployment missing from one of them is a question to ask, not to settle yourself. GitHub code search does not index these files, so do not rely on it.
 
 ## 1. Check main
 
@@ -58,7 +60,7 @@ gh run watch <databaseId> -R gearsnlevers/issue-concierge --exit-status
 ## 3. Verify the release
 
 ```bash
-node .claude/skills/cut-a-concierge-release/scripts/verify-release.mjs vX.Y.Z
+node .claude/skills/cut-an-issue-concierge-release/scripts/verify-release.mjs vX.Y.Z
 ```
 
 It changes nothing. It checks that the release is published and immutable, that `gh release verify` and `gh release verify-asset` pass (attestation), that the manifest is for this tag and names the tag's commit, and prints the files the manifest adds, removes and changes compared with the previous stable release.
@@ -71,22 +73,22 @@ If the maintainer did not ask for the rollout, stop here and report the tag, the
 ## 4. Dispatch the updater in every deployment
 
 ```bash
-gh workflow run concierge-updater.yml -R <owner/repo>                       # latest release of the pinned channel
-gh workflow run concierge-updater.yml -R <owner/repo> -f target=vX.Y.Z      # a specific release
-gh run list -R <owner/repo> --workflow concierge-updater.yml -L 1 --json databaseId,status,conclusion
-gh pr list -R <owner/repo> --head concierge/update --state open --json number,title,url
+gh workflow run issue-concierge-updater.yml -R <owner/repo>                       # latest release of the pinned channel
+gh workflow run issue-concierge-updater.yml -R <owner/repo> -f target=vX.Y.Z      # a specific release
+gh run list -R <owner/repo> --workflow issue-concierge-updater.yml -L 1 --json databaseId,status,conclusion
+gh pr list -R <owner/repo> --head issue-concierge/update --state open --json number,title,url   # older deployments: --head concierge/update
 ```
 
-Each deployment gets one pull request titled `chore: update Repo Concierge vA → vB` from the branch `concierge/update`. The updater rebuilds and force-pushes that branch itself, which is by design; you never push to it.
+Each deployment gets one pull request titled `chore: update Issue Concierge vA → vB` from the branch `issue-concierge/update` (a deployment whose updater predates the rename still produces `chore: update Repo Concierge vA → vB` from `concierge/update` once more; `compare-update-prs.mjs` accepts both). When the version is already current but files or the pin are still in their old places, the updater opens `chore: move the Issue Concierge's files to their new places` from the same branch, and it closes an old pull request still open from `concierge/update`. The updater rebuilds and force-pushes that branch itself, which is by design; you never push to it.
 
-- No pull request and a log that only reports: the deployment's `CONCIERGE_TOKEN` is missing or expired. Tell the maintainer; do not push the update by hand.
+- No pull request and a log that only reports: the deployment's `ISSUE_CONCIERGE_TOKEN` (called `CONCIERGE_TOKEN` before the rename, which still works) is missing or expired. Tell the maintainer; do not push the update by hand.
 - `no stable release of … found, but vX is pinned` is a transient GitHub API problem: run the workflow again once.
 - `digest mismatch` means a file at the release commit differs from the manifest. Stop and report; do not work around it.
 
 ## 5. Inspect every update pull request
 
 ```bash
-node .claude/skills/cut-a-concierge-release/scripts/compare-update-prs.mjs <owner/repo>#<N> [<owner/repo>#<N> ...]
+node .claude/skills/cut-an-issue-concierge-release/scripts/compare-update-prs.mjs <owner/repo>#<N> [<owner/repo>#<N> ...]
 ```
 
 It changes nothing. It prints each pull request's title, branch and check results, groups the diffs after masking the lines that differ per repository on purpose (gh-aw's frontmatter hash and secret list, git index lines, hunk line numbers), and lists the `permissions:` of every workflow file the update adds.
@@ -111,7 +113,7 @@ gh pr merge <N> -R <owner/repo> --merge
 ## 7. Verify every default branch
 
 ```bash
-node .claude/skills/cut-a-concierge-release/scripts/verify-rollout.mjs vX.Y.Z <owner/repo> [<owner/repo> ...]
+node .claude/skills/cut-an-issue-concierge-release/scripts/verify-rollout.mjs vX.Y.Z <owner/repo> [<owner/repo> ...]
 ```
 
 It changes nothing. For each deployment it checks the pin (tag and commit), that every file the manifest installs is there and byte-identical (files with a cross-repository marker are compared without the generated token lines), that files this release dropped are gone, that every lock file was compiled with the manifest's gh-aw version, and that the role gate holds (`issue-worker` has no membership check, every other gate keeps the default roles; see "Who can start a gate" in docs/deployment.md).
@@ -149,5 +151,5 @@ Give the maintainer: the tag and commit; the verification result of step 3 and t
 - A release created from a branch other than `main` is refused for real runs; use the dry run for other branches.
 - The updater runs daily by itself, so a deployment may already have the update pull request when you arrive. Inspect and merge that one; do not open another.
 - Merging an update pull request is not releasing anything: the release already exists. Releasing is never triggered by a merge.
-- A release that adds a setting the updater generates (a new `# concierge:cross-repo...` marker) reaches a deployment one release late: the update is made by the updater it already has. Dispatch the updater a second time with `-f target=<the tag>` after merging the first pull request, merge the second, and only then verify the rollout.
+- A release that adds a setting the updater generates (a new `# concierge:cross-repo...` marker; the updater reads `# issue-concierge:cross-repo...` as the same marker, and the delivered files keep the older spelling until every deployment reads both) reaches a deployment one release late: the update is made by the updater it already has. Dispatch the updater a second time with `-f target=<the tag>` after merging the first pull request, merge the second, and only then verify the rollout. The rename of the pin file and of the folder of a repository's own files works the same way: the first update is made by the updater the deployment already has, which leaves them where they were, and the next run of the new updater (the daily one, or a dispatch) opens `chore: move the Issue Concierge's files to their new places`. Nothing is asked of the deployment; merge it, and `verify-rollout.mjs` stops saying that the pin is in its old place.
 - Do not edit managed files in a deployment to "fix" an update. Fix the harness, release again.

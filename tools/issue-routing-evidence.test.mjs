@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { applyCrossRepo } from '../scripts/concierge-updater.mjs';
+import { applyCrossRepo } from '../scripts/issue-concierge-updater.mjs';
 
 // What went wrong on frodo-cli#887 (run 40021303506, 2026-10-23): the Issue Worker (model `small`, 7 turns)
 // read only the issue, labelled it `related-repo` with confidence HIGH and the rationale "per related-repos.md",

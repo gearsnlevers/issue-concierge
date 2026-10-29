@@ -1,9 +1,9 @@
-// Read-only check that deployments are on a Repo Concierge release. Changes nothing.
+// Read-only check that deployments are on an Issue Concierge release. Changes nothing.
 //
 //   node verify-rollout.mjs <tag> <owner/repo> [<owner/repo> ...] [--source <owner/name>]
 //
 // For each deployment's default branch:
-//   - .github/concierge.yml pins the tag and the tag's commit;
+//   - .github/issue-concierge.yml (or, until the updater has moved it, .github/concierge.yml) pins the tag and the tag's commit;
 //   - every file the manifest installs is there and byte-identical to the release (files with a
 //     `# concierge:cross-repo` or `# concierge:cross-repo-env` marker are compared without the generated token, allowed-repos and CROSS_REPO lines);
 //   - files the previous release installed and this one dropped are gone;
@@ -34,7 +34,8 @@ async function readFile(repo, file, ref) {
 }
 
 const GENERATED = /^\s*(github-token|allowed-repos|CROSS_REPO|CROSS_REPO_TOKEN):/;
-const MARKER = /^\s*# concierge:cross-repo(-env)?\s*$/;
+// Both spellings: the delivered files carry the older one until every deployment's updater reads both.
+const MARKER = /^\s*# (?:issue-)?concierge:cross-repo(-env)?\s*$/;
 /** A definition or plain workflow with the cross-repository settings left out, to compare source and deployed copy. */
 export const withoutCrossRepo = (text) => text.split('\n').filter((l) => !GENERATED.test(l) && !MARKER.test(l)).join('\n');
 
@@ -55,10 +56,13 @@ export function lockProblems(name, lock, ghAwVersion) {
 async function verifyRepo(repo, tag, manifest, previous) {
   const results = [];
   const note = (ok, text) => results.push({ ok, text });
-  const pin = (await readFile(repo, '.github/concierge.yml')) ?? '';
+  const newPin = await readFile(repo, '.github/issue-concierge.yml');
+  const oldPin = newPin === null ? await readFile(repo, '.github/concierge.yml') : null;
+  const pin = newPin ?? oldPin ?? '';
   const version = pin.match(/^version:\s*(\S+)/m)?.[1];
   const sha = pin.match(/^sha:\s*(\S+)/m)?.[1];
   note(version === tag && sha === manifest.commit, `pin is ${version ?? 'missing'} ${sha?.slice(0, 7) ?? ''}, expected ${tag} ${manifest.commit.slice(0, 7)}`);
+  if (oldPin !== null) note(true, 'the pin is still in its old place, .github/concierge.yml: the updater moves it to .github/issue-concierge.yml in its next pull request');
 
   const installed = manifest.files.filter((f) => f.dest);
   await Promise.all(

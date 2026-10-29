@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { checkDecisions, checkDeployment, checkGuidance, DECISIONS_DIRS, GUIDANCE_FILES, main, readSafeOutputsConfig } from './check-deployment.mjs';
+import { checkDecisions, checkDeployment, checkGuidance, checkLegacyFolder, DECISIONS_DIRS, GUIDANCE_FILES, main, readSafeOutputsConfig } from './check-deployment.mjs';
 
 const RELATED = (secret = 'FRODO_CLI_ISSUES_TOKEN') => `
 this: rockcarver/frodo-lib
@@ -95,6 +95,17 @@ test('the closer must exist, write to the related repository and use its secret'
   const neither = healthy();
   neither['related-repo-closer.yml'] = 'env:\n  GH_TOKEN: x\n';
   assert.equal(checkDeployment(RELATED(), neither).errors.length, 2);
+});
+
+test('the newer spelling of the marker, left in a closer, is the same warning to finish', () => {
+  const locks = healthy();
+  locks['related-repo-closer.yml'] = 'env:\n  GH_TOKEN: x\n  # issue-concierge:cross-repo-env\n';
+  const { errors, warnings } = checkDeployment(RELATED(), locks);
+  assert.deepEqual(errors, []);
+  assert.equal(warnings.length, 1);
+  assert.match(warnings[0], /still has the # issue-concierge:cross-repo-env marker/);
+  locks['related-repo-closer.yml'] = 'env:\n  # issue-concierge:cross-repo-env\n  CROSS_REPO: rockcarver/frodo-cli\n  CROSS_REPO_TOKEN: ${{ secrets.CLI_TOKEN }}\n';
+  assert.deepEqual(checkDeployment(RELATED(), locks).warnings, [], 'a marker beside the generated lines is not a leftover');
 });
 
 test('a closer the previous updater installed, with the marker not yet replaced, is a warning to finish, not an error', () => {
@@ -196,11 +207,11 @@ test('main: AGENTS.md or copilot-instructions.md silences the notice; a director
 test('main: the notice never changes the outcome of the real checks', () => {
   const related = 'this: a/b\n\nrelated:\n  - role: cli\n    repo: a/c\n    secret: C_TOKEN\n    when: |\n      x\n';
   // A related repository whose compiled workflows are missing: the existing error still fails the check.
-  const failing = runMain({ '.github/agentic-workflows/related-repos.md': related });
+  const failing = runMain({ '.github/issue-concierge/related-repos.md': related });
   assert.equal(failing.code, 1);
   assert.match(failing.out, /::error::/);
   assert.match(failing.out, /::notice::/);
-  assert.equal(runMain({ '.github/agentic-workflows/related-repos.md': related, 'AGENTS.md': 'x' }).code, 1);
+  assert.equal(runMain({ '.github/issue-concierge/related-repos.md': related, 'AGENTS.md': 'x' }).code, 1);
 });
 
 // Decision records: a notice, never a failure.
@@ -258,7 +269,65 @@ test('main: decisions/ at the repository root silences the decision notice; a fi
 
 test('main: the decision notice never changes the outcome of the real checks', () => {
   const related = 'this: a/b\n\nrelated:\n  - role: cli\n    repo: a/c\n    secret: C_TOKEN\n    when: |\n      x\n';
-  const failing = runMain({ '.github/agentic-workflows/related-repos.md': related, 'AGENTS.md': '# Agents' });
+  const failing = runMain({ '.github/issue-concierge/related-repos.md': related, 'AGENTS.md': '# Agents' });
   assert.equal(failing.code, 1);
   assert.match(failing.out, /Design decisions are not preserved/);
+});
+
+// The folder of a repository's own files was `.github/agentic-workflows/` until the update moves it to
+// `.github/issue-concierge/`. Until then the old folder is read, and the check says so; in the 2.x releases that never fails it.
+const FAILING_RELATED = 'this: a/b\n\nrelated:\n  - role: cli\n    repo: a/c\n    secret: C_TOKEN\n    when: |\n      x\n';
+const OLD = (name) => `.github/agentic-workflows/${name}`;
+const NEW = (name) => `.github/issue-concierge/${name}`;
+
+test('checkLegacyFolder: a notice for files only in the old folder, a warning for files in both, nothing otherwise', () => {
+  const has = (...present) => (p) => present.includes(p);
+  assert.deepEqual(checkLegacyFolder(has()), { notices: [], warnings: [] });
+  assert.deepEqual(checkLegacyFolder(has(NEW('scope.md'))), { notices: [], warnings: [] }, 'a repository that has moved has nothing to say');
+  assert.deepEqual(checkLegacyFolder(has(OLD('scope.md'))).notices, [
+    'scope.md is still in .github/agentic-workflows/. The update moves it to .github/issue-concierge/; until then it is read from there.',
+  ]);
+  const two = checkLegacyFolder(has(OLD('scope.md'), OLD('related-repos.md')));
+  assert.equal(two.notices.length, 1, 'one notice, not one per file');
+  assert.match(two.notices[0], /^related-repos\.md, scope\.md are still in \.github\/agentic-workflows\/\. The update moves them to \.github\/issue-concierge\/; until then they are read from there\.$/);
+  const dup = checkLegacyFolder(has(OLD('scope.md'), NEW('scope.md'), OLD('guard.md')));
+  assert.deepEqual(dup.warnings, ['scope.md is in both .github/agentic-workflows/ and .github/issue-concierge/. The one in .github/issue-concierge/ is used and the one in .github/agentic-workflows/ is ignored: delete it.']);
+  assert.match(dup.notices[0], /^guard\.md is still in/, 'a file in both places is a warning only, the other is the notice');
+  assert.deepEqual(checkLegacyFolder(has('.github/agentic-workflows/notes.txt')), { notices: [], warnings: [] }, 'a file the Concierge does not know is none of its business');
+});
+
+test('main: files still in the old folder give one notice, the old related-repos.md is checked, and the exit code is the real checks\'', () => {
+  const only = runMain({ [OLD('scope.md')]: 'x', 'AGENTS.md': '# Agents', 'docs/decisions/README.md': '# D' });
+  assert.equal(only.code, 0, 'the notice alone never fails');
+  assert.match(only.out, /^::notice::scope\.md is still in \.github\/agentic-workflows\/\. The update moves it to \.github\/issue-concierge\/; until then it is read from there\.$/m);
+  assert.match(only.out, /nothing to check/);
+
+  const failing = runMain({ [OLD('related-repos.md')]: FAILING_RELATED, 'AGENTS.md': '# Agents', 'docs/decisions/README.md': '# D' });
+  assert.equal(failing.code, 1, 'the related-repos.md of the old folder is read and its problems are errors as before');
+  assert.match(failing.out, /^::notice::related-repos\.md is still in/m);
+  assert.match(failing.out, /::error::/);
+});
+
+test('main: with the file in both folders the new one is read, the old one is ignored with a warning, and a clean new file passes', () => {
+  const both = runMain({ [NEW('related-repos.md')]: 'this: a/b\n', [OLD('related-repos.md')]: FAILING_RELATED, 'AGENTS.md': '# Agents', 'docs/decisions/README.md': '# D' });
+  assert.equal(both.code, 0, 'the failing old file is not read');
+  assert.match(both.out, /^::warning::related-repos\.md is in both \.github\/agentic-workflows\/ and \.github\/issue-concierge\/\./m);
+  assert.doesNotMatch(both.out, /::error::/);
+  assert.doesNotMatch(both.out, /^::notice::related-repos\.md is still in/m, 'it is not "still" in the old folder: it is in both');
+});
+
+test('main: settings.yml is read from the old folder when the new one has none, and the new one wins', () => {
+  const quiet = { 'AGENTS.md': '# Agents', 'docs/decisions/README.md': '# D' };
+  const old = runMain({ ...quiet, [OLD('settings.yml')]: 'colour: red\n' });
+  assert.equal(old.code, 0);
+  assert.match(old.out, /^::warning::settings\.yml line 1: unknown setting "colour"/m, 'a bad line in the old file is reported');
+  const both = runMain({ ...quiet, [OLD('settings.yml')]: 'colour: red\n', [NEW('settings.yml')]: 'status-issue: true\n' });
+  assert.doesNotMatch(both.out, /unknown setting "colour"/, 'the new file wins');
+  const moved = runMain({ ...quiet, [NEW('settings.yml')]: 'colour: red\n' });
+  assert.match(moved.out, /unknown setting "colour"/);
+  assert.doesNotMatch(moved.out, /still in \.github\/agentic-workflows/);
+});
+
+test('main: nothing to check names the place the file belongs in, which is the new folder', () => {
+  assert.match(runMain({}).out, /^No \.github\/issue-concierge\/related-repos\.md: nothing to check\.$/m);
 });
