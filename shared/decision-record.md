@@ -54,7 +54,8 @@ Accepted records are not edited. To change a decision, write a new record that s
 supersede a record in the same change, so that review sees both.
 
 Scope: `applies-to:` lists the paths the decision binds, so a gate reads it only when a change touches them. Leave it out
-for a repository-wide decision. A decision that binds several repositories is written once, in the repository the others
+for a repository-wide decision. Prefer a folder or a prefix glob (`src/ops/**`, `scripts/issue-*.mjs`) to a single file name: files are
+renamed and change type, and a pattern that matches no file silently keeps the gates from surfacing the record. A decision that binds several repositories is written once, in the repository the others
 list in their `AGENTS.md`, with a `repos:` list in its frontmatter; each repository's `AGENTS.md` names the ones that bind it.
 
 Language: write for any contributor and any tool. No tool names, no "as discussed in the session", no instructions to a

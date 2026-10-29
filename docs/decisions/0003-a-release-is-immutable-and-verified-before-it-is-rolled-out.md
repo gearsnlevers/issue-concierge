@@ -5,7 +5,7 @@ decision-makers:
   - maintainers
 applies-to:
   - .github/workflows/release.yml
-  - .claude/skills/cut-a-concierge-release/**
+  - .claude/skills/cut-an-issue-concierge-release/**
 issues:
   - vscheuber/repo-concierge#10
 ---

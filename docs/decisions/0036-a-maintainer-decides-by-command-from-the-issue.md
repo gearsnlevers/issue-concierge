@@ -6,7 +6,7 @@ decision-makers:
 applies-to:
   - workflows/commands.yml
   - scripts/commands.mjs
-  - scripts/concierge-state.mjs
+  - scripts/issue-concierge-state.mjs
   - shared/settings.yml
   - requirements.json
   - docs/multi-phase-design.md

@@ -6,7 +6,7 @@ decision-makers:
 applies-to:
   - workflows/related-repo-closer.yml
   - scripts/related-repo-closer.mjs
-  - scripts/concierge-updater.mjs
+  - scripts/issue-concierge-updater.mjs
   - scripts/check-deployment.mjs
 issues:
   - rockcarver/frodo-lib#806
