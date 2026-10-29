@@ -12,6 +12,26 @@ Step-by-step instructions for installing Issue Concierge in a consuming reposito
 - Issues enabled on the target repository (Settings → General → Features → Issues).
 - For organization repositories, the Grok (by xAI) GitHub App (or equivalent token) must be installed on the organization.
 - A Copilot engine credential (see below).
+- The tokens in the next section.
+
+## Tokens
+
+Every token the Concierge uses, with what it needs. The name of each is a link to the form for creating it, filled in for the `gearsnlevers` organization: name, description, resource owner, a 90-day expiry and the permissions below. Check that the form shows them before you generate the token.
+
+| Secret | Used for | Permissions (fine-grained) | Repository access |
+|--------|----------|----------------------------|-------------------|
+| [`ISSUE_CONCIERGE_TOKEN`](https://github.com/settings/personal-access-tokens/new?name=ISSUE_CONCIERGE_TOKEN&description=Let+the+Issue+Concierge+updater+open+its+update+pull+request&target_name=gearsnlevers&expires_in=90&contents=write&pull_requests=write&workflows=write) (it was called `CONCIERGE_TOKEN`; the old name still works) | The updater pushes its branch and opens the update pull request, with checks that run ([updater.md](updater.md)) | Contents, Pull requests and Workflows: read and write | The repositories that run the Concierge |
+| [`SIGNAL_TOKEN`](https://github.com/settings/personal-access-tokens/new?name=SIGNAL_TOKEN&description=Apply+and+remove+harness+labels+so+the+next+gate+starts&target_name=gearsnlevers&expires_in=90&issues=write&pull_requests=write) | Labels that start the next gate; pins the status issue ([Signal token](#signal-token)) | Issues and Pull requests: read and write | The repositories that run the Concierge |
+| [`COPILOT_GITHUB_TOKEN`](https://github.com/settings/personal-access-tokens/new?name=COPILOT_GITHUB_TOKEN&description=GitHub+Agentic+Workflows+-+Copilot+engine+authentication&expires_in=90&user_copilot_requests=read) | The Copilot engine of every gate; not needed with organization Copilot billing ([Copilot engine credential](#copilot-engine-credential)) | Account permission Copilot Requests: read | Public repositories (the setting that makes the permission appear) |
+| [`GH_AW_AGENT_TOKEN`](https://github.com/settings/personal-access-tokens/new?name=GH_AW_AGENT_TOKEN&description=Assign+the+Copilot+coding+agent+from+the+PR+worker&target_name=gearsnlevers&expires_in=90&actions=write&contents=write&issues=write&pull_requests=write) | The PR worker assigns the Copilot coding agent ([Copilot coding agent token](#copilot-coding-agent-token)) | Actions, Contents, Issues and Pull requests: read and write | The repositories that run the PR worker |
+| [`RELEASE_TOKEN`](https://github.com/settings/personal-access-tokens/new?name=RELEASE_TOKEN&description=Create+releases+so+the+release+closer+runs&target_name=gearsnlevers&expires_in=90&contents=write) | Creating the GitHub release, so that the release closer runs ([Release token](#release-token)) | Contents: read and write | The repositories that publish releases |
+| [`OTHER_REPO_ISSUES_TOKEN`](https://github.com/settings/personal-access-tokens/new?name=OTHER_REPO_ISSUES_TOKEN&description=Create+and+update+issues+in+the+related+repository&target_name=gearsnlevers&expires_in=90&issues=write) (the name is yours: `related-repos.md` names it, one for each related repository) | Writing to the related repository: the linked issue, the closer, route back, work items ([Cross-repository issue creation](#cross-repository-issue-creation)) | Issues: read and write | Only the related repository |
+
+- **Repository access cannot be pre-filled.** On each form choose **Only select repositories** and select the ones in the last column.
+- **A fine-grained token has one resource owner.** A token for `gearsnlevers` reaches only repositories of that organization; for repositories of another owner, change `target_name=` in the address of the form (the Frodo repositories are in [Frodo](#frodo)). `COPILOT_GITHUB_TOKEN` is the exception: its permission exists only on a personal account, so its form has no resource owner and the token works for organization repositories once it is stored as a secret.
+- **Store each as a secret** of the repositories that use it: an organization secret limited to selected repositories, or a repository secret. A Free-plan organization cannot share a secret with its private repositories, which need their own repository secrets. A repository secret of the same name wins over the organization secret, so delete the old repository secret when you move to an organization secret.
+- **They expire.** Put the expiry in your calendar and replace the token before it passes.
+- The end-to-end sandbox uses the first three and has tokens of its own ([The sandbox](e2e.md#the-sandbox)).
 
 ## 1. Install the workflow files
 
@@ -697,6 +717,7 @@ Nothing here is required: the Concierge reads the old names as well as the new o
 ## Checklist
 
 - [ ] Issues enabled
+- [ ] The tokens in [Tokens](#tokens) created and stored as secrets
 - [ ] `COPILOT_GITHUB_TOKEN` set (org secret for orgs, repo secret for user repos) or org Copilot billing enabled
 - [ ] Workflow `.md` files added (and, if split-repo routing is used, `related-repo-closer.yml` and its script, see above)
 - [ ] Optional `.github/issue-concierge/` config files added only if needed; none left in the old folder `.github/agentic-workflows/` (the update moves them, and Check Deployment lists what is left)
