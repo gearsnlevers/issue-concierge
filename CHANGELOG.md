@@ -1,5 +1,14 @@
 # Changelog
 
+## [v2.1.0] - 2026-10-29
+
+### What's Changed
+* docs: number the scenarios, and list the flows and workflows the Concierge supports by @vscheuber in https://github.com/gearsnlevers/issue-concierge/pull/74
+* feat: name everything the Issue Concierge puts in a repository for the product (v2.1.x) by @vscheuber in https://github.com/gearsnlevers/issue-concierge/pull/75
+* fix: correct the dead applies-to paths of seven accepted records, and refuse a dead path from now on by @vscheuber in https://github.com/gearsnlevers/issue-concierge/pull/76
+
+**Full Changelog**: https://github.com/gearsnlevers/issue-concierge/compare/v2.0.1...v2.1.0
+
 ## [v2.0.1] - 2026-10-28
 
 ### What's Changed
