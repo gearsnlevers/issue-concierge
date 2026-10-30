@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { LEGACY_MARKER, LEGACY_MENTION_MARKER, LEGACY_TITLE, LIST_CAP, MARKER, MENTION_CAP, MENTION_MARKER, TITLE, collect, hasStatusMarker, findStatusIssue, main, maintainersOf, normalise, nudge, overdue, planMention, reconcile, render, renderMention, summarize } from './status-issue.mjs';
+import { LEGACY_MARKER, LEGACY_MENTION_MARKER, LEGACY_TITLE, LIST_CAP, MARKER, MENTION_CAP, MENTION_MARKER, TITLE, collect, hasStatusMarker, findStatusIssue, main, maintainersOf, normalise, nudge, overdue, planMention, reconcile, render, renderMention, rolesOf, summarize } from './status-issue.mjs';
 import { DEFAULTS } from './issue-concierge-settings.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -94,6 +94,23 @@ test('summarize: reporter replies include an opted-out issue, marked, and leave 
   const m = summarize(fixture(), SETTINGS, NOW);
   assert.deepEqual(m.replies.map((r) => [r.number, r.login, r.optedOut]), [[6, 'reporter', false], [9, 'old-reporter', true]]);
   assert.equal(m.replies[0].title, 'Issue 6');
+});
+
+test('summarize: a reply from a private member of the organisation is a maintainer\'s word once the role is known, and says so when it is not', () => {
+  const comments = [
+    comment(6, 'reporter', ago(3 * H)),
+    comment(9, 'private-member', ago(1 * H), { assoc: 'CONTRIBUTOR' }),
+    comment(11, 'unasked', ago(2 * H), { assoc: 'CONTRIBUTOR' }),
+  ];
+  const roles = new Map([['reporter', 'none'], ['private-member', 'admin'], ['unasked', null]]);
+  const m = summarize({ ...fixture(), comments, roles }, SETTINGS, NOW);
+  assert.deepEqual(m.replies.map((r) => [r.number, r.login, r.unchecked]), [[11, 'unasked', true], [6, 'reporter', false]]);
+  const body = render(m);
+  assert.match(body, /- #11 Issue 11 · `unasked` replied 2 h ago · could not check whether they are a maintainer · \[comment\]/);
+  assert.doesNotMatch(body, /private-member/);
+  assert.doesNotMatch(body, /#6 Issue 6 · `reporter` replied 3 h ago · could not check/);
+  const old = summarize({ ...fixture(), comments, roles: undefined }, SETTINGS, NOW);
+  assert.equal(old.replies.some((r) => r.unchecked), false, 'a page built without roles marks nothing');
 });
 
 test('summarize: the pinned version is behind only when the channel has a newer release', () => {
@@ -284,8 +301,8 @@ test('normalise ignores the time of the last change and nothing else', () => {
 // ---------------------------------------------------------------- GitHub
 
 /** A fake GitHub: routes the calls of the script to canned answers and records every write. */
-function fakeCtx({ collaborators = [{ login: 'alice', type: 'User', role_name: 'admin' }, { login: 'bob', type: 'User', role_name: 'maintain' }], collaboratorsFail = [], variableByName = null, variable = { status: 200, data: { value: 'true', updated_at: '2026-10-27T09:30:00Z' } }, issues = [], botIssues = [], comments = [], issueComments = {}, events = {}, runs = [], files = {}, releases = [{ tag_name: 'v1.8.0', prerelease: false }], probe = { state: 'ok', expiresAt: null }, pinned = false, pinFails = null } = {}) {
-  const calls = { list: [], write: [], graphql: [] };
+function fakeCtx({ collaborators = [{ login: 'alice', type: 'User', role_name: 'admin' }, { login: 'bob', type: 'User', role_name: 'maintain' }], collaboratorsFail = [], variableByName = null, variable = { status: 200, data: { value: 'true', updated_at: '2026-10-27T09:30:00Z' } }, issues = [], botIssues = [], comments = [], issueComments = {}, events = {}, runs = [], files = {}, releases = [{ tag_name: 'v1.8.0', prerelease: false }], probe = { state: 'ok', expiresAt: null }, pinned = false, pinFails = null, permissions = {} } = {}) {
+  const calls = { list: [], write: [], graphql: [], permission: [] };
   let isPinned = pinned;
   return {
     calls,
@@ -305,8 +322,14 @@ function fakeCtx({ collaborators = [{ login: 'alice', type: 'User', role_name: '
       if (m) return events[m[1]] ?? [];
       throw new Error(`unexpected list ${p}`);
     },
-    get(p) {
+    get(p, token) {
       if (p.startsWith('repos/o/concierge/releases')) return { status: 200, data: releases };
+      const asked = /^repos\/o\/r\/collaborators\/([^/]+)\/permission$/.exec(p);
+      if (asked) {
+        calls.permission.push({ login: decodeURIComponent(asked[1]), token: token ?? 'workflow' });
+        const answer = permissions[decodeURIComponent(asked[1])] ?? { status: 404, data: null };
+        return typeof answer === 'function' ? answer(token ?? 'workflow') : answer;
+      }
       const named = /^repos\/o\/r\/actions\/variables\/(ISSUE_CONCIERGE_PAUSED|CONCIERGE_PAUSED)$/.exec(p);
       if (named) {
         calls.variableRead = (calls.variableRead ?? 0) + 1;
@@ -357,6 +380,44 @@ test('collect reads what the page needs and nothing it does not', () => {
   assert.deepEqual(out.pin, PIN.version ? { source: 'o/concierge', version: 'v1.8.0', channel: 'stable' } : null);
   assert.equal(out.latest, 'v1.8.0');
   assert.deepEqual(out.token, { state: 'ok', expiresAt: null });
+});
+
+test('rolesOf asks the workflow token first and the signal token second, and a 404 is no role at all', () => {
+  const ctx = fakeCtx({ permissions: {
+    admin: { status: 200, data: { role_name: 'admin', permission: 'admin' } },
+    legacy: { status: 200, data: { permission: 'write' } },
+    stranger: { status: 404, data: null },
+    'needs-signal': (token) => (token === 'workflow' ? { status: 403, data: null } : { status: 200, data: { role_name: 'Maintain' } }),
+    nobody: { status: 403, data: null },
+  } });
+  const roles = rolesOf(ctx, REPO, ['admin', 'legacy', 'stranger', 'needs-signal', 'nobody', 'admin'], 'signal');
+  assert.deepEqual([...roles], [['admin', 'admin'], ['legacy', 'write'], ['stranger', 'none'], ['needs-signal', 'maintain'], ['nobody', null]]);
+  assert.deepEqual(ctx.calls.permission.filter((c) => c.login === 'admin'), [{ login: 'admin', token: 'workflow' }], 'one question per person, and the signal token only when the first could not answer');
+  assert.deepEqual(ctx.calls.permission.filter((c) => c.login === 'nobody').map((c) => c.token), ['workflow', 'signal']);
+  const without = fakeCtx({ permissions: { nobody: { status: 403, data: null } } });
+  assert.deepEqual([...rolesOf(without, REPO, ['nobody'], '')], [['nobody', null]]);
+  assert.deepEqual(without.calls.permission.map((c) => c.token), ['workflow'], 'no signal token, no second try');
+  assert.equal(rolesOf(fakeCtx(), REPO, Array.from({ length: 80 }, (_, i) => `user${i}`), '').size, 30, 'at most thirty people are asked');
+});
+
+test('collect asks the role of the people whose last word the association leaves in doubt, and of nobody else', () => {
+  const ctx = fakeCtx({
+    issues: [issue(1, ['needs-decision']), issue(2, ['bug']), issue(3, ['enhancement']), issue(4, ['backlog'])],
+    comments: [
+      { ...comment(1, 'private-member', ago(H), { assoc: 'CONTRIBUTOR' }), issue_url: 'https://api.github.com/repos/o/r/issues/1' },
+      { ...comment(2, 'owner', ago(H), { assoc: 'OWNER' }), issue_url: 'https://api.github.com/repos/o/r/issues/2' },
+      { ...comment(3, 'github-actions[bot]', ago(H), { type: 'Bot' }), issue_url: 'https://api.github.com/repos/o/r/issues/3' },
+      { ...comment(4, 'reporter', ago(2 * H)), issue_url: 'https://api.github.com/repos/o/r/issues/4' },
+      { ...comment(4, 'earlier', ago(3 * H)), issue_url: 'https://api.github.com/repos/o/r/issues/4' },
+      { ...comment(99, 'elsewhere', ago(H)), issue_url: 'https://api.github.com/repos/o/r/issues/99' },
+    ],
+    permissions: { 'private-member': { status: 200, data: { role_name: 'admin' } }, reporter: { status: 200, data: { role_name: 'read' } } },
+  });
+  const out = collect(ctx, REPO, SETTINGS, 'tok');
+  assert.deepEqual(ctx.calls.permission.map((c) => c.login).sort(), ['private-member', 'reporter']);
+  assert.deepEqual(Object.fromEntries(out.roles), { 'private-member': 'admin', reporter: 'read' });
+  const m = summarize(out, SETTINGS, NOW);
+  assert.deepEqual(m.replies.map((r) => [r.number, r.login]), [[4, 'reporter']], 'the private member\'s word is a maintainer\'s');
 });
 
 test('collect looks back as far as the longest thing the page shows', () => {
