@@ -1,5 +1,15 @@
 # Changelog
 
+## [v2.1.1] - 2026-10-30
+
+### What's Changed
+* docs: one table of every token, with a pre-filled form for the gearsnlevers organization by @vscheuber in https://github.com/gearsnlevers/issue-concierge/pull/77
+* docs: test the Concierge end to end on demand only (record 0039) by @vscheuber in https://github.com/gearsnlevers/issue-concierge/pull/78
+* fix: the status page decides who is a maintainer by repository role by @vscheuber in https://github.com/gearsnlevers/issue-concierge/pull/79
+* feat: the status page tells a reporter from another commenter (record 0040) by @vscheuber in https://github.com/gearsnlevers/issue-concierge/pull/80
+
+**Full Changelog**: https://github.com/gearsnlevers/issue-concierge/compare/v2.1.0...v2.1.1
+
 ## [v2.1.0] - 2026-10-29
 
 ### What's Changed
