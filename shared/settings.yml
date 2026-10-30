@@ -52,7 +52,7 @@ commands-need: triage
 #   How far back the status issue looks for reporter replies that wait for an answer: an open issue whose
 #   latest comment is from someone who is not a maintainer (write, maintain or admin role) and not a bot,
 #   and is newer than this many days. Opted-out issues are included and marked, since nobody else watches
-#   them. The list shows the person's login and a link, never the text of the comment.
+#   them. The list shows the person's login, whether they are the reporter or another commenter, and a link, never the text of the comment.
 reporter-replies-days: 14
 
 # mention-after-days: 0 to 90                                      default: 0 (never)

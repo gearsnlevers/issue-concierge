@@ -140,6 +140,19 @@ test('reporterReplies: a repository role of write or more is a maintainer whatev
   assert.deepEqual(reporterReplies(comments, { now: NOW, days: 14, openNumbers: open }).length, 5, 'without roles the association alone decides, as before');
 });
 
+test('reporterReplies: the reporter is told from another commenter by the login the issue has on record, and comes first', () => {
+  const comments = [
+    reply(1, 'Tsigle', '2026-10-27T08:00:00Z'),
+    reply(2, 'passer-by', '2026-10-27T11:00:00Z'),
+    reply(3, 'someone-else', '2026-10-27T10:00:00Z'),
+    reply(4, 'the-author', '2026-10-27T09:00:00Z', 'CONTRIBUTOR'),
+  ];
+  const reporters = new Map([[1, 'tsigle'], [2, 'tsigle'], [4, 'the-author']]);
+  const out = reporterReplies(comments, { now: NOW, days: 14, openNumbers: open, reporters });
+  assert.deepEqual(out.map((r) => [r.number, r.login, r.reporter]), [[4, 'the-author', true], [1, 'Tsigle', true], [2, 'passer-by', false], [3, 'someone-else', false]], 'the case of a login does not matter; the reporter first, then newest first');
+  assert.deepEqual(reporterReplies(comments, { now: NOW, days: 14, openNumbers: open }).map((r) => r.reporter), [false, false, false, false], 'nobody is the reporter when nobody is named');
+});
+
 test('reporterReplies: a contributor or a first-time commenter is a reporter, a closed issue and an old reply are not listed, newest first', () => {
   const out = reporterReplies(
     [

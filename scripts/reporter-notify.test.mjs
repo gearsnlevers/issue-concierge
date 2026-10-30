@@ -461,6 +461,24 @@ test('link notice: a maintainer of the original repository is not mentioned, an 
   }
 });
 
+test('link notice: a maintainer whose membership is private reads as a CONTRIBUTOR, so the permission API decides, and an outsider is still mentioned', () => {
+  const permission = (login, answer) => ({ [`repos/${THIS}/collaborators/${login}/permission`]: answer });
+  for (const role of ['write', 'maintain', 'admin']) {
+    const w = world({ ...originalBy({ login: 'private-member', type: 'User' }, { author_association: 'CONTRIBUTOR' }), ...permission('private-member', { status: 200, data: { role_name: role, permission: 'admin' } }) });
+    const r = notifyLink(linked(), w.ctx);
+    assert.equal(r.notified, false, role);
+    assert.match(r.reason, /the original reporter is a maintainer \(private-member\)/);
+    assert.equal(w.posted.length, 0);
+  }
+  for (const answer of [{ status: 200, data: { role_name: 'read', permission: 'read' } }, { status: 200, data: { role_name: 'triage' } }, { status: 404, data: null }, { status: 403, data: null }]) {
+    const w = world({ ...originalBy({ login: 'outsider', type: 'User' }, { author_association: 'CONTRIBUTOR' }), ...permission('outsider', answer) });
+    assert.equal(notifyLink(linked(), w.ctx).notified, true, JSON.stringify(answer));
+  }
+  const asked = world(originalBy({ login: 'outsider', type: 'User' }, { author_association: 'OWNER' }));
+  notifyLink(linked(), asked.ctx);
+  assert.ok(!asked.reads.some((p) => p.includes('/collaborators/')), 'the association already says maintainer: nobody is asked');
+});
+
 test('link notice: the person who opened the canonical issue is not mentioned (they take part already)', () => {
   const w = world();
   const r = notifyLink(linked({ user: { login: 'PhalesTrivir', type: 'User' } }), w.ctx);

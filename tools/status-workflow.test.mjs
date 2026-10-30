@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { TRIGGER_LABELS } from '../scripts/janitor.mjs';
 import { buildManifest } from './build-release-manifest.mjs';
 
-// The status issue (docs/multi-phase-design.md, "The maintainer's view", decision 0035) is written by a plain
+// The status issue (docs/multi-phase-design.md, "The maintainer's view", decision 0040) is written by a plain
 // workflow that runs on the events of a busy repository, with a token that can pin. This pins what that workflow may
 // do and when, and that everything it needs is delivered with it.
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -71,7 +71,7 @@ test('every script it imports is delivered too, so that an install runs', () => 
       assert.match(aw, new RegExp(`^  - scripts/${dep.replace('.', '\\.')}$`, 'm'), `${file} imports ${dep}`);
     }
   }
-  assert.match(workflow, /scripts\/issue-concierge-settings\.mjs and scripts\/issue-concierge-state\.mjs to \.github\/scripts\/ \(they import janitor\.mjs and\n# opt-out\.mjs, so install those too\)/);
+  assert.match(workflow, /scripts\/issue-concierge-settings\.mjs and scripts\/issue-concierge-state\.mjs to \.github\/scripts\/ \(they import janitor\.mjs,\n# opt-out\.mjs, related-repo-closer\.mjs and reporter-notify\.mjs, and those import more, so install every script of the release\)/);
 });
 
 test('the status issue is invisible to the gates: opened by the bot and marked with the opt-out label', () => {
@@ -98,9 +98,11 @@ test('the docs, the record and the checklist say the same', () => {
   assert.match(design, /`mention-after-days` \(0, never\) is the nudge above\./);
   assert.match(read('docs/deployment.md'), /`mention-after-days`, off by default; it lists the collaborators with the workflow token and then with `SIGNAL_TOKEN`/);
   assert.match(read('README.md'), /mention the maintainers about what has waited for them too long \(`mention-after-days`\)/);
-  assert.match(read('docs/decisions/0035-each-repository-has-a-status-view-of-its-own.md'), /With `mention-after-days` above 0 \(off by default\) it also mentions the people who have the maintain or admin role/);
-  assert.match(read('docs/decisions/README.md'), /\| 0035 \| \[Each repository has a status view of its own\]\(0035-each-repository-has-a-status-view-of-its-own\.md\) \| accepted \|/);
-  assert.match(read('docs/decisions/0035-each-repository-has-a-status-view-of-its-own.md'), /^status: accepted$/m);
+  assert.match(read('docs/decisions/0040-each-repository-has-a-status-view-of-its-own-and-it-names-the-reporter-by-role.md'), /With `mention-after-days` above 0 \(off by default\) it also mentions the people who have the maintain or admin role/);
+  assert.match(read('docs/decisions/README.md'), /\| 0040 \| \[Each repository has a status view of its own, and it tells a reporter from a maintainer by role\]\(0040-each-repository-has-a-status-view-of-its-own-and-it-names-the-reporter-by-role\.md\) \| accepted \|/);
+  assert.match(read('docs/decisions/README.md'), /\| 0035 \| \[Each repository has a status view of its own\]\(0035-each-repository-has-a-status-view-of-its-own\.md\) \| superseded by 0040 \|/);
+  assert.match(read('docs/decisions/0040-each-repository-has-a-status-view-of-its-own-and-it-names-the-reporter-by-role.md'), /^status: accepted$/m);
+  assert.match(read('docs/decisions/0035-each-repository-has-a-status-view-of-its-own.md'), /^status: superseded by 0040$/m);
 });
 
 test('no heading in the docs is written twice in a row (an insertion once repeated the one it was placed before)', () => {

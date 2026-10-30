@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { LEGACY_MARKER, LEGACY_MENTION_MARKER, LEGACY_TITLE, LIST_CAP, MARKER, MENTION_CAP, MENTION_MARKER, TITLE, collect, hasStatusMarker, findStatusIssue, main, maintainersOf, normalise, nudge, overdue, planMention, reconcile, render, renderMention, rolesOf, summarize } from './status-issue.mjs';
+import { LEGACY_MARKER, LEGACY_MENTION_MARKER, LEGACY_TITLE, LIST_CAP, MARKER, MENTION_CAP, MENTION_MARKER, TITLE, collect, hasStatusMarker, findStatusIssue, main, maintainersOf, normalise, nudge, overdue, planMention, reconcile, render, renderMention, reportersOf, rolesOf, summarize } from './status-issue.mjs';
 import { DEFAULTS } from './issue-concierge-settings.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -106,9 +106,9 @@ test('summarize: a reply from a private member of the organisation is a maintain
   const m = summarize({ ...fixture(), comments, roles }, SETTINGS, NOW);
   assert.deepEqual(m.replies.map((r) => [r.number, r.login, r.unchecked]), [[11, 'unasked', true], [6, 'reporter', false]]);
   const body = render(m);
-  assert.match(body, /- #11 Issue 11 · `unasked` replied 2 h ago · could not check whether they are a maintainer · \[comment\]/);
+  assert.match(body, /- #11 Issue 11 · `unasked` \(another commenter\) replied 2 h ago · could not check whether they are a maintainer · \[comment\]/);
   assert.doesNotMatch(body, /private-member/);
-  assert.doesNotMatch(body, /#6 Issue 6 · `reporter` replied 3 h ago · could not check/);
+  assert.doesNotMatch(body, /#6 Issue 6 · `reporter` \(another commenter\) replied 3 h ago · could not check/);
   const old = summarize({ ...fixture(), comments, roles: undefined }, SETTINGS, NOW);
   assert.equal(old.replies.some((r) => r.unchecked), false, 'a page built without roles marks nothing');
 });
@@ -149,8 +149,8 @@ test('the page counts what the Concierge manages next to what it does not, so ev
 test('reporter replies show the login and a link and never the text of the comment', () => {
   const body = render(summarize(fixture(), SETTINGS, NOW));
   assert.match(body, /## Reporter replies waiting \(2\)/);
-  assert.match(body, /- #6 Issue 6 · `reporter` replied 1 h ago · \[comment\]\(https:\/\/github\.com\/o\/r\/issues\/6#c\)/);
-  assert.match(body, /- #9 Old report · `old-reporter` replied 3 h ago · opted out, the Concierge will not answer/);
+  assert.match(body, /- #6 Issue 6 · `reporter` \(another commenter\) replied 1 h ago · \[comment\]\(https:\/\/github\.com\/o\/r\/issues\/6#c\)/);
+  assert.match(body, /- #9 Old report · `old-reporter` \(another commenter\) replied 3 h ago · opted out, the Concierge will not answer/);
   assert.ok(!body.includes('SECRET-TEXT') && !body.includes('@everyone'));
 });
 
@@ -301,8 +301,8 @@ test('normalise ignores the time of the last change and nothing else', () => {
 // ---------------------------------------------------------------- GitHub
 
 /** A fake GitHub: routes the calls of the script to canned answers and records every write. */
-function fakeCtx({ collaborators = [{ login: 'alice', type: 'User', role_name: 'admin' }, { login: 'bob', type: 'User', role_name: 'maintain' }], collaboratorsFail = [], variableByName = null, variable = { status: 200, data: { value: 'true', updated_at: '2026-10-27T09:30:00Z' } }, issues = [], botIssues = [], comments = [], issueComments = {}, events = {}, runs = [], files = {}, releases = [{ tag_name: 'v1.8.0', prerelease: false }], probe = { state: 'ok', expiresAt: null }, pinned = false, pinFails = null, permissions = {} } = {}) {
-  const calls = { list: [], write: [], graphql: [], permission: [] };
+function fakeCtx({ collaborators = [{ login: 'alice', type: 'User', role_name: 'admin' }, { login: 'bob', type: 'User', role_name: 'maintain' }], collaboratorsFail = [], variableByName = null, variable = { status: 200, data: { value: 'true', updated_at: '2026-10-27T09:30:00Z' } }, issues = [], botIssues = [], comments = [], issueComments = {}, events = {}, runs = [], files = {}, releases = [{ tag_name: 'v1.8.0', prerelease: false }], probe = { state: 'ok', expiresAt: null }, pinned = false, pinFails = null, permissions = {}, remote = {} } = {}) {
+  const calls = { list: [], write: [], graphql: [], permission: [], remote: [] };
   let isPinned = pinned;
   return {
     calls,
@@ -324,6 +324,11 @@ function fakeCtx({ collaborators = [{ login: 'alice', type: 'User', role_name: '
     },
     get(p, token) {
       if (p.startsWith('repos/o/concierge/releases')) return { status: 200, data: releases };
+      if (p.startsWith('repos/o/cli/')) { // the related repository: what the tokens may read of it
+        calls.remote.push({ path: p, token: token ?? 'workflow' });
+        const answer = remote[p] ?? { status: 404, data: null };
+        return typeof answer === 'function' ? answer(token ?? 'workflow') : answer;
+      }
       const asked = /^repos\/o\/r\/collaborators\/([^/]+)\/permission$/.exec(p);
       if (asked) {
         calls.permission.push({ login: decodeURIComponent(asked[1]), token: token ?? 'workflow' });
@@ -418,6 +423,98 @@ test('collect asks the role of the people whose last word the association leaves
   assert.deepEqual(Object.fromEntries(out.roles), { 'private-member': 'admin', reporter: 'read' });
   const m = summarize(out, SETTINGS, NOW);
   assert.deepEqual(m.replies.map((r) => [r.number, r.login]), [[4, 'reporter']], 'the private member\'s word is a maintainer\'s');
+});
+
+// ---------------------------------------------------------------- the reporter and the commenters
+
+const RELATED_FILE = '.github/issue-concierge/related-repos.md';
+const RELATED_TEXT = 'this: o/r\n\nrelated:\n  - role: cli\n    repo: o/cli\n    secret: FRODO_CLI_ISSUES_TOKEN\n';
+const HARNESS = { login: 'github-actions[bot]', type: 'Bot' };
+/** A canonical issue opened by the harness under a maintainer's token, from the original o/cli#9. */
+const canonicalIssue = (n, extra = {}) => issue(n, ['original-in-related-repo'], { user: { login: 'a-maintainer', type: 'User' }, body: `Original report: ...\n\nReported from o/cli#9`, ...extra });
+/** What the related repository answers for the original o/cli#9, an opted-out one by default (cli#921 is). */
+const original9 = ({ author = { login: 'Tsigle', type: 'User' }, labels = ['related-repo', 'no-auto-processing'], comments = null } = {}) => ({
+  'repos/o/cli/issues/9': { status: 200, data: { number: 9, user: author, labels: labels.map((name) => ({ name })) } },
+  'repos/o/cli/issues/9/comments?per_page=100&page=1': { status: 200, data: comments ?? [{ user: HARNESS, body: 'This is being tracked in o/r#7. We will update this issue.' }] },
+});
+
+test('reportersOf: an issue\'s author reported it, and the reporter of a linked issue is the author of its original, opted out or not', () => {
+  const ctx = fakeCtx({ remote: original9(), files: { [RELATED_FILE]: RELATED_TEXT } });
+  const issues = [
+    issue(1, ['bug'], { user: { login: 'Reporter-One', type: 'User' } }),
+    issue(2, ['bug'], { user: { login: 'github-actions[bot]', type: 'Bot' } }),
+    issue(3, ['bug'], { user: { login: 'copilot-swe-agent', type: 'Bot' } }),
+    canonicalIssue(7),
+    issue(4, ['bug'], { user: { login: 'not-asked', type: 'User' } }),
+  ];
+  const reporters = reportersOf(ctx, REPO, issues, new Set([1, 2, 3, 7]), '');
+  assert.deepEqual([...reporters], [[1, 'reporter-one'], [7, 'tsigle']], 'lower case; a bot reported nothing; the author of the linked issue is a maintainer and is not the reporter');
+  assert.deepEqual(ctx.calls.remote.map((c) => c.path), ['repos/o/cli/issues/9', 'repos/o/cli/issues/9/comments?per_page=100&page=1'], 'the original is read only for the linked issue that has a reply');
+});
+
+test('reportersOf: a link nobody confirmed, a repository that is not a related one and an unreadable original name nobody', () => {
+  const files = { [RELATED_FILE]: RELATED_TEXT };
+  const forged = fakeCtx({ remote: original9({ comments: [{ user: { login: 'someone', type: 'User' }, body: 'tracked in o/r#7' }] }), files });
+  assert.equal(reportersOf(forged, REPO, [canonicalIssue(7)], new Set([7]), '').size, 0, 'only the harness\'s comment proves the link');
+  const unlabelled = fakeCtx({ remote: original9({ labels: ['bug'] }), files });
+  assert.equal(reportersOf(unlabelled, REPO, [canonicalIssue(7)], new Set([7]), '').size, 0, 'a maintainer unlinked the original');
+  const elsewhere = fakeCtx({ remote: original9(), files });
+  assert.equal(reportersOf(elsewhere, REPO, [canonicalIssue(7, { body: 'Reported from someone/else#9' })], new Set([7]), '').size, 0);
+  assert.equal(elsewhere.calls.remote.length, 0, 'nothing is read for a repository that is not the related one');
+  const unlisted = fakeCtx({ remote: original9(), files: {} });
+  assert.equal(reportersOf(unlisted, REPO, [canonicalIssue(7)], new Set([7]), '').size, 0, 'no related-repos.md, no related repository');
+  const private_ = fakeCtx({ files });
+  assert.equal(reportersOf(private_, REPO, [canonicalIssue(7)], new Set([7]), '').size, 0, 'a private original the workflow token cannot read');
+  const bot = fakeCtx({ remote: original9({ author: { login: 'github-actions[bot]', type: 'Bot' } }), files });
+  assert.equal(reportersOf(bot, REPO, [canonicalIssue(7)], new Set([7]), '').size, 0, 'a bot reported nothing');
+});
+
+test('reportersOf: the signal token reads the original the workflow token may not, and at most ten linked issues are looked up', () => {
+  const answers = original9();
+  const remote = Object.fromEntries(Object.entries(answers).map(([path, answer]) => [path, (token) => (token === 'workflow' ? { status: 404, data: null } : answer)]));
+  const ctx = fakeCtx({ remote, files: { [RELATED_FILE]: RELATED_TEXT } });
+  assert.deepEqual([...reportersOf(ctx, REPO, [canonicalIssue(7)], new Set([7]), 'signal')], [[7, 'tsigle']]);
+  assert.deepEqual(ctx.calls.remote.map((c) => c.token), ['workflow', 'signal', 'workflow', 'signal'], 'the second token only where the first was refused');
+  const many = fakeCtx({ remote: answers, files: { [RELATED_FILE]: RELATED_TEXT } });
+  const issues = Array.from({ length: 14 }, (_, i) => canonicalIssue(100 + i));
+  assert.equal(reportersOf(many, REPO, issues, new Set(issues.map((i) => i.number)), '').size, 0, 'none of them is confirmed by the original');
+  assert.equal(many.calls.remote.filter((c) => c.path === 'repos/o/cli/issues/9').length, 10);
+});
+
+test('the page tells the reporter of a linked issue from another commenter, and puts the reporter first', () => {
+  const ctx = fakeCtx({
+    issues: [canonicalIssue(7), issue(8, ['bug'], { user: { login: 'Asker', type: 'User' } })],
+    comments: [
+      { ...comment(7, 'passer-by', ago(1 * H)), issue_url: 'https://api.github.com/repos/o/r/issues/7' },
+      { ...comment(7, 'tsigle', ago(2 * H), { assoc: 'CONTRIBUTOR' }), issue_url: 'https://api.github.com/repos/o/r/issues/7' },
+      { ...comment(8, 'asker', ago(3 * H)), issue_url: 'https://api.github.com/repos/o/r/issues/8' },
+      { ...comment(7, 'a-maintainer', ago(30 * 60000), { assoc: 'CONTRIBUTOR' }), issue_url: 'https://api.github.com/repos/o/r/issues/7' },
+    ],
+    permissions: { 'a-maintainer': { status: 200, data: { role_name: 'admin' } } },
+    remote: original9(),
+    files: { [RELATED_FILE]: RELATED_TEXT },
+  });
+  const out = collect(ctx, REPO, SETTINGS, 'tok');
+  assert.deepEqual([...out.reporters], [[8, 'asker']], 'the maintainer\'s word on #7 ends that list, so the original is not read');
+  const later = fakeCtx({
+    issues: [canonicalIssue(7), issue(8, ['bug'], { user: { login: 'Asker', type: 'User' } })],
+    comments: [
+      { ...comment(7, 'passer-by', ago(1 * H)), issue_url: 'https://api.github.com/repos/o/r/issues/7' },
+      { ...comment(7, 'tsigle', ago(2 * H), { assoc: 'CONTRIBUTOR' }), issue_url: 'https://api.github.com/repos/o/r/issues/7' },
+      { ...comment(8, 'asker', ago(3 * H)), issue_url: 'https://api.github.com/repos/o/r/issues/8' },
+    ],
+    remote: original9(),
+    files: { [RELATED_FILE]: RELATED_TEXT },
+  });
+  const raw2 = collect(later, REPO, SETTINGS, 'tok');
+  assert.deepEqual(Object.fromEntries(raw2.reporters), { 7: 'tsigle', 8: 'asker' });
+  const model = summarize(raw2, SETTINGS, NOW);
+  assert.deepEqual(model.replies.map((r) => [r.number, r.login, r.reporter]), [[8, 'asker', true], [7, 'passer-by', false]], 'the latest comment of each issue counts; the reporter first');
+  const body = render(model);
+  assert.match(body, /- #8 Issue 8 · `asker` \(the reporter\) replied 3 h ago/);
+  assert.match(body, /- #7 Issue 7 · `passer-by` \(another commenter\) replied 1 h ago/);
+  assert.ok(body.indexOf('(the reporter)') < body.indexOf('(another commenter)'));
+  assert.match(body, /"replies": 2,\n  "repliesFromReporter": 1,/);
 });
 
 test('collect looks back as far as the longest thing the page shows', () => {
