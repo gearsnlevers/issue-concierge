@@ -1,6 +1,6 @@
 ---
 name: cut-an-issue-concierge-release
-description: Cut an Issue Concierge release and roll it out to every repository that consumes it. Verify main, run the Release workflow, verify the published release, dispatch the Issue Concierge updater in each deployment, check the update pull requests, merge them, then verify every default branch. Use when a maintainer asks to release, ship or deploy a new version of the harness, or to check that a rollout went through. Maintainer-only: it publishes an immutable release and merges pull requests.
+description: Cut an Issue Concierge release and roll it out to every repository that consumes it. Verify main, run the Release workflow, verify the published release, prove it in the sandbox when the release needs it, dispatch the Issue Concierge updater in each deployment, check the update pull requests, merge them, then verify every default branch. Use when a maintainer asks to release, ship or deploy a new version of the harness, or to check that a rollout went through. Maintainer-only: it publishes an immutable release and merges pull requests.
 disable-model-invocation: true
 ---
 
@@ -69,6 +69,31 @@ It changes nothing. It checks that the release is published and immutable, that 
 - Read the comparison against the changes the maintainer named. A changed file nobody expected is a surprise to report, not to explain away. A different gh-aw version means every lock file in every deployment changes; that is expected only when the release says so.
 
 If the maintainer did not ask for the rollout, stop here and report the tag, the commit and the comparison.
+
+## 3b. Prove it in the sandbox
+
+[Record 0039](../../../docs/decisions/0039-the-concierge-is-tested-end-to-end-on-demand-in-proportion-to-what-changed.md) says what proof a release needs before any other deployment gets it. Every release: the four sandbox repositories (`gearsnlevers/e2e-lib`, `e2e-app`, `e2e-lib-private`, `e2e-app-private`) are deployments like any other, so they take steps 4 to 7 first, on their own, and the deployment check, the janitor dry run and the status page are clean there. A release that changes how a gate behaves: also the suite on the public pair, and the scenario that exercises the changed behaviour repeated. A release that changes secrets, tokens, permissions or anything that depends on a repository being private: also the private pair. A release that changes nothing a gate reads needs no suite. Say which tier you chose and why.
+
+- Tell the maintainer before a run starts. The runner files its issues under their account, so they get a mail for each comment the Concierge leaves (two to seven per scenario, about fifty for a full suite); a full suite takes about three hours and spends model credits.
+- The public pair is free. The private pair uses the organisation's Actions minutes and rests paused: check the budget first (`gh api organizations/gearsnlevers/settings/billing/budgets`, and the usage with `gh api "organizations/gearsnlevers/settings/billing/usage/summary?repository=gearsnlevers/e2e-lib-private"`), delete the pause in both private repositories before the run, and set it again when the run ends, whatever its result.
+
+```bash
+gh variable delete ISSUE_CONCIERGE_PAUSED -R gearsnlevers/e2e-lib-private   # and e2e-app-private, only for a run on the private pair
+gh variable set ISSUE_CONCIERGE_PAUSED --body true -R gearsnlevers/e2e-lib-private   # and e2e-app-private, after it
+```
+
+- Run the pairs the tier calls for, from a checkout of this repository at the release tag, or with the E2E workflow (`gh workflow run e2e.yml -R gearsnlevers/issue-concierge --ref main -f profile=public -f scenario=10`; its `profile` input defaults to `public`). Scenario 10 takes about twenty minutes, so run several samples one after another, not side by side.
+
+```bash
+node tools/e2e/run.mjs --yes --profile public --scenario 10 --out s10-1.json   # one sample; repeat
+node tools/e2e/run.mjs --yes --profile public --out full.json                  # the suite
+```
+
+- Clean means every scenario passed on its first attempt. One that passed only on the second attempt is flaky: read its report and say so. One that failed twice is a result: stop and report. An attempt that ends in `error` because the runner lost its connection to GitHub is the runner's, not the release's, and the retry decides.
+- A job annotated "The job was not started because recent account payments have failed or your spending limit needs to be increased" is a billing stop, not a result: stop, do not count that run, and tell the maintainer, who owns the budget.
+- Afterwards each sandbox has only its status issue open (`gh issue list -R <repo> --state open`), and the private pair is paused again.
+
+The rollout of the other deployments continues with steps 4 to 7.
 
 ## 4. Dispatch the updater in every deployment
 
@@ -143,7 +168,7 @@ Expect green runs. `check-deployment` ends with `0 error(s), 0 warning(s)` and m
 
 ## Report
 
-Give the maintainer: the tag and commit; the verification result of step 3 and the release comparison in one line; the update pull requests (number, check state, merged or not); the result of step 7; and what you did not verify. Keep claims to what you saw. Do not say a gate behaves differently live until a real case has run through it.
+Give the maintainer: the tag and commit; the verification result of step 3 and the release comparison in one line; the proof you ran (tier, runs, clean or not); the update pull requests (number, check state, merged or not); the result of step 7; and what you did not verify. Keep claims to what you saw. Do not say a gate behaves differently live until a real case has run through it.
 
 ## Pitfalls
 
