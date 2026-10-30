@@ -12,6 +12,7 @@ import {
   LABEL_ORIGINAL,
   LABEL_WAITING,
   resolutionFor,
+  verifyOriginal,
   waitingComment,
 } from './related-repo-closer.mjs';
 import { resolutionComment } from './resolution.mjs';
@@ -624,6 +625,15 @@ test('a canonical issue that carries no-auto-processing is skipped before anythi
   assert.match(verdict.reason, /carries no-auto-processing/);
   assert.deepEqual(gh.reads, [], 'the original is not even read');
   assert.equal(decide(canonical(), ctxFor(github())).action, 'waiting', 'the control without the label');
+});
+
+test('verifyOriginal refuses an opted-out original, unless the caller only reads it', () => {
+  const gh = github({ [`repos/${RELATED}/issues/922`]: { status: 200, data: original({ labels: [{ name: LABEL_ORIGINAL }, { name: 'no-auto-processing' }] }) } });
+  assert.match(verifyOriginal(canonical(), ctxFor(gh)).skip, /922: the issue carries no-auto-processing/);
+  const read = verifyOriginal(canonical(), ctxFor(gh), { allowOptedOut: true });
+  assert.equal(read.original.data.user.login, 'a-reporter', 'the opt-out says what the Concierge does there, and not who wrote it');
+  const forged = github({ [`repos/${RELATED}/issues/922/comments?per_page=100&page=1`]: { status: 200, data: [] }, [`repos/${RELATED}/issues/922`]: { status: 200, data: original({ labels: [{ name: LABEL_ORIGINAL }, { name: 'no-auto-processing' }] }) } });
+  assert.match(verifyOriginal(canonical(), ctxFor(forged), { allowOptedOut: true }).skip, /no comment from the harness that names/, 'the rest of the proof still holds');
 });
 
 test('an original that carries no-auto-processing is not commented on, labelled or closed', () => {

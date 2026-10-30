@@ -62,3 +62,4 @@ Copy `template.md` to `NNNN-short-title.md` (the next number, starting at 0001),
 | 0037 | [The Concierge is paused by a repository variable](0037-the-concierge-is-paused-by-a-repository-variable.md) | accepted |
 | 0038 | [Everything the Issue Concierge puts in a repository is named for the product](0038-everything-the-issue-concierge-puts-in-a-repository-is-named-for-the-product.md) | accepted |
 | 0039 | [The Concierge is tested end to end on demand, in proportion to what changed](0039-the-concierge-is-tested-end-to-end-on-demand-in-proportion-to-what-changed.md) | accepted |
+| 0040 | [Each repository has a status view of its own, and it tells a reporter from a maintainer by role](0040-each-repository-has-a-status-view-of-its-own-and-it-names-the-reporter-by-role.md) | proposed |

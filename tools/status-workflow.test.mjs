@@ -71,7 +71,7 @@ test('every script it imports is delivered too, so that an install runs', () => 
       assert.match(aw, new RegExp(`^  - scripts/${dep.replace('.', '\\.')}$`, 'm'), `${file} imports ${dep}`);
     }
   }
-  assert.match(workflow, /scripts\/issue-concierge-settings\.mjs and scripts\/issue-concierge-state\.mjs to \.github\/scripts\/ \(they import janitor\.mjs and\n# opt-out\.mjs, so install those too\)/);
+  assert.match(workflow, /scripts\/issue-concierge-settings\.mjs and scripts\/issue-concierge-state\.mjs to \.github\/scripts\/ \(they import janitor\.mjs,\n# opt-out\.mjs, related-repo-closer\.mjs and reporter-notify\.mjs, and those import more, so install every script of the release\)/);
 });
 
 test('the status issue is invisible to the gates: opened by the bot and marked with the opt-out label', () => {

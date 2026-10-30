@@ -107,9 +107,11 @@ export const MAINTAINER_ROLES = new Set(['write', 'maintain', 'admin']);
  * and not a bot, and is newer than `days`. comments: [{ issueNumber, id, created_at, user, author_association, html_url }].
  * The association is only a first look: GitHub shows a member whose membership is private as a CONTRIBUTOR to the token
  * of a workflow, so `roles` (login -> the repository role the permission API gave, null when it could not be asked) has
- * the last word. A login without a role is a reporter, as before. Returns [{ number, login, at, url }], newest first.
+ * the last word. A login without a role is a reporter, as before. `reporters` (issue number -> the login of the person who
+ * reported it, lower case) says which of the replies is the reporter's: the others are another commenter's. Returns
+ * [{ number, login, at, url, reporter }], the reporter's replies first and each group newest first.
  */
-export function reporterReplies(comments, { now, days, openNumbers, roles = new Map() }) {
+export function reporterReplies(comments, { now, days, openNumbers, roles = new Map(), reporters = new Map() }) {
   const latest = new Map();
   for (const c of comments) {
     // The options comment is always the last one, so it must not hide a reporter's reply under it.
@@ -124,9 +126,9 @@ export function reporterReplies(comments, { now, days, openNumbers, roles = new 
     const isBot = !login || c.user.type === 'Bot' || login === BOT || /\[bot\]$/.test(login);
     if (isBot || MAINTAINER_ASSOCIATIONS.has(c.author_association) || MAINTAINER_ROLES.has(roles.get(login))) continue;
     const at = Date.parse(c.created_at);
-    if (at >= limit) out.push({ number, login, at, url: c.html_url });
+    if (at >= limit) out.push({ number, login, at, url: c.html_url, reporter: reporters.get(number) === String(login).toLowerCase() });
   }
-  return out.sort((a, b) => b.at - a.at);
+  return out.sort((a, b) => Number(b.reporter) - Number(a.reporter) || b.at - a.at);
 }
 
 /**
