@@ -34,6 +34,8 @@ export const LIST_CAP = 10;
 const ANALYSIS_CHECKS = 40;
 /** Issues whose events are read to find out how long they have waited. */
 const EVENT_CHECKS = 40;
+/** People whose repository role is asked for, to tell a maintainer's last word from a reporter's reply. */
+const ROLE_CHECKS = 30;
 /** GitHub accepts 65,536 characters in a body; the page stays well below. */
 const BODY_LIMIT = 60000;
 const MAX_BUFFER = 64 * 1024 * 1024;
@@ -48,7 +50,8 @@ const minute = (ms) => `${new Date(ms).toISOString().slice(0, 16).replace('T', '
 
 /**
  * raw: { repo, issues (the open ones, pull requests included), comments, events (number -> events), analysed (a set of
- * numbers), runs, pin, latest, token }; settings as parseSettings gives them; now in milliseconds.
+ * numbers), runs, pin, latest, token, roles (login -> repository role, null when it could not be asked) }; settings as
+ * parseSettings gives them; now in milliseconds.
  */
 export function summarize(raw, settings, now) {
   const counts = { open: 0, managed: 0, optedOut: 0, botAuthored: 0, notPickedUp: 0 };
@@ -82,10 +85,11 @@ export function summarize(raw, settings, now) {
   for (const q of queues.values()) q.items.sort((a, b) => a.since - b.since);
   stages['in-flight'].sort((a, b) => a.since - b.since);
 
-  const replies = reporterReplies(raw.comments, { now, days: settings['reporter-replies-days'], openNumbers }).map((r) => ({
+  const replies = reporterReplies(raw.comments, { now, days: settings['reporter-replies-days'], openNumbers, roles: raw.roles }).map((r) => ({
     ...r,
     title: byNumber.get(r.number)?.title ?? '',
     optedOut: optedOut.has(r.number),
+    unchecked: Boolean(raw.roles) && !raw.roles.get(r.login),
   }));
 
   const health = runHealth(raw.runs, { now });
@@ -137,7 +141,7 @@ export function render(m) {
   } else {
     L.push(`The latest comment is from someone who is not a maintainer or a bot, from the last ${plural(settings['reporter-replies-days'], 'day')}.`, '');
     for (const r of m.replies.slice(0, LIST_CAP)) {
-      L.push(`- #${r.number} ${safeText(r.title)} · \`${safeText(r.login, 39)}\` replied ${ago(m.now - r.at)} ago${r.optedOut ? ' · opted out, the Concierge will not answer' : ''}${r.url ? ` · [comment](${r.url})` : ''}`);
+      L.push(`- #${r.number} ${safeText(r.title)} · \`${safeText(r.login, 39)}\` replied ${ago(m.now - r.at)} ago${r.optedOut ? ' · opted out, the Concierge will not answer' : ''}${r.unchecked ? ' · could not check whether they are a maintainer' : ''}${r.url ? ` · [comment](${r.url})` : ''}`);
     }
     if (m.replies.length > LIST_CAP) L.push(`- and ${m.replies.length - LIST_CAP} more`);
     L.push('');
@@ -349,6 +353,25 @@ export function realContext(env = process.env) {
   };
 }
 
+/**
+ * The repository role of each login (read, triage, write, maintain, admin, none), from the permission API: the workflow token
+ * asks first and the signal token second, as the commands do. null when neither could be asked. The author association says
+ * CONTRIBUTOR for a member whose membership is private, so a maintainer's last word would look like a reporter's reply.
+ */
+export function rolesOf(ctx, repo, logins, signalToken) {
+  const roles = new Map();
+  for (const login of [...new Set(logins)].slice(0, ROLE_CHECKS)) {
+    let role = null;
+    for (const token of signalToken ? [undefined, signalToken] : [undefined]) {
+      const res = ctx.get(`repos/${repo}/collaborators/${encodeURIComponent(login)}/permission`, token);
+      if (res.status === 200 && res.data) { role = String(res.data.role_name || res.data.permission || '').toLowerCase() || null; break; }
+      if (res.status === 404) { role = 'none'; break; }
+    }
+    roles.set(login, role);
+  }
+  return roles;
+}
+
 /** Collect the facts. Returns null when the issues cannot be read: the page is not rewritten from nothing. */
 export function collect(ctx, repo, settings, signalToken, pausedVariables = []) {
   const now = ctx.now;
@@ -360,6 +383,9 @@ export function collect(ctx, repo, settings, signalToken, pausedVariables = []) 
   const since = new Date(now - windowDays * 86400000).toISOString();
   const rawComments = ctx.list(`repos/${repo}/issues/comments?since=${encodeURIComponent(since)}`, { maxPages: 10 }) ?? [];
   const comments = rawComments.map((c) => ({ ...c, issueNumber: Number(String(c.issue_url).split('/').pop()) }));
+  // Whose last word is a reporter's reply is settled by the repository role, and only the replies the association leaves in doubt are asked.
+  const doubtful = reporterReplies(comments, { now, days: settings['reporter-replies-days'], openNumbers: new Set(candidates.map((i) => i.number)) });
+  const roles = rolesOf(ctx, repo, doubtful.map((r) => r.login), signalToken);
 
   const analysed = new Set();
   let checks = 0;
@@ -393,7 +419,7 @@ export function collect(ctx, repo, settings, signalToken, pausedVariables = []) 
     .filter(Boolean)
     .sort();
   const pausedSince = stamps[0] ?? null;
-  return { repo, issues: candidates, comments, analysed, events, runs, pin, latest, token: ctx.probe(signalToken), paused: paused ? { since: pausedSince } : null };
+  return { repo, issues: candidates, comments, roles, analysed, events, runs, pin, latest, token: ctx.probe(signalToken), paused: paused ? { since: pausedSince } : null };
 }
 
 const PIN = 'mutation($id: ID!) { pinIssue(input: {issueId: $id}) { issue { id } } }';

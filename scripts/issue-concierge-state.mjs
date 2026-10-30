@@ -99,12 +99,17 @@ export const isOptionsComment = (comment) => {
   return Boolean(comment.user && comment.user.login === BOT && (body.includes(OPTIONS_MARKER) || body.includes(LEGACY_OPTIONS_MARKER)));
 };
 
+/** The repository roles whose comment is a maintainer's: they can change what the Concierge acts on. */
+export const MAINTAINER_ROLES = new Set(['write', 'maintain', 'admin']);
+
 /**
  * Reporter replies nobody has answered: the latest comment of an open issue is from a person who is not a maintainer
  * and not a bot, and is newer than `days`. comments: [{ issueNumber, id, created_at, user, author_association, html_url }].
- * Returns [{ number, login, at, url }], newest first.
+ * The association is only a first look: GitHub shows a member whose membership is private as a CONTRIBUTOR to the token
+ * of a workflow, so `roles` (login -> the repository role the permission API gave, null when it could not be asked) has
+ * the last word. A login without a role is a reporter, as before. Returns [{ number, login, at, url }], newest first.
  */
-export function reporterReplies(comments, { now, days, openNumbers }) {
+export function reporterReplies(comments, { now, days, openNumbers, roles = new Map() }) {
   const latest = new Map();
   for (const c of comments) {
     // The options comment is always the last one, so it must not hide a reporter's reply under it.
@@ -117,7 +122,7 @@ export function reporterReplies(comments, { now, days, openNumbers }) {
   for (const [number, c] of latest) {
     const login = c.user && c.user.login;
     const isBot = !login || c.user.type === 'Bot' || login === BOT || /\[bot\]$/.test(login);
-    if (isBot || MAINTAINER_ASSOCIATIONS.has(c.author_association)) continue;
+    if (isBot || MAINTAINER_ASSOCIATIONS.has(c.author_association) || MAINTAINER_ROLES.has(roles.get(login))) continue;
     const at = Date.parse(c.created_at);
     if (at >= limit) out.push({ number, login, at, url: c.html_url });
   }

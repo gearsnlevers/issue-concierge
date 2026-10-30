@@ -5,7 +5,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   CONCIERGE_LABELS, GATE_LABELS, LEGACY_OPTIONS_MARKER, OPTIONS_MARKER, QUEUES, STUCK_AFTER_MINUTES, aicOf, ago, classify, compareVersions, isAnalysis, isConciergeLabel,
-  GATE_PREFIX, isOptionsComment, labelledAt, latestRelease, queueOf, readPin, reporterReplies, runHealth, safeText, shortGateName, spend, tokenExpiry,
+  GATE_PREFIX, MAINTAINER_ROLES, isOptionsComment, labelledAt, latestRelease, queueOf, readPin, reporterReplies, runHealth, safeText, shortGateName, spend, tokenExpiry,
 } from './issue-concierge-state.mjs';
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -123,6 +123,22 @@ for (const marker of [OPTIONS_MARKER, LEGACY_OPTIONS_MARKER]) {
     assert.deepEqual(answered, [], 'a maintainer answered before the menu was posted again');
   });
 }
+
+test('reporterReplies: a repository role of write or more is a maintainer whatever the association says, because a private member reads as a CONTRIBUTOR', () => {
+  const comments = [
+    reply(1, 'private-member', '2026-10-27T10:00:00Z', 'CONTRIBUTOR'),
+    reply(2, 'reader', '2026-10-27T10:00:00Z', 'CONTRIBUTOR'),
+    reply(3, 'unasked', '2026-10-27T10:00:00Z', 'CONTRIBUTOR'),
+    reply(4, 'triager', '2026-10-27T10:00:00Z', 'NONE'),
+    reply(5, 'maintainer', '2026-10-27T10:00:00Z', 'NONE'),
+  ];
+  const roles = new Map([['private-member', 'admin'], ['reader', 'read'], ['unasked', null], ['triager', 'triage'], ['maintainer', 'maintain']]);
+  const out = reporterReplies(comments, { now: NOW, days: 14, openNumbers: open, roles });
+  assert.deepEqual(out.map((r) => r.login).sort(), ['reader', 'triager', 'unasked'], 'only write, maintain and admin answer for the maintainers');
+  for (const role of ['write', 'maintain', 'admin']) assert.equal(MAINTAINER_ROLES.has(role), true, role);
+  for (const role of ['read', 'triage', 'none', null, undefined]) assert.equal(MAINTAINER_ROLES.has(role), false, String(role));
+  assert.deepEqual(reporterReplies(comments, { now: NOW, days: 14, openNumbers: open }).length, 5, 'without roles the association alone decides, as before');
+});
 
 test('reporterReplies: a contributor or a first-time commenter is a reporter, a closed issue and an old reply are not listed, newest first', () => {
   const out = reporterReplies(
