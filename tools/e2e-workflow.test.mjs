@@ -7,11 +7,15 @@ import { fileURLToPath } from 'node:url';
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const text = fs.readFileSync(path.join(ROOT, '.github/workflows/e2e.yml'), 'utf8');
 
-test('the e2e workflow runs on demand and weekly, never on a pull request, because it holds a person\'s token', () => {
+test('the e2e workflow runs on demand only: never on a schedule, never on a pull request, because it holds a person\'s token', () => {
   const on = text.match(/^on:\n([\s\S]*?)\npermissions:/m)[1];
   assert.match(on, /^ {2}workflow_dispatch:/m);
-  assert.match(on, /^ {2}schedule:/m);
-  assert.doesNotMatch(on, /pull_request|push:|issues:|issue_comment/);
+  assert.doesNotMatch(on, /schedule:|cron:|pull_request|push:|issues:|issue_comment/);
+});
+
+test('the e2e workflow runs on the public pair unless a maintainer asks for the private one, which spends the plan\'s minutes', () => {
+  assert.match(text, /profile:\n {8}description: [^\n]*\n {8}required: false\n {8}default: public\n/);
+  assert.match(text, /PROFILE: \$\{\{ inputs\.profile \|\| 'public' \}\}/);
 });
 
 test('the e2e workflow has read-only permissions and gives the runner token to the two steps that file issues, nothing else', () => {

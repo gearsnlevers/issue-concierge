@@ -1,6 +1,6 @@
 # End-to-end tests
 
-The unit tests pin what the prompts say and what the scripts decide. They cannot say what a model does with a prompt, or what GitHub does with a label, a comment or a run. The end-to-end suite does: it files mock enhancements in sandbox repositories, lets the real gates run on them, and asserts what the design promises. Why it exists and what it may and may not do: [record 0033](decisions/0033-the-concierge-is-tested-end-to-end-in-a-sandbox-of-its-own.md).
+The unit tests pin what the prompts say and what the scripts decide. They cannot say what a model does with a prompt, or what GitHub does with a label, a comment or a run. The end-to-end suite does: it files mock enhancements in sandbox repositories, lets the real gates run on them, and asserts what the design promises. Why it exists, when it runs and what it may and may not do: [record 0039](decisions/0039-the-concierge-is-tested-end-to-end-on-demand-in-proportion-to-what-changed.md), which carries forward [record 0033](decisions/0033-the-concierge-is-tested-end-to-end-in-a-sandbox-of-its-own.md).
 
 ## The sandbox
 
@@ -43,11 +43,21 @@ node tools/e2e/run.mjs --yes --profile all --out results.json  # both pairs, sid
 node tools/e2e/run.mjs --cleanup-stale 6                       # close what a killed run left open
 ```
 
-Without `--yes` it only prints the plan. It needs `gh` and a token in `GH_TOKEN` (or a logged-in `gh`) of a person who can write to the sandbox. In Actions, **E2E** runs it on demand and every Monday. The result is a Markdown report (also in the job summary) and, with `--out`, JSON.
+Without `--yes` it only prints the plan. It needs `gh` and a token in `GH_TOKEN` (or a logged-in `gh`) of a person who can write to the sandbox. In Actions, **E2E** runs it on demand only (its `profile` input defaults to `public`); it never runs on a schedule or on a pull request. The result is a Markdown report (also in the job summary) and, with `--out`, JSON.
 
 How a run goes: each scenario files its issue(s) with a tag in the title and a hidden marker in the body, polls GitHub every 45 seconds until its checks hold or its time is up, and in the end adds `no-auto-processing` to what it filed and closes it as not planned. A scenario that fails is run once more (`--retries`); one that passes only the second time is reported as flaky. A model does not answer the same way twice; a real regression fails both times.
 
 **Which runs belong to a scenario.** Nothing ties a gate's run to an issue: a gh-aw run is titled with the workflow, and a failure issue names only the run that failed. So a run, or a failure issue, counts for a scenario when it started after the scenario did, and the scenarios of a pair run one at a time (the pairs run side by side). The `runs` check makes sure the runs are seen at all, so that "no run failed" cannot pass on zero runs.
+
+## What a run costs, and the private pair
+
+Facts measured on 2026-10-29 and 2026-10-30; they date, so check them before relying on them.
+
+- **The public pair** uses no Actions minutes (public repositories are free; the usage report shows them at a full discount). A run spends model credits, which have not been measured. A full suite on one pair takes about three hours; scenario 10 alone about twenty minutes.
+- **The private pair** uses the organisation's Actions minutes. A free-plan organisation includes a monthly quantity for private repositories (shown in the usage report as a dollar amount that the minutes are discounted against), and the organisation's Actions budget stops usage when it is $0: a job then does not start, with the annotation "The job was not started because recent account payments have failed or your spending limit needs to be increased". That wording is generic; it appeared with no failed payment, because the included minutes were used up. A run stopped this way proves nothing about a release. Read the budget and the usage with the normal `gh` token: `gh api organizations/gearsnlevers/settings/billing/budgets` and `gh api "organizations/gearsnlevers/settings/billing/usage/summary?repository=gearsnlevers/e2e-lib-private"`.
+- **The workflows of a deployment run on a schedule** (the janitor, the sweep, dependency watch and the PR ready signal, among others), and in a private repository that uses minutes even when nothing is tested: about 35 billed minutes a day in the private library (the janitor takes two minutes a run, the others one), and about $0.24 a day for the pair, measured over three idle hours, which is more than half of the included amount over a month. One scenario-10 sample on the private library used about 38 standard and 39 slim minutes, about $0.31. A full suite on the private pair takes about three hours, so at that rate about three to four dollars; that is an estimate, not a measurement.
+- **So the private pair rests paused** ([record 0037](decisions/0037-the-concierge-is-paused-by-a-repository-variable.md)): `gh variable set ISSUE_CONCIERGE_PAUSED --body true -R gearsnlevers/e2e-lib-private` (and `e2e-app-private`). A paused repository starts no gate, so delete the variable before a run on that pair (`gh variable delete ISSUE_CONCIERGE_PAUSED -R ...`) and set it again after. The status page, the updater and the deployment check keep running. On 2026-10-30 the status issue of the private library showed the paused banner; how many minutes the pause saves has not been measured yet.
+- **Mail.** The runner files its issues under a person's account, so GitHub mails that person every comment the Concierge leaves on them: two to seven mails per scenario, about fifty for a full suite on one pair. A mail filter on the subjects that start with `[gearsnlevers/e2e-` keeps them out of the inbox. Tell the maintainer before a long run starts.
 
 ## The scenarios
 
@@ -130,4 +140,4 @@ The fix is a record that does not depend on what the token can see: `/accept` wr
 
 ## What it does not do
 
-It does not judge the code a coding agent writes: nothing is ever assigned. It does not test a reporter without write access (the runner is a collaborator). It does not run on every pull request: it takes tens of minutes and spends model credits, and a model's answers vary.
+It does not judge the code a coding agent writes: nothing is ever assigned. It does not test a reporter without write access (the runner is a collaborator). It does not run on every pull request, and it does not run on a schedule: it takes tens of minutes, spends model credits and, on the private pair, minutes the plan limits, and a model's answers vary. A run is tied to a change ([record 0039](decisions/0039-the-concierge-is-tested-end-to-end-on-demand-in-proportion-to-what-changed.md)).
