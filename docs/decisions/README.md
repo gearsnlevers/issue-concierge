@@ -61,4 +61,4 @@ Copy `template.md` to `NNNN-short-title.md` (the next number, starting at 0001),
 | 0036 | [A maintainer decides by command, from the issue](0036-a-maintainer-decides-by-command-from-the-issue.md) | accepted |
 | 0037 | [The Concierge is paused by a repository variable](0037-the-concierge-is-paused-by-a-repository-variable.md) | accepted |
 | 0038 | [Everything the Issue Concierge puts in a repository is named for the product](0038-everything-the-issue-concierge-puts-in-a-repository-is-named-for-the-product.md) | accepted |
-| 0039 | [The Concierge is tested end to end on demand, in proportion to what changed](0039-the-concierge-is-tested-end-to-end-on-demand-in-proportion-to-what-changed.md) | proposed |
+| 0039 | [The Concierge is tested end to end on demand, in proportion to what changed](0039-the-concierge-is-tested-end-to-end-on-demand-in-proportion-to-what-changed.md) | accepted |
