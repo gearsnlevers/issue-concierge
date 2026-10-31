@@ -488,7 +488,7 @@ test('--scenario takes a number as well as an id, and --list says which number i
   const listed = io();
   assert.equal(await main(['--list'], {}, listed), 0);
   assert.ok(listed.lines.some((l) => l.startsWith('10\tcommand-accepts-a-held-request\t')));
-  for (const token of ['0', '12', '010x', '-1']) {
+  for (const token of ['0', '99', '010x', '-1']) {
     const bad = io();
     assert.equal(await main(['--scenario', token], {}, bad), 2, token);
     assert.match(bad.errors[0], new RegExp(`unknown scenario ${token}`));
