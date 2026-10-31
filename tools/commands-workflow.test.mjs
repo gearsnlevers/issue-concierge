@@ -48,7 +48,7 @@ test('the text of a comment, a title or a login never reaches a shell: no run li
 
 test('a label event starts it only for the labels that change what waits for a maintainer, an opted-out issue and a pull request never do, and a bot\'s comment is not read', () => {
   const list = JSON.parse(/fromJSON\('(\[[^']*\])'\)/.exec(code)[1]);
-  assert.deepEqual(list, ['needs-decision', 'scope-review', 'plan-approval-required', 'complexity/low', 'complexity/medium', 'complexity/high', 'risk/low', 'risk/medium', 'risk/high', 'issue-triage-handoff', 'plan-triage-handoff', 'declined']);
+  assert.deepEqual(list, ['needs-decision', 'scope-review', 'plan-approval-required', 'complexity/low', 'complexity/medium', 'complexity/high', 'risk/low', 'risk/medium', 'risk/high', 'issue-triage-handoff', 'plan-worker-ready', 'plan-triage-handoff', 'declined']);
   const known = new Set(requirements.labels.map((l) => l.name));
   for (const label of list) assert.ok(known.has(label), `${label} is not in requirements.json`);
   assert.match(code, /\(github\.event\.action != 'labeled'\n\s+\|\| contains\(fromJSON/);
