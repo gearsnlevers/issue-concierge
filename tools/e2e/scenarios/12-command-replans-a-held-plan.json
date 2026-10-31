@@ -1,0 +1,62 @@
+{
+  "id": "command-replans-a-held-plan",
+  "title": "/replan from a maintainer takes the options comment away until the new plan is there, and it comes back last",
+  "covers": [
+    "a plan that waits for approval carries an options comment that offers /approve and /replan, as the last comment",
+    "after /replan nothing waits for a maintainer until the new plan is there, so the options comment is gone and does not offer /approve for the plan that was asked to be replaced",
+    "the new plan is a second comment of the plan worker, and the options comment comes back as the last comment within minutes of it, not with the next hourly run (the label that tells the plan has arrived starts the commands workflow)"
+  ],
+  "profiles": ["public", "private"],
+  "repo": "lib",
+  "issue": {
+    "title": "listWidgets: sort numbers inside names as numbers (replan)",
+    "body": "## Problem\n\n`listWidgets` compares names as plain text, so a list with numbers in the names comes out in a surprising order:\n\n```js\nlistWidgets([{ name: 'widget10' }, { name: 'widget2' }, { name: 'widget1' }]).map((w) => w.name);\n// ['widget1', 'widget10', 'widget2']\n```\n\n## Proposal\n\nCompare the numbers inside names as numbers, so the result is `['widget1', 'widget2', 'widget10']`. Names without numbers must sort as they do now, still ignoring case.\n\n## Acceptance\n\n- A test for the example above.\n- The existing tests still pass.",
+    "labels": ["enhancement", "plan-approval-required"]
+  },
+  "steps": [
+    {
+      "wait": {
+        "timeoutMinutes": 35,
+        "checks": [
+          { "name": "the plan worker left one plan", "type": "comments", "workflow": "plan-worker", "count": 1 },
+          { "name": "plan triage classified the issue and the hold stayed", "type": "labels", "include": ["plan-approval-required"], "oneWithPrefix": ["complexity/", "risk/"], "exclude": ["plan-triage-handoff", "pr-worker-ready"] },
+          { "name": "the last comment is the options comment, and it offers /approve", "type": "lastComment", "match": "concierge:options kind=plan[\\s\\S]*`/approve`" },
+          { "name": "there is one options comment", "type": "comments", "from": "bot", "match": "concierge:options", "count": 1 },
+          { "name": "no run failed", "type": "noFailedRuns" },
+          { "name": "no failure issue was opened", "type": "noFailureIssues" }
+        ]
+      }
+    },
+    { "comment": "/replan Keep the order of names without numbers exactly as it is today." },
+    {
+      "wait": {
+        "timeoutMinutes": 8,
+        "checks": [
+          { "name": "the old plan is still the only one", "type": "comments", "workflow": "plan-worker", "count": 1 },
+          { "name": "the options comment is gone while the new plan is written", "type": "comments", "from": "bot", "match": "concierge:options", "count": 0 },
+          { "name": "the last comment is still the maintainer's /replan", "type": "lastComment", "match": "^/replan" }
+        ]
+      }
+    },
+    {
+      "wait": {
+        "timeoutMinutes": 25,
+        "checks": [
+          { "name": "the plan worker left a second plan", "type": "comments", "workflow": "plan-worker", "count": 2 }
+        ]
+      }
+    },
+    {
+      "wait": {
+        "timeoutMinutes": 4,
+        "checks": [
+          { "name": "the options comment is back as the last comment, offering /approve", "type": "lastComment", "match": "concierge:options kind=plan[\\s\\S]*`/approve`" },
+          { "name": "there is one options comment", "type": "comments", "from": "bot", "match": "concierge:options", "count": 1 },
+          { "name": "the hold stayed and the plan is classified", "type": "labels", "include": ["plan-approval-required"], "oneWithPrefix": ["complexity/", "risk/"], "exclude": ["plan-triage-handoff"] },
+          { "name": "no run failed", "type": "noFailedRuns" }
+        ]
+      }
+    },
+    { "expect": { "checks": [{ "name": "nothing started coding", "type": "noPullRequest" }] } }
+  ]
+}

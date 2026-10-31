@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
-  ACCEPT_MARKER, LEGACY_ACCEPT_MARKER, STOP_LABELS, effectiveNeed, main, mayUse, menuCandidates, menuKind, neutralizeMentions, optionsFor, parseCommand, planMenu, planReason,
+  ACCEPT_MARKER, LEGACY_ACCEPT_MARKER, STOP_LABELS, effectiveNeed, main, mayUse, menuCandidates, menuKind, neutralizeMentions, optionsFor, parseCommand, planMenu, planPending, planReason,
   runCommand, situationOf, syncOptions,
 } from './commands.mjs';
 import { OPTIONS_MARKER, isOptionsComment } from './issue-concierge-state.mjs';
@@ -22,6 +22,8 @@ const comment = (id, body, user = { login: 'reporter', type: 'User' }, ageMs = (
 const plan = (id, extra = '') => comment(id, `## Plan\n\n**Size:** small\n${extra}\n\n<!-- gh-aw-workflow-call-id: ${REPO}/plan-worker -->`, BOT);
 const SETTINGS = { commands: { on: true, need: 'triage' } };
 const classifiedHold = ['plan-approval-required', 'complexity/low', 'risk/high'];
+const labelled = (name, ageMs) => ({ event: 'labeled', label: { name }, created_at: iso(ageMs) });
+const unlabelled = (name, ageMs) => ({ event: 'unlabeled', label: { name }, created_at: iso(ageMs) });
 
 // ---------------------------------------------------------------- reading a command
 
@@ -83,6 +85,25 @@ test('situationOf: a gate label is stalled after an hour, not before', () => {
   assert.equal(situationOf(issue(['plan-worker-ready']), { events: ev(2 * H), now: NOW }), 'stalled');
   assert.equal(situationOf(issue(['plan-worker-ready']), { events: ev(30 * 60000), now: NOW }), null);
   assert.equal(situationOf(issue(['plan-worker-ready']), { events: [], now: NOW }), null);
+});
+
+test('planPending: a plan was asked for and has not come, for an hour at most', () => {
+  const asked = labelled('issue-triage-handoff', 3 * 60000);
+  assert.equal(planPending([], NOW), false);
+  assert.equal(planPending([asked], NOW), true);
+  assert.equal(planPending([asked, labelled('plan-worker-ready', 60000)], NOW), false, 'the plan came');
+  assert.equal(planPending([labelled('plan-worker-ready', 30 * 60000), asked], NOW), true, 'the plan that came before was the old one');
+  assert.equal(planPending([labelled('issue-triage-handoff', 2 * H)], NOW), false, 'a plan that does not come within the hour is taken as lost');
+  assert.equal(planPending([asked, unlabelled('issue-triage-handoff', 20000)], NOW), true, 'the janitor taking the label away is not an answer');
+});
+
+test('situationOf: a plan that waits has no menu while a new plan is written, and has one when it is there or lost', () => {
+  const asked = [labelled('issue-triage-handoff', 3 * 60000)];
+  assert.equal(situationOf(issue(classifiedHold), { events: asked, now: NOW }), null);
+  assert.equal(situationOf(issue([...classifiedHold, 'issue-triage-handoff']), { events: [], now: NOW }), null, 'the label alone shows it while the events lag');
+  assert.equal(situationOf(issue(classifiedHold), { events: [...asked, labelled('plan-worker-ready', 60000)], now: NOW }), 'plan');
+  assert.equal(situationOf(issue(classifiedHold), { events: [labelled('issue-triage-handoff', 2 * H)], now: NOW }), 'plan');
+  assert.equal(situationOf(issue(['needs-decision', ...classifiedHold]), { events: asked, now: NOW }), 'decision', 'a decision is a decision whatever plan is written');
 });
 
 test('situationOf: nothing waits for a maintainer on a closed issue, a pull request, a bot\'s issue or an opted-out one', () => {
@@ -386,6 +407,22 @@ test('/approve is refused with the reason plan approval gives: not classified, w
   assert.deepEqual(run('approve', issue(['plan-approval-required'])).api.calls, []);
 });
 
+test('/approve is refused while a new plan is written, by the label or by the events, and goes through once the plan is there', () => {
+  const asked = [labelled('issue-triage-handoff', 3 * 60000)];
+  const give = (i, events) => {
+    const api = fakeApi({ events: { 7: events } });
+    return { result: runCommand({ name: 'approve', argument: '' }, { issue: i, actor: 'maint', api, now: NOW }), api };
+  };
+  for (const [i, events] of [[issue([...classifiedHold, 'issue-triage-handoff']), []], [issue(classifiedHold), asked]]) {
+    const { result, api } = give(i, events);
+    assert.equal(result.ok, false);
+    assert.match(result.reason, /new plan is being written.*`\/replan` if it does not come/);
+    assert.deepEqual(api.calls, [], 'nothing is changed');
+  }
+  assert.equal(give(issue(classifiedHold), [...asked, labelled('plan-worker-ready', 60000)]).result.ok, true);
+  assert.equal(give(issue(classifiedHold), [labelled('issue-triage-handoff', 2 * H)]).result.ok, true, 'a plan that never came does not block the maintainer for ever');
+});
+
 test('/replan hands the issue to the plan worker again, and only for a plan that waits for approval', () => {
   const again = run('replan', issue([...classifiedHold, 'issue-triage-handoff']), { argument: 'use the library' });
   assert.deepEqual(again.api.calls, [['removeLabel', 7, 'issue-triage-handoff'], ['addLabelSignal', 7, 'issue-triage-handoff']]);
@@ -433,13 +470,41 @@ test('syncOptions leaves the issue alone when its comments cannot be read', () =
   assert.deepEqual(api.calls, []);
 });
 
-test('syncOptions reads the events only for an issue in a gate, to see how long it has been there', () => {
+test('syncOptions reads the events only for an issue in a gate or with a plan that waits, so not for a decision', () => {
   let read = 0;
   const api = fakeApi({ comments: { 7: [] } });
   api.listEvents = () => { read += 1; return []; };
   syncOptions(api, issue(['needs-decision']), { repo: REPO, settings: SETTINGS, organisation: true, now: NOW });
   assert.equal(read, 0);
   syncOptions(api, issue(['issue-triage-handoff']), { repo: REPO, settings: SETTINGS, organisation: true, now: NOW });
+  assert.equal(read, 1);
+});
+
+test('after a /replan the menu that offers /approve goes at once, and a menu is posted last when the new plan arrives (the case of frodo-lib#783)', () => {
+  const at = (c, ageMs) => ({ ...c, created_at: iso(ageMs) });
+  const maint = { login: 'maint', type: 'User' };
+  const oldPlan = at(plan(1), 2 * H);
+  const oldMenu = at(menu(2, 'plan.plain'), 2 * H - 1000);
+  const replan = at(comment(3, '/replan use the library', maint), 190000);
+  const newPlan = at(plan(4), 60000);
+  const asked = [labelled('issue-triage-handoff', 180000), unlabelled('issue-triage-handoff', 165000)];
+  const answered = [...asked, labelled('plan-worker-ready', 59000), unlabelled('plan-worker-ready', 40000)];
+  const sync = (comments, events) => {
+    const api = fakeApi({ comments: { 7: comments }, events: { 7: events } });
+    return syncOptions(api, issue(classifiedHold), { repo: REPO, settings: SETTINGS, organisation: true, now: NOW });
+  };
+  // the janitor has taken the label away again: only the events show that a plan is owed
+  assert.deepEqual(sync([oldPlan, oldMenu, replan], asked), [{ op: 'delete', id: 2 }], 'the old menu goes and none is posted');
+  assert.deepEqual(sync([oldPlan, replan], asked), [], 'and none is posted by the next run either');
+  assert.deepEqual(sync([oldPlan, replan, newPlan], answered).map((o) => o.op), ['post'], 'the plan is there: the menu comes back, last');
+  assert.deepEqual(sync([oldPlan, oldMenu, replan, newPlan], answered).map((o) => o.op), ['delete', 'post'], 'an old menu is not left above the new plan');
+});
+
+test('syncOptions reads the events for a plan that waits, to see whether a new plan is owed, as it does for an issue in a gate', () => {
+  let read = 0;
+  const api = fakeApi({ comments: { 7: [] } });
+  api.listEvents = () => { read += 1; return []; };
+  syncOptions(api, issue(classifiedHold), { repo: REPO, settings: SETTINGS, organisation: true, now: NOW });
   assert.equal(read, 1);
 });
 
@@ -492,6 +557,22 @@ test('main: a refused command gets a confused face and a reply that says why, an
   const reply = api.calls.find((c) => c[0] === 'reply');
   assert.match(reply[2], /^Could not run `\/approve`: There is no plan waiting for approval/);
   assert.equal(names(api).at(-1), 'postComment', 'the menu is posted after the reply, so it is last');
+});
+
+test('main: after a maintainer\'s /replan the menu that offered /approve is deleted and none is posted', () => {
+  const maint = { login: 'maint', type: 'User' };
+  const api = fakeApi({
+    issues: { 7: issue(classifiedHold) },
+    comments: { 7: [plan(1), menu(2, 'plan.plain'), comment(3, '/replan', maint)] },
+    events: { 7: [labelled('issue-triage-handoff', 1000)] },
+    roles: { maint: 'admin' },
+  });
+  const given = api.addLabelSignal;
+  api.addLabelSignal = (n, l) => { given(n, l); api.getIssue = () => issue([...classifiedHold, l]); };
+  const { env } = eventEnv('issue_comment', commentEvent('/replan', { labels: classifiedHold }));
+  assert.equal(main(env, api, () => {}), 0);
+  assert.deepEqual(api.calls.filter((c) => c[0] === 'addLabelSignal'), [['addLabelSignal', 7, 'issue-triage-handoff']]);
+  assert.deepEqual(api.calls.filter((c) => ['postComment', 'editComment', 'deleteComment'].includes(c[0])), [['deleteComment', 2]]);
 });
 
 test('main: a stranger\'s command is ignored without a word, a collaborator below the role is told', () => {
