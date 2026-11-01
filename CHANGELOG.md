@@ -1,5 +1,12 @@
 # Changelog
 
+## [v2.1.2] - 2026-11-01
+
+### What's Changed
+* fix: a /replan hides the options comment until the new plan is there (#81) by @vscheuber in https://github.com/gearsnlevers/issue-concierge/pull/82
+
+**Full Changelog**: https://github.com/gearsnlevers/issue-concierge/compare/v2.1.1...v2.1.2
+
 ## [v2.1.2-1] - 2026-10-31
 
 ### What's Changed
