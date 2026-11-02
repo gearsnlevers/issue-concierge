@@ -1,5 +1,12 @@
 # Changelog
 
+## [v2.2.1] - 2026-11-02
+
+### What's Changed
+* fix: list the coding agent's pull request on the status page, and ignore a failure from an earlier attempt by @vscheuber in https://github.com/gearsnlevers/issue-concierge/pull/85
+
+**Full Changelog**: https://github.com/gearsnlevers/issue-concierge/compare/v2.2.0...v2.2.1
+
 ## [v2.2.0] - 2026-11-02
 
 ### What's Changed
