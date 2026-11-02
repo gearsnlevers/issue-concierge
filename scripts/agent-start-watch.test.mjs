@@ -61,6 +61,20 @@ test('decide: the agent has to be assigned still, and the issue not labelled alr
   assert.match(decide(issue(['complexity/low', 'risk/high', 'agent-start-failed']), comment(RULESET)).reason, /already labelled/);
 });
 
+// frodo-lib#783: the first attempt failed at 18:11:35 (assigned 18:11:15); a maintainer started the agent again at 18:53:53, and the
+// second attempt, which works, wrote nothing on the issue. A run by hand at 20:00 looked at the latest comment of the agent, the old
+// failure, and would have labelled an issue the agent is working on.
+test('decide: a report from before the agent\'s latest assignment is about an attempt that is over', () => {
+  const at = (s) => Date.parse(`2026-11-02T${s}Z`);
+  const failure = comment(RULESET, AGENT, '2026-11-02T18:11:35Z');
+  assert.equal(decide(issue(), failure, { assigned: at('18:11:15') }).label, true, 'the report came after the assignment it is about');
+  assert.match(decide(issue(), failure, { assigned: at('18:53:53') }).reason, /assigned again after this comment/);
+  assert.equal(decide(issue(), failure, { assigned: at('18:53:53') }).label, false);
+  assert.equal(decide(issue(), failure, { assigned: null }).label, true, 'without events there is nothing to compare');
+  assert.equal(decide(issue(), failure).label, true);
+  assert.equal(decide(issue(), failure, { assigned: at('18:11:35') }).label, true, 'the same second is the same attempt');
+});
+
 test('decide: an issue plan triage has not classified is not one the Concierge handed to the agent, so starting it again is not the Concierge\'s to offer', () => {
   for (const labels of [[], ['enhancement'], ['complexity/low'], ['risk/high']]) assert.match(decide(issue(labels), comment(RULESET)).reason, /did not hand it to the agent/, labels.join());
 });
@@ -79,12 +93,13 @@ test('latestAgentComment: the newest comment of the coding agent, not a person\'
 
 // ---------------------------------------------------------------- main
 
-function fakeApi({ issues = {}, comments = {} } = {}) {
+function fakeApi({ issues = {}, comments = {}, events = {} } = {}) {
   const calls = [];
   return {
     calls,
     getIssue: (n) => issues[n] ?? null,
     listComments: (n) => comments[n] ?? [],
+    listEvents: (n) => events[n] ?? [],
     addLabel: (n, label) => calls.push(['addLabel', n, label]),
   };
 }
@@ -131,6 +146,21 @@ test('main: a run by hand looks at the latest comment of the agent on one issue'
   assert.match(silent.out[0], /the coding agent has not commented/);
 });
 
+const assigned = (login, at) => ({ event: 'assigned', assignee: { login, type: 'Bot' }, created_at: at });
+
+test('main: the timeline of frodo-lib#783: the report labels the issue when it comes, and not a run by hand after the second attempt', () => {
+  const first = [assigned('Copilot', '2026-11-02T18:11:15Z')];
+  const second = [...first, { event: 'unassigned', assignee: AGENT, created_at: '2026-11-02T18:50:07Z' }, assigned('Copilot', '2026-11-02T18:53:53Z')];
+  const options = (events) => ({ issues: { 7: issue() }, comments: { 7: [comment(RULESET)] }, events: { 7: events } });
+  const live = run('issue_comment', { issue: { number: 7 }, comment: comment(RULESET) }, options(first));
+  assert.deepEqual(live.api.calls, [['addLabel', 7, 'agent-start-failed']], 'at 18:11:35');
+  const byHand = run('workflow_dispatch', {}, { env: { ISSUE_NUMBER: '7' }, ...options(second) });
+  assert.deepEqual(byHand.api.calls, [], 'at 20:00, with the agent working on its second attempt');
+  assert.match(byHand.out[0], /^#7: skipped \(the coding agent was assigned again after this comment/);
+  const stillFailed = run('workflow_dispatch', {}, { env: { ISSUE_NUMBER: '7' }, ...options(first) });
+  assert.deepEqual(stillFailed.api.calls, [['addLabel', 7, 'agent-start-failed']], 'a failed attempt that nobody has retried is found by hand');
+});
+
 test('main: an issue that cannot be read is skipped, and a missing repository or number is an error', () => {
   const unread = run('workflow_dispatch', {}, { env: { ISSUE_NUMBER: '7' } });
   assert.equal(unread.code, 0);
@@ -149,4 +179,6 @@ test('the script starts no shell, reads the comment only from the event file, an
   assert.match(source, /const signal = env\.SIGNAL_TOKEN \|\| env\.GH_TOKEN;/);
   assert.match(source, /addLabel: \(n, label\) => call\(\['api', `repos\/\$\{repo\}\/issues\/\$\{n\}\/labels`, '--method', 'POST', '-f', `labels\[\]=\$\{label\}`\], signal\)/);
   assert.match(source, /getIssue: \(n\) => get\(`repos\/\$\{repo\}\/issues\/\$\{n\}`\)/, 'the decision reads the live issue with the workflow token');
+  assert.match(source, /assigned: assignedAt\(api\.listEvents\(number\)\)/, 'and the events say which attempt the report is about');
+  assert.match(source, /listEvents\(n\) \{[^}]*get\(`repos\/\$\{repo\}\/issues\/\$\{n\}\/events\?per_page=100&page=\$\{page\}`\)/, 'the real api reads them');
 });

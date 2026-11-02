@@ -426,6 +426,7 @@ test('collect reads what the page needs and nothing it does not', () => {
   });
   const out = collect(ctx, REPO, SETTINGS, 'tok');
   assert.deepEqual(out.issues.map((i) => i.number), [1, 2, 3, 4, 5], 'the status issue and the pull request are not issues to count');
+  assert.deepEqual(out.pulls.map((i) => i.number), [60], 'but the pull requests are kept: the agent\'s are found among them');
   assert.deepEqual([...out.analysed], [3]);
   assert.deepEqual(ctx.calls.list.filter((p) => /\/comments$/.test(p)), ['repos/o/r/issues/2/comments', 'repos/o/r/issues/3/comments'], 'comments only for issues the labels cannot place');
   assert.deepEqual(ctx.calls.list.filter((p) => /\/events$/.test(p)), ['repos/o/r/issues/1/events', 'repos/o/r/issues/4/events'], 'events only where a wait is timed');
@@ -434,6 +435,24 @@ test('collect reads what the page needs and nothing it does not', () => {
   assert.deepEqual(out.pin, PIN.version ? { source: 'o/concierge', version: 'v1.8.0', channel: 'stable' } : null);
   assert.equal(out.latest, 'v1.8.0');
   assert.deepEqual(out.token, { state: 'ok', expiresAt: null });
+});
+
+// v2.2.0 shipped with a fixture that put the pull requests in `issues`, which collect() never does: the live page listed every
+// issue with the agent as "no open pull request" while the agent's draft pull request was open (frodo-lib#783, #885). This runs the
+// real path, collect and then summarize and render, on what GitHub's lists look like.
+test('the page lists the pull request of the coding agent that collect found, end to end', () => {
+  const ctx = fakeCtx({
+    issues: [
+      issue(783, ['complexity/low', 'risk/high', 'backlog'], { title: 'Allow a promise', assignees: [{ login: 'Copilot' }] }),
+      issue(885, [], { title: 'Allow asynchronous handlers', pull_request: {}, draft: true, user: { login: 'Copilot', type: 'Bot' }, body: '> - Closes o/r#783\n- Fixes #783', updated_at: ago(60000) }),
+    ],
+    events: { 783: [{ event: 'assigned', assignee: { login: 'Copilot', type: 'Bot' }, created_at: ago(2 * H) }] },
+    files: { '.github/issue-concierge.yml': 'source: o/concierge\nversion: v1.8.0\nchannel: stable\n' },
+  });
+  const body = render(summarize(collect(ctx, REPO, SETTINGS, 'tok'), SETTINGS, NOW));
+  assert.match(body, /## With the coding agent \(1\)\n\n- #783 Allow a promise · assigned 2 h ago · \[draft pull request #885\]\(https:\/\/github\.com\/o\/r\/pull\/885\)/);
+  assert.doesNotMatch(body, /no open pull request/);
+  assert.doesNotMatch(body, /Parked: \[1\]/, 'and the parking label does not hide it');
 });
 
 test('collect reads the events of an issue with the coding agent, because they say when it was assigned', () => {
