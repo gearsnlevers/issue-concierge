@@ -1,5 +1,12 @@
 # Changelog
 
+## [v2.2.0] - 2026-11-02
+
+### What's Changed
+* feat: report a coding agent that did not start, and let a maintainer start it again by @vscheuber in https://github.com/gearsnlevers/issue-concierge/pull/84
+
+**Full Changelog**: https://github.com/gearsnlevers/issue-concierge/compare/v2.1.3...v2.2.0
+
 ## [v2.1.3] - 2026-11-02
 
 ### What's Changed
