@@ -81,7 +81,8 @@ test('summarize: each queue lists its issues oldest first, from when the label w
   assert.deepEqual(q('reporter').map((i) => i.number), [6]);
   assert.deepEqual(q('parked').map((i) => i.number), [7]);
   assert.deepEqual(q('dependency').map((i) => i.number), [8]);
-  assert.equal(m.stages['with-agent'], 1);
+  assert.deepEqual(m.stages['with-agent'].map((i) => i.number), [13]);
+  assert.deepEqual(q('agent'), []);
   assert.equal(m.stages.settled, 1, 'the analysed issue with no label');
 });
 
@@ -126,7 +127,7 @@ test('the page opens with the marker, then the sections in the order a maintaine
   const body = render(summarize(fixture(), SETTINGS, NOW));
   assert.equal(body.split('\n')[0], MARKER);
   const headings = [...body.matchAll(/^#{1,2} (.+)$/gm)].map((m) => m[1].replace(/ \(\d+\).*$/, '').replace(/ · .*$/, ''));
-  assert.deepEqual(headings, [TITLE, 'Needs you', 'Reporter replies waiting', 'In flight', 'Everything else the Concierge manages', 'Which issues the Concierge manages', 'Health', 'Spend', 'Settings']);
+  assert.deepEqual(headings, [TITLE, 'Needs you', 'Reporter replies waiting', 'In flight', 'With the coding agent', 'Everything else the Concierge manages', 'Which issues the Concierge manages', 'Health', 'Spend', 'Settings']);
 });
 
 test('the page says whose move it is, how long it has waited, and links the whole queue', () => {
@@ -138,6 +139,53 @@ test('the page says whose move it is, how long it has waited, and links the whol
   assert.match(body, /- #3 Issue 3 · waiting 3 h/);
   assert.match(body, /## In flight \(2\) · 1 stuck/);
   assert.match(body, /- #4 Issue 4 · `issue-triage-handoff` for 3 h ⚠ stuck/);
+});
+
+// frodo-lib#783: the coding agent said it could not start, and the page showed the issue as "Parked: 1" with "With the coding
+// agent: 0" (the issue still carried `backlog`, and the agent stage was only a number).
+test('an issue the coding agent could not start on is listed under "Needs you", with how long it has waited', () => {
+  const f = fixture();
+  f.issues.push(issue(20, ['agent-start-failed', 'backlog', 'complexity/low', 'risk/high'], { title: 'Allow a promise', assignees: [{ login: 'Copilot' }] }));
+  f.events.set(20, labelled('agent-start-failed', ago(40 * 60000)));
+  const m = summarize(f, SETTINGS, NOW);
+  assert.deepEqual(m.queues.find((x) => x.id === 'agent').items.map((i) => [i.number, i.since]), [[20, NOW - 40 * 60000]]);
+  assert.equal(m.queues.find((x) => x.id === 'parked').items.length, 1, 'it is not parked as well');
+  const body = render(m);
+  assert.match(body, /## Needs you \(4\)/);
+  assert.match(body, /\*\*Held: the coding agent did not start\*\* · \[1 issue\]\(https:\/\/github\.com\/o\/r\/issues\?q=is%3Aissue%20is%3Aopen%20label%3Aagent-start-failed\)\n- #20 Allow a promise · waiting under 1 h/);
+  assert.equal(m.stages['with-agent'].length, 1, 'the agent stage does not count it twice');
+});
+
+test('"With the coding agent" lists each issue with how long ago it was assigned and its pull request, and marks one with none after half an hour', () => {
+  const pr = (number, login, body, draft = true) => issue(number, [], { title: `PR ${number}`, pull_request: {}, user: { login, type: 'Bot' }, body, draft, updated_at: ago(60000) });
+  const assigned = (at) => [{ event: 'assigned', assignee: { login: 'Copilot', type: 'Bot' }, created_at: at }];
+  const f = fixture();
+  f.issues.push(
+    issue(21, ['backlog', 'complexity/low', 'risk/high'], { title: 'Works', assignees: [{ login: 'Copilot' }] }),
+    issue(22, ['complexity/low'], { title: 'Just assigned', assignees: [{ login: 'Copilot' }] }),
+    issue(23, ['complexity/low'], { title: 'Silent', assignees: [{ login: 'Copilot' }] }),
+    pr(90, 'Copilot', 'Fixes #21'),
+    pr(91, 'someone', 'Fixes #22'),
+  );
+  f.events.set(21, assigned(ago(20 * 60000)));
+  f.events.set(22, assigned(ago(5 * 60000)));
+  f.events.set(23, assigned(ago(3 * H)));
+  const m = summarize(f, SETTINGS, NOW);
+  const byNumber = Object.fromEntries(m.stages['with-agent'].map((i) => [i.number, [i.pull?.number ?? null, i.quiet]]));
+  assert.deepEqual(byNumber, { 13: [null, true], 21: [90, false], 22: [null, false], 23: [null, true] });
+  assert.deepEqual(m.stages['with-agent'].map((i) => i.number), [13, 23, 21, 22], 'the longest with the agent first (13 has no assignment in its events, so it counts from its last update)');
+  const body = render(m);
+  assert.match(body, /## With the coding agent \(4\) · 2 with no pull request/);
+  assert.match(body, /- #21 Works · assigned under 1 h ago · \[draft pull request #90\]\(https:\/\/github\.com\/o\/r\/pull\/90\)/);
+  assert.match(body, /- #22 Just assigned · assigned under 1 h ago · no pull request yet/, 'a pull request of a person does not count, and five minutes is not long');
+  assert.match(body, /- #23 Silent · assigned 3 h ago · ⚠ no open pull request after 30 min/);
+  assert.doesNotMatch(body, /with the coding agent: \d/i, 'it is no longer a number among the rest');
+  assert.equal(JSON.parse(body.split('```json\n')[1].split('\n```')[0]).withAgent, 4);
+});
+
+test('"With the coding agent" says so when no issue is with it', () => {
+  const body = render(summarize(raw({ issues: [issue(1, ['needs-decision'])] }), SETTINGS, NOW));
+  assert.match(body, /## With the coding agent \(0\)\n\nNo issue is with the coding agent\./);
 });
 
 test('the page counts what the Concierge manages next to what it does not, so every number has a denominator', () => {
@@ -188,8 +236,9 @@ test('the numbers come as JSON for a dashboard, and agree with the page', () => 
   assert.equal(json.schema, 1);
   assert.equal(json.repo, REPO);
   assert.deepEqual([json.open, json.managed, json.optedOut, json.botAuthored, json.notPickedUp], [13, 10, 1, 1, 1]);
-  assert.deepEqual(json.queues, { decision: 2, scope: 0, plan: 1, dependency: 1, reporter: 1, parked: 1 });
+  assert.deepEqual(json.queues, { decision: 2, scope: 0, plan: 1, agent: 0, dependency: 1, reporter: 1, parked: 1 });
   assert.equal(json.stuck, 1);
+  assert.equal(json.withAgent, 1, 'a number, as before, though the page lists the issues');
   assert.equal(json.replies, 2);
   assert.equal(json.pinned, 'v1.8.0');
 });
@@ -385,6 +434,16 @@ test('collect reads what the page needs and nothing it does not', () => {
   assert.deepEqual(out.pin, PIN.version ? { source: 'o/concierge', version: 'v1.8.0', channel: 'stable' } : null);
   assert.equal(out.latest, 'v1.8.0');
   assert.deepEqual(out.token, { state: 'ok', expiresAt: null });
+});
+
+test('collect reads the events of an issue with the coding agent, because they say when it was assigned', () => {
+  const ctx = fakeCtx({
+    issues: [issue(1, ['complexity/low', 'risk/high'], { assignees: [{ login: 'Copilot' }] }), issue(2, ['enhancement'], { assignees: [{ login: 'a-person' }] }), issue(3, ['complexity/low'])],
+    issueComments: { 2: [] },
+    files: { '.github/issue-concierge.yml': 'source: o/concierge\nversion: v1.8.0\nchannel: stable\n' },
+  });
+  collect(ctx, REPO, SETTINGS, 'tok');
+  assert.deepEqual(ctx.calls.list.filter((p) => /\/events$/.test(p)), ['repos/o/r/issues/1/events']);
 });
 
 test('rolesOf asks the workflow token first and the signal token second, and a 404 is no role at all', () => {

@@ -5,8 +5,8 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
-  ACCEPT_MARKER, LEGACY_ACCEPT_MARKER, STOP_LABELS, effectiveNeed, main, mayUse, menuCandidates, menuKind, neutralizeMentions, optionsFor, parseCommand, planMenu, planPending, planReason,
-  runCommand, situationOf, syncOptions,
+  ACCEPT_MARKER, LEGACY_ACCEPT_MARKER, STOP_LABELS, agentPullsOf, deletableBranch, effectiveNeed, isEmptyStart, main, mayUse, menuCandidates, menuKind, neutralizeMentions, optionsFor, parseCommand, planMenu, planPending,
+  planReason, runCommand, situationOf, syncOptions,
 } from './commands.mjs';
 import { OPTIONS_MARKER, isOptionsComment } from './issue-concierge-state.mjs';
 
@@ -73,6 +73,19 @@ test('situationOf: what the issue waits for, from its labels', () => {
   assert.equal(situationOf(issue(classifiedHold)), 'plan');
   assert.equal(situationOf(issue(['backlog', 'needs-info', 'dependency-required'])), null, 'parked and waiting for others needs no command');
   assert.equal(situationOf(issue([])), null);
+});
+
+test('situationOf: an agent that did not start waits for a maintainer, after a decision, a doubt and a plan, and before a stalled gate', () => {
+  const failed = ['agent-start-failed', 'complexity/low', 'risk/high'];
+  assert.equal(situationOf(issue(failed)), 'agent');
+  assert.equal(situationOf(issue(['backlog', ...failed])), 'agent', 'a parking label does not hide it (frodo-lib#783)');
+  assert.equal(situationOf(issue(['needs-decision', ...failed])), 'decision');
+  assert.equal(situationOf(issue(['scope-review', ...failed])), 'scope');
+  assert.equal(situationOf(issue(['plan-approval-required', ...failed])), 'plan');
+  const stalled = [{ event: 'labeled', label: { name: 'plan-triage-handoff' }, created_at: iso(3 * H) }];
+  assert.equal(situationOf(issue(['plan-triage-handoff', ...failed]), { events: stalled, now: NOW }), 'agent');
+  assert.equal(situationOf(issue(failed, { state: 'closed' })), null);
+  assert.equal(situationOf(issue(['no-auto-processing', ...failed])), null);
 });
 
 test('situationOf: a hold nobody has classified yet has no plan to approve, so no menu', () => {
@@ -160,6 +173,16 @@ test('optionsFor: a plan held for another reason says so, and adds what the main
   assert.match(o('Wrong layer: o/lib').body, /The plan found that the fix belongs in another repository/);
   assert.match(o('- Conflicts with https://x/0003.md: y').body, /conflicts with a decision the project has taken/);
   assert.match(o('Breaking change: removes x').body, /The plan found a change to something that already exists/);
+});
+
+test('optionsFor: an agent that did not start says so in plain words and offers only a retry that takes the empty start back', () => {
+  const o = optionsFor(issue(['agent-start-failed', 'complexity/low', 'risk/high', 'backlog']), { settings: SETTINGS, repo: REPO, now: NOW });
+  assert.equal(o.kind, 'agent');
+  const visible = o.body.split('<details>')[0];
+  assert.match(visible, /GitHub's coding agent could not start work on this issue, so nothing has been built\. A maintainer can ask it to start again\./);
+  assert.doesNotMatch(visible.split('\n').slice(1).join('\n'), /`|label|\/|workflow|gate/i, 'the visible sentence is for whoever reads the issue');
+  assert.deepEqual([...o.body.matchAll(/^\| `(\/[a-z]+)/gm)].map((m) => m[1]), ['/retry']);
+  assert.match(o.body, /unassigns the coding agent, closes its empty draft pull request and deletes that branch, and hands the issue to the PR worker once more\. A pull request with changes on it is never touched\./);
 });
 
 test('optionsFor: a stalled gate offers only a retry', () => {
@@ -256,7 +279,7 @@ test('an options comment is the bot\'s with the marker; a person quoting it is n
 
 // ---------------------------------------------------------------- a fake GitHub
 
-function fakeApi({ issues = {}, comments = {}, events = {}, roles = {}, open = [], recent = [], files = {}, listFails = false } = {}) {
+function fakeApi({ issues = {}, comments = {}, events = {}, roles = {}, open = [], recent = [], files = {}, listFails = false, pulls = {}, agentStays = false } = {}) {
   const calls = [];
   const reads = [];
   const rec = (...a) => calls.push(a);
@@ -275,6 +298,11 @@ function fakeApi({ issues = {}, comments = {}, events = {}, roles = {}, open = [
     closeSignal: (n) => rec('closeSignal', n),
     reopen: (n) => rec('reopen', n),
     reply: (n, body) => rec('reply', n, body),
+    agentPulls: (n) => (n in pulls ? pulls[n] : []),
+    unassign: (n, logins) => { rec('unassign', n, logins); return agentStays ? logins : []; },
+    closePull: (number) => rec('closePull', number),
+    branchesToDelete: [],
+    deleteBranch(branch) { rec('deleteBranch', branch); this.branchesToDelete.push(branch); },
     react: (id, content) => rec('react', id, content),
     postComment: (n, body) => rec('postComment', n, body),
     editComment: (id, body) => rec('editComment', id, body),
@@ -436,6 +464,126 @@ test('/retry gives the gate label that is there again, and refuses when no gate 
   assert.match(run('retry', issue(['enhancement'])).result.reason, /Nothing is in a gate/);
 });
 
+// ---------------------------------------------------------------- /retry on an agent that did not start (frodo-lib#783)
+
+const failedLabels = ['agent-start-failed', 'complexity/low', 'risk/high', 'enhancement'];
+const withAgent = (labels = failedLabels) => issue(labels, { assignees: [{ login: 'maint' }, { login: 'Copilot' }] });
+const shell = (number, branch = `copilot/start-${number}`, extra = {}) => ({ number, isDraft: true, changedFiles: 0, branch, ...extra });
+const retry = (i, options = {}, actor = 'maint') => {
+  const api = fakeApi(options);
+  return { result: runCommand({ name: 'retry', argument: '' }, { issue: i, actor, api, now: NOW }), api };
+};
+
+test('/retry on an agent that did not start unassigns it first, takes the empty draft pull request and its branch back, and hands the issue on again', () => {
+  const { result, api } = retry(withAgent(), { pulls: { 7: [shell(884, 'copilot/allow-callbackhandler-to-return-promise')] } });
+  assert.equal(result.ok, true);
+  assert.deepEqual(api.calls.slice(0, 1), [['unassign', 7, ['Copilot']]], 'the agent goes first, and only the agent: not the person assigned with it');
+  assert.deepEqual(names(api), ['unassign', 'reply', 'closePull', 'deleteBranch', 'removeLabel', 'addLabelSignal', 'reply']);
+  assert.match(api.calls[1][2], /^Closed by @maint with \/retry: the coding agent could not start, so this pull request holds no changes\. A new attempt follows on #7\.$/);
+  assert.deepEqual([api.calls[1][1], api.calls[2], api.calls[3]], [884, ['closePull', 884], ['deleteBranch', 'copilot/allow-callbackhandler-to-return-promise']]);
+  assert.deepEqual(api.calls[4], ['removeLabel', 7, 'agent-start-failed']);
+  assert.deepEqual(api.calls[5], ['addLabelSignal', 7, 'plan-triage-handoff'], 'the hand-off a maintainer gave by hand, with the signal token so that the PR worker starts');
+  assert.deepEqual(api.calls[6].slice(0, 2), ['reply', 7]);
+  assert.match(api.calls[6][2], /^Started again by @maint with \/retry\. #884 held no changes and is closed\. The issue goes back to implementation\.$/);
+  assert.match(result.note, /closed #884/);
+});
+
+test('/retry closes every empty start, deletes only the branches that are the agent\'s own, and says so', () => {
+  const { result, api } = retry(withAgent(), { pulls: { 7: [shell(1), shell(2, null)] } });
+  assert.equal(result.ok, true);
+  assert.deepEqual(api.calls.filter((c) => c[0] === 'closePull'), [['closePull', 1], ['closePull', 2]]);
+  assert.deepEqual(api.calls.filter((c) => c[0] === 'deleteBranch'), [['deleteBranch', 'copilot/start-1']], 'a branch of a fork or with another name is left');
+  assert.match(api.calls.at(-1)[2], /#1, #2 held no changes and are closed/);
+});
+
+test('/retry works when there is nothing to take back: the agent is no longer assigned and no pull request is open', () => {
+  const { result, api } = retry(issue(failedLabels), { pulls: { 7: [] } });
+  assert.equal(result.ok, true);
+  assert.deepEqual(names(api), ['removeLabel', 'addLabelSignal', 'reply']);
+  assert.equal(api.calls[2][2], 'Started again by @maint with /retry. The issue goes back to implementation.');
+  assert.ok(!names(api).includes('unassign'));
+});
+
+test('/retry never discards work: a pull request of the agent with changes, or one that is ready for review, stops it before anything is touched', () => {
+  for (const work of [shell(9, 'copilot/x', { changedFiles: 3 }), shell(9, 'copilot/x', { isDraft: false }), shell(9, 'copilot/x', { changedFiles: undefined })]) {
+    const { result, api } = retry(withAgent(), { pulls: { 7: [shell(8), work] } });
+    assert.equal(result.ok, false);
+    assert.match(result.reason, /pull request #9 with changes on it.*not a start that failed.*would drop that work/);
+    assert.deepEqual(api.calls, [], 'not even the empty one is closed, and the agent stays assigned');
+  }
+});
+
+test('/retry changes nothing when GitHub cannot say which pull requests the agent has', () => {
+  const { result, api } = retry(withAgent(), { pulls: { 7: null } });
+  assert.equal(result.ok, false);
+  assert.match(result.reason, /did not tell the Concierge which pull requests the coding agent has.*nothing was changed/);
+  assert.deepEqual(api.calls, []);
+});
+
+test('/retry stops when GitHub keeps the agent assigned, before it closes anything, and a second /retry after a failure half-way finishes the job', () => {
+  const stuck = retry(withAgent(), { pulls: { 7: [shell(884)] }, agentStays: true });
+  assert.equal(stuck.result.ok, false);
+  assert.match(stuck.result.reason, /kept the coding agent assigned.*Unassign it by hand/);
+  assert.deepEqual(names(stuck.api), ['unassign'], 'nothing was closed, deleted or relabelled');
+  // The label is still there after a failure half-way, so the command can be given again; with the pull request closed already it finds none open.
+  const again = retry(issue(failedLabels), { pulls: { 7: [] } });
+  assert.equal(again.result.ok, true);
+});
+
+test('/retry on an issue without the label is the gate retry it always was, and the label does not take over a closed issue', () => {
+  assert.deepEqual(run('retry', issue(['plan-worker-ready'])).api.calls, [['removeLabel', 7, 'plan-worker-ready'], ['addLabelSignal', 7, 'plan-worker-ready']]);
+  assert.match(run('retry', issue(failedLabels, { state: 'closed' })).result.reason, /Nothing is in a gate/);
+});
+
+test('/retry on an agent that did not start is refused while the Concierge is paused and on an opted-out issue, and changes nothing', () => {
+  const paused = fakeApi({ pulls: { 7: [shell(884)] } });
+  const result = runCommand({ name: 'retry', argument: '' }, { issue: withAgent(), actor: 'maint', api: paused, paused: true, now: NOW });
+  assert.equal(result.ok, false);
+  assert.match(result.reason, /paused/);
+  assert.deepEqual(paused.calls, []);
+  assert.match(run('retry', withAgent([...failedLabels, 'no-auto-processing'])).result.reason, /carries `no-auto-processing`/);
+});
+
+test('isEmptyStart: a draft with no changed file is a start that failed, and nothing else is', () => {
+  assert.equal(isEmptyStart({ isDraft: true, changedFiles: 0 }), true);
+  for (const pr of [{ isDraft: true, changedFiles: 1 }, { isDraft: false, changedFiles: 0 }, { isDraft: true }, { changedFiles: 0 }, {}]) assert.equal(isEmptyStart(pr), false, JSON.stringify(pr));
+});
+
+test('deletableBranch: only the agent\'s own copilot/ branch in this repository, never a fork\'s, a default branch or an odd name', () => {
+  const pr = (headRefName, repo = REPO) => ({ headRefName, headRepository: { nameWithOwner: repo } });
+  assert.equal(deletableBranch(pr('copilot/allow-callbackhandler-to-return-promise'), REPO), 'copilot/allow-callbackhandler-to-return-promise');
+  assert.equal(deletableBranch(pr('copilot/fix_1.2-x/y'), REPO), 'copilot/fix_1.2-x/y');
+  for (const bad of ['main', 'master', 'release/1', 'copilot', 'copilot/', 'copilot/a b', 'copilot/a;rm -rf', 'copilot/$(x)', 'copilot/a\nb', 'feature/copilot/x', '', undefined]) assert.equal(deletableBranch(pr(bad), REPO), null, String(bad));
+  assert.equal(deletableBranch(pr('copilot/x', 'someone/fork'), REPO), null, 'a fork\'s branch is not ours to delete');
+  assert.equal(deletableBranch({ headRefName: 'copilot/x' }, REPO), null);
+});
+
+// What GitHub answered for frodo-lib#783 on 2026-11-02 (the query in realApi.agentPulls, with closed pull requests included to show the filter):
+// #785 closed, #884 closed (the empty start), #885 open (work).
+const ANSWER = (nodes) => ({ data: { repository: { issue: { closedByPullRequestsReferences: { nodes } } } } });
+const FROM_GITHUB = [
+  { number: 785, state: 'CLOSED', isDraft: true, changedFiles: 2, headRefName: 'copilot/fix-connection-profile-mfa-error', headRepository: { nameWithOwner: 'rockcarver/frodo-lib' }, author: { login: 'copilot-swe-agent', __typename: 'Bot' } },
+  { number: 884, state: 'CLOSED', isDraft: true, changedFiles: 0, headRefName: 'copilot/allow-callbackhandler-to-return-promise', headRepository: { nameWithOwner: 'rockcarver/frodo-lib' }, author: { login: 'copilot-swe-agent', __typename: 'Bot' } },
+  { number: 885, state: 'OPEN', isDraft: true, changedFiles: 4, headRefName: 'copilot/allow-callbackhandler-return-promise', headRepository: { nameWithOwner: 'rockcarver/frodo-lib' }, author: { login: 'copilot-swe-agent', __typename: 'Bot' } },
+];
+
+test('agentPullsOf: GitHub\'s answer to the pull requests of the agent that are open, with the branch a retry may delete', () => {
+  assert.deepEqual(agentPullsOf(ANSWER(FROM_GITHUB), 'rockcarver/frodo-lib'), [{ number: 885, isDraft: true, changedFiles: 4, branch: 'copilot/allow-callbackhandler-return-promise' }]);
+  const empty = { ...FROM_GITHUB[1], state: 'OPEN' };
+  assert.deepEqual(agentPullsOf(ANSWER([empty]), 'rockcarver/frodo-lib'), [{ number: 884, isDraft: true, changedFiles: 0, branch: 'copilot/allow-callbackhandler-to-return-promise' }]);
+  assert.ok(isEmptyStart(agentPullsOf(ANSWER([empty]), 'rockcarver/frodo-lib')[0]), 'the first attempt was an empty start');
+  assert.ok(!isEmptyStart(agentPullsOf(ANSWER([FROM_GITHUB[2]]), 'rockcarver/frodo-lib')[0]), 'the second was work');
+  assert.deepEqual(agentPullsOf(ANSWER([{ ...empty, author: { login: 'a-person' } }, { ...empty, author: null }]), 'rockcarver/frodo-lib'), [], 'a person\'s pull request is not the agent\'s start');
+  assert.equal(agentPullsOf(ANSWER([{ ...empty, headRepository: { nameWithOwner: 'x/fork' } }]), 'rockcarver/frodo-lib')[0].branch, null);
+});
+
+test('/approve takes backlog off too: an approved plan is no longer parked (frodo-lib#783 kept it into implementation)', () => {
+  const { result, api } = run('approve', issue([...classifiedHold, 'backlog']), { actor: 'maint' });
+  assert.equal(result.ok, true);
+  assert.deepEqual(api.calls.slice(0, 3), [['removeLabel', 7, 'plan-approval-required'], ['removeLabel', 7, 'backlog'], ['addLabelSignal', 7, 'plan-triage-handoff']], 'before the hand-off, with the workflow token');
+  assert.deepEqual(run('approve', issue([...classifiedHold, 'backlog', 'dependency-required'])).api.calls, [], 'a refused approval keeps the parking label');
+});
+
 test('/help lists every command in one comment', () => {
   const { result, api } = run('help', issue([]));
   assert.equal(result.ok, true);
@@ -513,6 +661,7 @@ test('menuCandidates: the issues that wait or are in a gate, and those that hold
   const recent = [{ ...menu(9), issue_url: 'https://api.github.com/repos/o/r/issues/5' }, { ...comment(10, 'x'), issue_url: 'https://api.github.com/repos/o/r/issues/2' }];
   assert.deepEqual(menuCandidates(fakeApi({ open, recent }), NOW).numbers, [1, 3, 5]);
   assert.equal(menuCandidates(fakeApi({ listFails: true }), NOW), null);
+  assert.deepEqual(menuCandidates(fakeApi({ open: [issue(['agent-start-failed'], { number: 6 })] }), NOW).numbers, [6], 'an agent that did not start waits for a maintainer');
 });
 
 // ---------------------------------------------------------------- the events
@@ -625,6 +774,27 @@ test('main: a comment that is no command keeps the menu last on an issue that wa
   assert.deepEqual(idle.api.reads, [], 'not even a read');
 });
 
+test('main: /retry on an agent that did not start passes the branches to delete to the job that may delete them, and nothing else does', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'out-'));
+  const out = path.join(dir, 'output');
+  fs.writeFileSync(out, '');
+  const { env } = eventEnv('issue_comment', commentEvent('/retry', { labels: failedLabels }));
+  const api = fakeApi({ issues: { 7: withAgent() }, comments: { 7: [] }, roles: { maint: 'admin' }, pulls: { 7: [shell(884, 'copilot/a'), shell(885, 'copilot/b'), shell(886, null)] } });
+  assert.equal(main({ ...env, GITHUB_OUTPUT: out }, api, () => {}), 0);
+  assert.equal(fs.readFileSync(out, 'utf8'), 'branches=copilot/a copilot/b\n');
+  // a comment that deletes nothing writes nothing
+  const quiet = path.join(dir, 'quiet');
+  fs.writeFileSync(quiet, '');
+  const { env: env2 } = eventEnv('issue_comment', commentEvent('/accept'));
+  main({ ...env2, GITHUB_OUTPUT: quiet }, fakeApi({ ...held, roles: { maint: 'admin' } }), () => {});
+  assert.equal(fs.readFileSync(quiet, 'utf8'), '');
+});
+
+test('main: a comment on an issue that carries the label keeps its menu last, like any issue that waits', () => {
+  const waiting = go('issue_comment', commentEvent('thanks!', { login: 'reporter', assoc: 'NONE', labels: failedLabels }), { issues: { 7: issue(failedLabels) }, comments: { 7: [comment(1, 'analysis', BOT), menu(2), comment(3, 'thanks!')] } });
+  assert.deepEqual(names(waiting.api), ['deleteComment', 'postComment']);
+});
+
 test('main: a pull request comment, a bot\'s comment and the setting off do nothing', () => {
   assert.deepEqual(go('issue_comment', commentEvent('/accept', { pr: true }), held).api.calls, []);
   const bot = go('issue_comment', commentEvent('/accept', { login: 'github-actions[bot]', type: 'Bot' }), { ...held, comments: { 7: [comment(1, 'x'), menu(2)] } });
@@ -679,4 +849,12 @@ test('what starts the next gate uses the signal token and what must not uses the
   assert.match(source, /closeSignal: \(n\) => json\('PATCH'[^\n]*, signal\)/);
   assert.match(source, /removeLabel: \(n, label\) => ignore404\(\(\) => json\('DELETE'[^\n]*labels\/\$\{encodeURIComponent\(label\)\}`\)\),/, 'a removal uses the default, the workflow token');
   assert.match(source, /reopen: \(n\) => json\('PATCH', `repos\/\$\{repo\}\/issues\/\$\{n\}`, \{ state: 'open' \}\)/, 'a reopen starts nothing');
+});
+
+test('a retry closes the agent\'s pull request with the signal token (pull requests: write) and cannot delete a branch itself: it only names it', () => {
+  const source = fs.readFileSync(path.join(HERE, 'commands.mjs'), 'utf8');
+  assert.match(source, /closePull: \(number\) => json\('PATCH', `repos\/\$\{repo\}\/pulls\/\$\{number\}`, \{ state: 'closed' \}, signal\)/);
+  assert.match(source, /deleteBranch\(branch\) \{\n      this\.branchesToDelete\.push\(branch\);\n    \}/);
+  assert.ok(!/git\/refs/.test(source), 'the job that has contents: write deletes, in workflows/commands.yml');
+  assert.match(source, /includeClosedPrs:false/, 'the query asks for open pull requests only');
 });

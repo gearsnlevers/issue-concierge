@@ -19,6 +19,7 @@ import {
   GATE,
   TRIAGE_OUTCOMES,
   OPEN_WORK_STATE,
+  LABEL_AGENT_FAILED,
 } from './janitor.mjs';
 
 const issue = (labels, extra = {}) => ({ labels, state: 'open', assignees: [], ...extra });
@@ -83,6 +84,37 @@ test('closing an issue removes gate labels and open-work state, and keeps everyt
   for (const kept of ['enhancement', 'complexity/medium', 'risk/medium', 'low-hanging-fruit', 'out-of-scope', 'duplicate', 'related-repo', 'waiting-for-release', 'released', 'priority/p1']) {
     assert.equal(removed.has(kept), false, `${kept} must stay`);
   }
+});
+
+// frodo-lib#783 and #754: the coding agent said it could not start. The label describes the assignment, so it goes with it.
+test('agent-start-failed stays while the coding agent is assigned, and goes when nobody is, when a new hand-off was given, and when the issue closes', () => {
+  const copilot = { assignees: ['Copilot'] };
+  assert.equal(LABEL_AGENT_FAILED, 'agent-start-failed');
+  assert.deepEqual(stale([LABEL_AGENT_FAILED, 'complexity/low', 'risk/high'], copilot), [], 'the agent is assigned: that is the state it describes');
+  assert.deepEqual(stale([LABEL_AGENT_FAILED, 'complexity/low', 'risk/high']), [LABEL_AGENT_FAILED], 'a maintainer unassigned the agent');
+  assert.deepEqual(stale([LABEL_AGENT_FAILED, 'plan-triage-handoff'], copilot), [LABEL_AGENT_FAILED, 'plan-triage-handoff'], 'started again by hand: both are over');
+  assert.deepEqual(stale([LABEL_AGENT_FAILED, 'plan-triage-handoff']), [LABEL_AGENT_FAILED], 'unassigned and handed on: the hand-off is waiting for the PR worker, and stays');
+  assert.deepEqual(stale([LABEL_AGENT_FAILED, 'backlog'], { ...copilot, state: 'closed' }), ['backlog', LABEL_AGENT_FAILED].sort(), 'open-work state goes on close');
+  assert.ok(OPEN_WORK_STATE.includes(LABEL_AGENT_FAILED));
+  assert.deepEqual(staleLabels({ labels: [LABEL_AGENT_FAILED], isPullRequest: true }), [], 'a pull request never carries it');
+});
+
+test('lifecycle: an agent that did not start, from the failure to the second attempt', () => {
+  const labels = new Set(['complexity/low', 'risk/high', 'backlog', 'plan-triage-handoff']);
+  const assignees = ['Copilot'];
+  const settle = () => { for (const l of staleLabels({ labels, state: 'open', assignees })) labels.delete(l); };
+  settle();
+  assert.deepEqual([...labels].sort(), ['backlog', 'complexity/low', 'risk/high'], 'the hand-off goes as soon as the agent is assigned (the PR worker\'s own run is green)');
+  labels.add(LABEL_AGENT_FAILED); // the watch
+  settle();
+  assert.ok(labels.has(LABEL_AGENT_FAILED), 'it stays while the agent is assigned');
+  assignees.length = 0; // /retry: unassign, remove the label, hand on
+  labels.add('plan-triage-handoff');
+  settle();
+  assert.deepEqual([...labels].sort(), ['backlog', 'complexity/low', 'plan-triage-handoff', 'risk/high'], 'the hand-off waits for the PR worker');
+  assignees.push('Copilot'); // the second attempt
+  settle();
+  assert.deepEqual([...labels].sort(), ['backlog', 'complexity/low', 'risk/high']);
 });
 
 test('pull request labels: hand-over goes with the next signal, both go when it closes', () => {
@@ -219,6 +251,13 @@ test('the workflow starts for exactly the label events the script cares about', 
   const m = yml.match(/fromJSON\('(\[.*?\])'\)/);
   assert.ok(m, 'label list not found in workflows/janitor.yml');
   assert.deepEqual(JSON.parse(m[1]).sort(), [...TRIGGER_LABELS].sort());
+});
+
+// frodo-lib#783: a maintainer who unassigns the coding agent ends the failed start it was labelled for, and the janitor takes the
+// label away on that event instead of waiting for the sweep, which GitHub starts every few hours.
+test('the workflow starts when the coding agent is assigned or unassigned, and when an item closes', () => {
+  const yml = fs.readFileSync(new URL('../workflows/janitor.yml', import.meta.url), 'utf8');
+  assert.match(yml, /^  issues:\n    types: \[labeled, assigned, unassigned, closed\]$/m);
 });
 
 test('every label event has its own concurrency group, so a skipped run cannot cancel the one that works', () => {

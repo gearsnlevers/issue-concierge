@@ -43,6 +43,8 @@ files:
   - scripts/issue-concierge-updater.mjs
   - workflows/pr-ready-signal.yml
   - scripts/pr-ready-signal.mjs
+  - workflows/agent-start-watch.yml
+  - scripts/agent-start-watch.mjs
   - shared/dependencies.md
   - shared/safety-policy.md
   - shared/complexity.md
