@@ -414,6 +414,17 @@ The coding agent cannot add labels, so a plain Actions workflow (no LLM) adds `p
 
 It imports `janitor.mjs` and `opt-out.mjs`, so install those too. The triggers and what each one means are in [multi-phase-design.md](multi-phase-design.md#3-pr-gate). To signal a pull request by hand, run the workflow with its number.
 
+### Agent start watch
+
+The coding agent can fail to start after GitHub accepted the assignment. It then says so in one comment on the issue, and a plain Actions workflow (no LLM) reads that comment and adds `agent-start-failed`, which puts the issue under "Needs you" on the status issue and offers `/retry` in the options comment. It never starts the agent again by itself. Install it with the other plain workflows.
+
+| From this repository | To the consuming repository |
+|----------------------|-----------------------------|
+| `workflows/agent-start-watch.yml` | `.github/workflows/agent-start-watch.yml` |
+| `scripts/agent-start-watch.mjs` | `.github/scripts/agent-start-watch.mjs` |
+
+It imports `janitor.mjs`, `opt-out.mjs` and `plan-approval-resume.mjs`, so install those too. It needs `SIGNAL_TOKEN` (Issues: Read and write), because a label added with the workflow token starts no workflow and the status issue and the options comment start on this label. The design and the reason are in [multi-phase-design.md](multi-phase-design.md#when-the-coding-agent-does-not-start). To check an issue by hand, run **Agent Start Watch** from the Actions tab with its number: it looks at the latest comment of the coding agent. `/retry` closes the agent's empty draft pull request with `SIGNAL_TOKEN` (Pull requests: Read and write) and the `delete-branches` job of `commands.yml` deletes its `copilot/` branch; both need nothing new.
+
 ### Janitor
 
 A plain Actions workflow (no LLM) keeps issues and pull requests showing where they are: it removes an earlier gate label once the next signal exists, and the labels that describe open work when an issue closes. It also deletes the runs GitHub holds for approval that approving could only turn into a skipped run or into CI for a commit that is no longer the head: the `Issue Worker` run that each comment by the coding agent on its own pull request leaves behind, the `Dependabot Auto-Merge` run of each of its pushes (only while the repository's workflow still conditions every job on the Dependabot actor), and the runs of pushes its pull request has moved past or of a pull request that is closed. It never deletes the held run for a pull request's current head, which is the approval that matters, and none caused by anyone but the coding agent. Install it with the other plain workflows; it needs no secret. The deletion is a second job that declares `actions: write` and `pull-requests: read` for itself; the label job keeps its smaller token.
@@ -575,6 +586,7 @@ The workflows apply and react to specific labels. Create them once per repositor
 | `risk/medium` | `fbca04` | Normal code changes |
 | `risk/high` | `d93f0b` | Security, auth, data integrity, availability, or public API impact |
 | `plan-approval-required` | `b60205` | Hold for approval (also by hand): nothing is assigned; remove to resume (`plan-approval-resume`) |
+| `agent-start-failed` | `b60205` | The coding agent could not start; /retry takes the empty start back and hands the issue on again |
 | `needs-info` | `d4c5f9` | Missing reproduction steps or details |
 | `backlog` | `c5def5` | Valid but not urgent; do not plan or implement now |
 | `low-hanging-fruit` | `bfdadc` | Valid but not urgent, small and low risk; handed to the plan gate anyway |
@@ -738,6 +750,7 @@ Nothing here is required: the Concierge reads the old names as well as the new o
 - [ ] Commands installed (`commands.yml` and `commands.mjs`; needs `SIGNAL_TOKEN`; the updater does it); on an issue that carries `needs-decision` the last comment is the options comment, and `/accept` from a collaborator with the role hands the issue to the plan worker
 - [ ] Status issue installed (`status.yml`, `status-issue.mjs`, `issue-concierge-settings.mjs` and `issue-concierge-state.mjs`; the updater does it); after the first run the "Issue Concierge status" issue exists, is pinned, and its counts match the open issues
 - [ ] PR ready signal installed (`pr-ready-signal.yml` and `pr-ready-signal.mjs`; needs `SIGNAL_TOKEN`)
+- [ ] Agent start watch installed (`agent-start-watch.yml` and `agent-start-watch.mjs`; needs `SIGNAL_TOKEN`; the updater does it); on an issue the coding agent reported it could not start on, the label `agent-start-failed` appears, the status issue lists it under "Needs you", and `/retry` closes the empty draft pull request and hands the issue on (not seen live yet)
 - [ ] Branch protection / ruleset configured (require PR, status checks, no force-push)
 - [ ] Auto-merge enabled (if low/low unattended merge is desired)
 - [ ] Test issue processed end-to-end

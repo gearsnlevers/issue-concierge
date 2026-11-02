@@ -40,6 +40,11 @@
       "description": "Hold for approval (also by hand): nothing is assigned; remove to resume (`plan-approval-resume`)"
     },
     {
+      "name": "agent-start-failed",
+      "color": "b60205",
+      "description": "The coding agent could not start; /retry takes the empty start back and hands the issue on again"
+    },
+    {
       "name": "needs-info",
       "color": "d4c5f9",
       "description": "Missing reproduction steps or details"

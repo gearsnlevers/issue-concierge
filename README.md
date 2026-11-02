@@ -36,6 +36,7 @@ These are the flows the Concierge supports, from a first comment to a release. [
 17. An issue that stalled
 18. Labels and runs kept tidy
 19. Staying current
+20. A coding agent that did not start
 
 ## Releases
 
@@ -132,6 +133,7 @@ Create these in consuming repositories (full list and colors in [docs/deployment
 | `risk/medium` | Risk | Normal code changes |
 | `risk/high` | Risk | Security, auth, data integrity, availability, or public API impact |
 | `plan-approval-required` | Gate | Added by plan triage for high complexity or high risk, or by a maintainer by hand. Nothing is assigned while it is present. Removing it resumes the issue (`plan-approval-resume` hands it to the PR gate) |
+| `agent-start-failed` | Gate | The coding agent said it could not start work on the issue (added by the agent start watch); a maintainer gives `/retry` to take the empty start back and hand the issue on again |
 | `needs-info` | Quality | Missing reproduction steps or details |
 | `dependency-required` | Gate | Issue declares a dependency that is not finished; the watcher removes it (see [shared/dependencies.md](shared/dependencies.md)) |
 | `dependency-satisfied` | Gate | Dependencies finished (or cleared by a maintainer); issue triage lets the issue through |
@@ -220,6 +222,7 @@ Templates are in `shared/`. A repository can also supply an environment agent (s
 │   ├── spawn-work-items.yml
 │   ├── pr-worker.md
 │   ├── pr-ready-signal.yml
+│   ├── agent-start-watch.yml
 │   ├── pr-triage.md
 │   ├── janitor.yml
 │   ├── related-repo-closer.yml
@@ -231,6 +234,7 @@ Templates are in `shared/`. A repository can also supply an environment agent (s
 │   ├── status.yml
 │   └── commands.yml
 ├── scripts/                 what the plain workflows run
+│   ├── agent-start-watch.mjs
 │   ├── check-deployment.mjs
 │   ├── commands.mjs
 │   ├── dependency-watch.mjs

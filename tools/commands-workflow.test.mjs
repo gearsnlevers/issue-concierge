@@ -41,20 +41,48 @@ test('one run at a time, and a run that is writing is not cancelled', () => {
 test('the text of a comment, a title or a login never reaches a shell: no run line has an expression, and the event file is the only input', () => {
   assert.doesNotMatch(code, /github\.event\.(comment\.body|comment\.user\.login|issue\.title|issue\.body|issue\.user\.login)/);
   for (const [, line] of code.matchAll(/^\s+run: (.+)$/gm)) assert.doesNotMatch(line, /\$\{\{/, line);
-  assert.deepEqual([...code.matchAll(/^\s+run: (.+)$/gm)].map((m) => m[1]), ['sleep 30', 'node .github/scripts/commands.mjs']);
+  assert.deepEqual([...code.matchAll(/^\s+run: (.+)$/gm)].map((m) => m[1]), ['sleep 30', 'node .github/scripts/commands.mjs', '|'], 'the last is the block of the job that deletes branches, checked below');
   assert.doesNotMatch(code, /GITHUB_EVENT_PATH|toJSON\(github\.event/, 'the script reads the file GitHub provides itself');
   assert.match(read('scripts/commands.mjs'), /env\.GITHUB_EVENT_PATH/);
 });
 
 test('a label event starts it only for the labels that change what waits for a maintainer, an opted-out issue and a pull request never do, and a bot\'s comment is not read', () => {
   const list = JSON.parse(/fromJSON\('(\[[^']*\])'\)/.exec(code)[1]);
-  assert.deepEqual(list, ['needs-decision', 'scope-review', 'plan-approval-required', 'complexity/low', 'complexity/medium', 'complexity/high', 'risk/low', 'risk/medium', 'risk/high', 'issue-triage-handoff', 'plan-worker-ready', 'plan-triage-handoff', 'declined']);
+  assert.deepEqual(list, ['needs-decision', 'scope-review', 'plan-approval-required', 'complexity/low', 'complexity/medium', 'complexity/high', 'risk/low', 'risk/medium', 'risk/high', 'issue-triage-handoff', 'plan-worker-ready', 'plan-triage-handoff', 'declined', 'agent-start-failed']);
   const known = new Set(requirements.labels.map((l) => l.name));
   for (const label of list) assert.ok(known.has(label), `${label} is not in requirements.json`);
   assert.match(code, /\(github\.event\.action != 'labeled'\n\s+\|\| contains\(fromJSON/);
   assert.match(code, /&& !contains\(github\.event\.issue\.labels\.\*\.name, 'no-auto-processing'\)/);
   assert.match(code, /&& github\.event\.issue\.pull_request == null/);
   assert.match(code, /&& github\.event\.comment\.user\.type != 'Bot'/);
+});
+
+// A retry of an agent that did not start (decision 0041) closes the agent's empty draft pull request with the signal token and
+// names its branch; deleting a branch needs contents: write, which the job that reads every comment must not have.
+test('the only job with contents: write deletes branches, runs only when the command named some, and gets nothing from a comment but a validated name', () => {
+  const top = code.split('\njobs:')[0];
+  assert.match(top, /^permissions:\n  contents: read\n  issues: write\n\nconcurrency:/m, 'the job that reads comments keeps the two it needs');
+  const jobs = code.split('\njobs:')[1];
+  const [commandsJob, deleteJob] = jobs.split('\n  delete-branches:');
+  assert.ok(deleteJob, 'a job of its own');
+  assert.doesNotMatch(commandsJob, /contents: write|permissions:/, 'the command job asks for nothing beyond the file\'s permissions');
+  assert.equal([...code.matchAll(/contents: write/g)].length, 1, 'once, in the delete job');
+  assert.match(deleteJob, /\n    needs: commands\n    if: \$\{\{ needs\.commands\.outputs\.branches != '' \}\}/);
+  assert.match(deleteJob, /\n    permissions:\n      contents: write\n/);
+  assert.doesNotMatch(deleteJob, /secrets\.|SIGNAL_TOKEN|checkout/, 'no secret and no code is checked out');
+  assert.match(deleteJob, /BRANCHES: \$\{\{ needs\.commands\.outputs\.branches \}\}/);
+  const script = deleteJob.split('run: |\n')[1];
+  assert.doesNotMatch(script, /\$\{\{/, 'the names reach the shell as an environment variable only');
+  assert.match(script, /\[\[ "\$branch" =~ \^copilot\/\[A-Za-z0-9\._\/-\]\+\$ \]\]/, 'and only a name of the shape of the agent\'s branches is deleted');
+  assert.match(script, /gh api --method DELETE "repos\/\$\{GITHUB_REPOSITORY\}\/git\/refs\/heads\/\$\{branch\}"/);
+  assert.match(commandsJob, /outputs:\n      branches: \$\{\{ steps\.commands\.outputs\.branches \}\}/);
+  assert.match(commandsJob, /- name: Run the command and keep the options comment\n        id: commands\n/);
+});
+
+test('the script names the branches to the job through the step output, and the output carries only names the script validated', () => {
+  const source = read('scripts/commands.mjs');
+  assert.match(source, /fs\.appendFileSync\(env\.GITHUB_OUTPUT, `branches=\$\{\[\.\.\.new Set\(api\.branchesToDelete\)\]\.join\(' '\)\}\\n`\)/);
+  assert.match(source, /\/\^copilot\\\/\[\\w\.\/-\]\+\$\//, 'the shape is checked where the name is chosen as well');
 });
 
 test('after a label event it waits half a minute, so that the comment a gate posts with its labels is there first', () => {
@@ -103,4 +131,6 @@ test('the docs, the record and the checklist say the same', () => {
   assert.match(read('README.md'), /An issue that waits for a maintainer carries the command they need next\./);
   assert.match(read('docs/decisions/README.md'), /\| 0036 \| \[A maintainer decides by command, from the issue\]\(0036-a-maintainer-decides-by-command-from-the-issue\.md\) \| accepted \|/);
   assert.match(read('docs/decisions/0036-a-maintainer-decides-by-command-from-the-issue.md'), /^status: accepted$/m);
+  assert.match(design, /\| the coding agent could not start \(`agent-start-failed`\) \| `\/retry` \|/);
+  assert.match(design, /^### When the coding agent does not start$/m);
 });

@@ -67,6 +67,23 @@ test('resume applies the handoff label and comments exactly once', () => {
   assert.match(calls[1][1], /@maintainer/);
 });
 
+test('resume takes backlog off: an approved plan is no longer parked, and the label would show it as waiting for nobody (frodo-lib#783)', () => {
+  const calls = [];
+  const ctx = { removedLabel: 'plan-approval-required', actor: 'maintainer', removeLabel: (l) => calls.push(['remove', l]), addLabel: (l) => calls.push(['label', l]), comment: (b) => calls.push(['comment', b]) };
+  assert.equal(resume(issue(['complexity/low', 'risk/high', 'backlog']), ctx).handoff, true);
+  assert.deepEqual(calls.map((c) => c.slice(0, 2)).slice(0, 2), [['remove', 'backlog'], ['label', 'plan-triage-handoff']], 'before the hand-off');
+  const without = [];
+  resume(issue(['complexity/high', 'risk/high']), { ...ctx, removeLabel: (l) => without.push(l), addLabel() {}, comment() {} });
+  assert.deepEqual(without, [], 'nothing to remove');
+  // an older caller without removeLabel still hands off
+  assert.equal(resume(issue(['complexity/high', 'backlog']), { removedLabel: 'plan-approval-required', addLabel() {}, comment() {} }).handoff, true);
+  // a refusal and a dry run keep the label
+  const kept = [];
+  resume(issue(['complexity/high', 'backlog', 'plan-approval-required']), { ...ctx, removeLabel: (l) => kept.push(l) });
+  resume(issue(['complexity/high', 'backlog']), { ...ctx, dryRun: true, removeLabel: (l) => kept.push(l) });
+  assert.deepEqual(kept, []);
+});
+
 test('resume changes nothing when skipped or in a dry run', () => {
   const calls = [];
   const ctx = { addLabel: (l) => calls.push(l), comment: (b) => calls.push(b) };

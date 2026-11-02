@@ -29,6 +29,7 @@ A workflow is either **model** (a gh-aw agent that reads, decides and writes lab
 | 17 | An issue that stalled | An issue the worker analysed but that never reached triage is given the gate label again by a sweep, a bounded number of times. The sweep never lifts a hold and never comments. | 1e | none |
 | 18 | Labels and runs kept tidy | An issue shows where it is, not where it has been: when the next gate label exists the earlier one goes, and when an issue closes the labels that describe open work go. Runs the coding agent leaves waiting for approval, which could only become skipped runs, are deleted. | 4a | none |
 | 19 | Staying current | Each day the updater opens one pull request that moves a repository to the newest release of the version channel it pins. The deployment check reports a setup that cannot do what the repository's files promise. | 4e, 4f | none |
+| 20 | A coding agent that did not start | The agent can fail to start after it was assigned: it opens an empty draft pull request and says so in one comment. A plain workflow reads that comment and labels the issue `agent-start-failed`, which lists it under "Needs you" on the status issue and offers `/retry` in the options comment. `/retry` unassigns the agent, closes its empty draft pull request, deletes its branch and hands the issue to the PR worker again; a pull request with changes is never touched. Nothing starts the agent again by itself. | 3d, 4a, 5a, 5b | none |
 
 "Scenario" is the number of a live end-to-end scenario in [e2e.md](e2e.md#the-scenarios) that tests the flow in a sandbox. `none` means that no live scenario tests it yet; the unit tests still do.
 
@@ -50,15 +51,16 @@ They are named `Issue Concierge <code> [▸ ]<Name>` so that the Actions sidebar
 | 3a | PR Worker | `pr-worker.md` | model | `plan-triage-handoff` | 1 |
 | 3b | PR Ready Signal | `pr-ready-signal.yml` | plain | the coding agent finishes, and by hand for one pull request | 1 |
 | 3c | PR Triage | `pr-triage.md` | model | `pr-worker-ready` | 1 |
-| 4a | Janitor | `janitor.yml` | plain | after gate labels change, on assignment and on close, hourly, and by hand | 18 |
+| 3d | Agent Start Watch | `agent-start-watch.yml` | plain | the coding agent comments that it could not start, and by hand for one issue | 20 |
+| 4a | Janitor | `janitor.yml` | plain | after gate labels change, on assignment, unassignment and close, hourly, and by hand | 18, 20 |
 | 4b | Related Repo Closer | `related-repo-closer.yml` | plain | a linked issue is closed, and by hand for one issue | 10 |
 | 4c | Waiting for Release | `waiting-for-release.yml` | plain | an issue is closed by a merged pull request, and by hand for one issue | 16 |
 | 4d | Release Closer | `release-closer.md` | model | a release is published | 16 |
 | 4e | Updater | `issue-concierge-updater.yml` | plain | daily, and by hand | 19 |
 | 4f | Check Deployment | `check-deployment.yml` | plain | on pull requests, and by hand | 19 |
 | 4g | Route Back | `route-back.yml` | plain | by hand, for the linked issue of a split | 11 |
-| 5a | Status | `status.yml` | plain | a label that matters changes, on a comment, hourly, and by hand | 14 |
-| 5b | Commands | `commands.yml` | plain | a comment, a label that changes what waits for a maintainer, an issue closing or reopening, hourly, and by hand | 13 |
+| 5a | Status | `status.yml` | plain | a label that matters changes, the coding agent is assigned or unassigned, on a comment, on a schedule, and by hand | 14, 20 |
+| 5b | Commands | `commands.yml` | plain | a comment, a label that changes what waits for a maintainer, an issue closing or reopening, hourly, and by hand | 13, 20 |
 
 Flows 8 and 15 are not in the last column: the opt-out label and the pause variable are read by every workflow that acts on an issue or a pull request.
 

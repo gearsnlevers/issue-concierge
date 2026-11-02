@@ -5,6 +5,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { TRIGGER_LABELS } from '../scripts/janitor.mjs';
 import { buildManifest } from './build-release-manifest.mjs';
+import { holds, jobIf } from './workflow-condition.mjs';
 
 // The status issue (docs/multi-phase-design.md, "The maintainer's view", decision 0040) is written by a plain
 // workflow that runs on the events of a busy repository, with a token that can pin. This pins what that workflow may
@@ -20,10 +21,10 @@ test('it is the maintainer\'s view, named in the sidebar order, and can be start
   assert.match(code, /^  workflow_dispatch:\n    inputs:\n      dry_run:\n        description: 'Only print the page and write nothing'/m);
 });
 
-test('it runs on the events that change a number on the page, every hour and by hand, and on no other', () => {
+test('it runs on the events that change a number on the page, on a schedule and by hand, and on no other', () => {
   const on = code.split('\npermissions:')[0];
   assert.match(on, /schedule:\n    - cron: '17 \* \* \* \*'/);
-  assert.match(on, /issues:\n    types: \[opened, closed, reopened, labeled\]/);
+  assert.match(on, /issues:\n    types: \[opened, closed, reopened, labeled, assigned, unassigned\]/);
   assert.match(on, /issue_comment:\n    types: \[created\]/);
   assert.doesNotMatch(on, /pull_request|push:|edited|unlabeled|workflow_run/, 'a removal starts nothing: only the issue worker and the plan approval resume may listen to it');
 });
@@ -46,6 +47,23 @@ test('a label event starts it only for the labels the janitor watches, and nothi
   assert.match(code, /&& !contains\(github\.event\.issue\.labels\.\*\.name, 'no-auto-processing'\)/);
   assert.match(code, /&& github\.event\.issue\.pull_request == null/);
   assert.match(code, /&& github\.event\.comment\.user\.type != 'Bot'/);
+});
+
+// frodo-lib#783: the page did not change when the coding agent was assigned, unassigned or said it could not start, and the
+// hourly schedule that was meant to catch what the events missed started every 3.5 to 10 hours.
+test('an assignment starts it only when it is the coding agent\'s, and the label of a failed start is one of the labels that start it', () => {
+  const condition = jobIf(workflow, 'status');
+  const event = (action, extra = {}) => ({ vars: {}, github: { event_name: 'issues', event: { action, issue: { labels: [], pull_request: null }, ...extra } } });
+  for (const login of ['Copilot', 'copilot-swe-agent', 'copilot-swe-agent[bot]']) {
+    for (const action of ['assigned', 'unassigned']) assert.equal(holds(condition, event(action, { assignee: { login } })), true, `${action} ${login}`);
+  }
+  for (const action of ['assigned', 'unassigned']) assert.equal(holds(condition, event(action, { assignee: { login: 'a-person' } })), false, `${action} a person: no run for what the page does not show`);
+  assert.equal(holds(condition, event('assigned', { assignee: { login: 'Copilot' }, issue: { labels: [{ name: 'no-auto-processing' }], pull_request: null } })), false, 'an opted-out issue starts nothing');
+  assert.equal(holds(condition, event('assigned', { assignee: { login: 'Copilot' }, issue: { labels: [], pull_request: {} } })), false, 'a pull request starts nothing');
+  assert.equal(holds(condition, event('labeled', { label: { name: 'agent-start-failed' } })), true);
+  assert.equal(holds(condition, event('labeled', { label: { name: 'enhancement' } })), false);
+  assert.equal(holds(condition, { vars: {}, github: { event_name: 'schedule', event: {} } }), true, 'the schedule and a run by hand carry no action');
+  assert.ok(TRIGGER_LABELS.includes('agent-start-failed'));
 });
 
 test('it checks out the default branch and runs one script, so the settings are read from there', () => {
@@ -88,7 +106,7 @@ test('the status issue is invisible to the gates: opened by the bot and marked w
 test('the docs, the record and the checklist say the same', () => {
   const design = read('docs/multi-phase-design.md');
   assert.match(design, /^## The maintainer's view$/m);
-  assert.match(design, /\| `Issue Concierge 5a ▸ Status` \| when a label that matters changes, on a comment, hourly, and on demand; a plain workflow, no model \|/);
+  assert.match(design, /\| `Issue Concierge 5a ▸ Status` \| when a label that matters changes, when the coding agent is assigned or unassigned, on a comment, on a schedule \(in practice every few hours\), and on demand; a plain workflow, no model \|/);
   assert.match(read('docs/deployment.md'), /^### Status issue$/m);
   assert.match(read('docs/deployment.md'), /- \[ \] Status issue installed \(`status\.yml`, `status-issue\.mjs`, `issue-concierge-settings\.mjs` and `issue-concierge-state\.mjs`; the updater does it\)/);
   assert.match(read('docs/deployment.md'), /\| `settings\.yml` \| No \|/);

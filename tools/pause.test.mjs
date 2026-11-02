@@ -43,6 +43,7 @@ const COVERED = [
   { file: 'janitor.yml', where: 'job:held-runs', event: { name: 'schedule' }, needs: { clean: { result: 'success' } }, manual: true },
   { file: 'plan-approval-resume.yml', where: 'job:resume', event: issuesEvent('unlabeled', [], 'plan-approval-required'), manual: true },
   { file: 'pr-ready-signal.yml', where: 'job:signal', event: { name: 'pull_request', payload: { pull_request: { labels: [] } } }, manual: true },
+  { file: 'agent-start-watch.yml', where: 'job:watch', event: { name: 'issue_comment', payload: { issue: issue(), comment: { user: { login: 'Copilot', type: 'Bot' }, body: 'The agent encountered an error and was unable to start working on this issue: x' } } }, manual: true },
   { file: 'related-repo-closer.yml', where: 'job:close-original', event: issuesEvent('closed', ['original-in-related-repo']), manual: true },
   { file: 'reporter-notify.yml', where: 'job:notify', event: issuesEvent('labeled', [], 'issue-worker-ready'), manual: true },
   { file: 'waiting-for-release.yml', where: 'job:resolution', event: issuesEvent('closed'), manual: true },

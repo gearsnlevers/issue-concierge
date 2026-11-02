@@ -4,8 +4,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
-  CONCIERGE_LABELS, GATE_LABELS, LEGACY_OPTIONS_MARKER, OPTIONS_MARKER, QUEUES, STUCK_AFTER_MINUTES, aicOf, ago, classify, compareVersions, isAnalysis, isConciergeLabel,
-  GATE_PREFIX, MAINTAINER_ROLES, isOptionsComment, labelledAt, latestRelease, queueOf, readPin, reporterReplies, runHealth, safeText, shortGateName, spend, tokenExpiry,
+  AGENT_QUIET_MINUTES, CONCIERGE_LABELS, GATE_LABELS, LEGACY_OPTIONS_MARKER, OPTIONS_MARKER, QUEUES, STUCK_AFTER_MINUTES, agentPullFor, aicOf, ago, assignedAt, classify, closesIssue, compareVersions,
+  isAnalysis, isConciergeLabel, GATE_PREFIX, MAINTAINER_ROLES, isOptionsComment, labelledAt, latestRelease, queueOf, readPin, reporterReplies, runHealth, safeText, shortGateName, spend, tokenExpiry,
 } from './issue-concierge-state.mjs';
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -49,12 +49,61 @@ test('queueOf: a maintainer\'s move comes before anyone else\'s, and a gate labe
   assert.equal(queueOf(issue(['needs-info', 'dependency-required'])), 'dependency');
   assert.equal(queueOf(issue(['needs-info'])), 'reporter');
   assert.equal(queueOf(issue(['backlog'])), 'parked');
+  assert.equal(queueOf(issue(['backlog', 'needs-info'])), 'reporter', 'a wait for someone else still comes before parked');
   assert.equal(queueOf(issue(['issue-triage-handoff'])), 'in-flight');
   assert.equal(queueOf(issue(['issue-triage-handoff'], { assignees: [{ login: 'Copilot' }] })), 'in-flight');
   assert.equal(queueOf(issue(['risk/low'], { assignees: [{ login: 'Copilot' }] })), 'with-agent');
   assert.equal(queueOf(issue(['related-repo'])), 'elsewhere');
   assert.equal(queueOf(issue(['risk/low'])), 'settled');
-  assert.deepEqual(QUEUES.filter((q) => q.who === 'you').map((q) => q.label), ['needs-decision', 'scope-review', 'plan-approval-required']);
+  assert.deepEqual(QUEUES.filter((q) => q.who === 'you').map((q) => q.label), ['needs-decision', 'scope-review', 'plan-approval-required', 'agent-start-failed']);
+});
+
+// frodo-lib#783 kept `backlog` from its first triage ("valid, not urgent") through the approval of its plan and the hand-off to
+// the coding agent, and the status issue listed it as "Parked: 1" while the agent was assigned: the parking label won over
+// everything. It now counts only when nothing is working on the issue.
+test('queueOf: backlog is parked only when nothing works on the issue, so a gate label or the coding agent outranks it (frodo-lib#783)', () => {
+  const copilot = { assignees: [{ login: 'Copilot' }] };
+  assert.equal(queueOf(issue(['backlog', 'plan-triage-handoff'])), 'in-flight');
+  assert.equal(queueOf(issue(['backlog', 'complexity/low', 'risk/high'], copilot)), 'with-agent');
+  assert.equal(queueOf(issue(['backlog', 'complexity/low', 'risk/high'])), 'parked');
+  assert.equal(queueOf(issue(['backlog', 'related-repo'])), 'parked');
+});
+
+test('queueOf: an agent that did not start is a maintainer\'s move, whatever else the issue carries', () => {
+  const copilot = { assignees: [{ login: 'Copilot' }] };
+  assert.equal(queueOf(issue(['agent-start-failed'], copilot)), 'agent');
+  assert.equal(queueOf(issue(['agent-start-failed', 'backlog', 'complexity/low', 'risk/high'], copilot)), 'agent');
+  assert.equal(queueOf(issue(['agent-start-failed', 'plan-triage-handoff'], copilot)), 'agent');
+  assert.equal(queueOf(issue(['plan-approval-required', 'agent-start-failed'])), 'plan', 'an approval that waits comes first');
+  assert.ok(isConciergeLabel('agent-start-failed'), 'the label makes an issue managed');
+  assert.deepEqual(classify(issue(['agent-start-failed'])), { kind: 'managed', queue: 'agent' });
+});
+
+test('assignedAt: the latest time the coding agent was assigned, from the events, or null', () => {
+  const assigned = (login, at) => ({ event: 'assigned', assignee: { login }, created_at: at });
+  assert.equal(assignedAt([assigned('Copilot', '2026-11-02T18:11:15Z'), assigned('vscheuber', '2026-11-02T19:00:00Z'), assigned('Copilot', '2026-11-02T18:53:53Z')]), Date.parse('2026-11-02T18:53:53Z'));
+  assert.equal(assignedAt([assigned('vscheuber', '2026-11-02T18:11:15Z'), { event: 'labeled', label: { name: 'x' }, created_at: '2026-11-02T19:00:00Z' }]), null);
+  assert.equal(assignedAt(undefined), null);
+});
+
+test('closesIssue: a closing keyword for this issue, in this repository, in any case', () => {
+  for (const body of ['Fixes #7', '- fixes #7', 'Closes o/r#7', 'closed: #7', 'Resolves  #7.', '> - Closes O/R#7', 'Fix #7']) assert.equal(closesIssue(body, 7, 'o/r'), true, body);
+  for (const body of ['Fixes #70', 'Fixes #6', 'See #7', 'Closes other/repo#7', 'prefixes #7', '', undefined]) assert.equal(closesIssue(body, 7, 'o/r'), false, String(body));
+});
+
+test('agentPullFor: the newest open pull request of the coding agent that closes the issue', () => {
+  const pr = (number, login, body, updated) => ({ number, pull_request: {}, user: { login }, body, updated_at: updated });
+  const items = [
+    pr(1, 'Copilot', 'Fixes #7', '2026-11-02T18:00:00Z'),
+    pr(2, 'copilot-swe-agent', 'Closes o/r#7', '2026-11-02T19:00:00Z'),
+    pr(3, 'someone', 'Fixes #7', '2026-11-02T20:00:00Z'),
+    pr(4, 'Copilot', 'Fixes #8', '2026-11-02T21:00:00Z'),
+    { number: 7, user: { login: 'Copilot' }, body: 'Fixes #7', updated_at: '2026-11-02T22:00:00Z' },
+  ];
+  assert.equal(agentPullFor(7, 'o/r', items).number, 2, 'the newest of the agent\'s, not a person\'s and not another issue\'s, and not an issue');
+  assert.equal(agentPullFor(9, 'o/r', items), null);
+  assert.equal(agentPullFor(7, 'o/r', undefined), null);
+  assert.equal(AGENT_QUIET_MINUTES, 30);
 });
 
 test('isAnalysis: the issue worker of this repository, as the bot, and nothing that only starts with its name', () => {
