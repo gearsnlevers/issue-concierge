@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
-  AGENT_QUIET_MINUTES, CONCIERGE_LABELS, GATE_LABELS, LEGACY_OPTIONS_MARKER, OPTIONS_MARKER, QUEUES, STUCK_AFTER_MINUTES, agentPullFor, aicOf, ago, assignedAt, classify, closesIssue, compareVersions,
+  AGENT_QUIET_MINUTES, CONCIERGE_LABELS, GATE_LABELS, LEGACY_OPTIONS_MARKER, OPTIONS_MARKER, PLAN_OWED_MINUTES, QUEUES, STUCK_AFTER_MINUTES, agentPullFor, aicOf, ago, assignedAt, classify, closesIssue, compareVersions,
   isAnalysis, isConciergeLabel, GATE_PREFIX, MAINTAINER_ROLES, isOptionsComment, labelledAt, latestRelease, queueOf, readPin, reporterReplies, runHealth, safeText, shortGateName, spend, tokenExpiry,
 } from './issue-concierge-state.mjs';
 
@@ -126,6 +126,9 @@ test('labelledAt: the last time the label was applied, from the events, or null'
   assert.equal(labelledAt(events, 'scope-review'), null);
   assert.equal(labelledAt(undefined, 'scope-review'), null);
   assert.equal(STUCK_AFTER_MINUTES, 60);
+  // A plan is owed for a few minutes (the plan worker stops after 6, plan triage after 4), not for the hour a stuck gate takes.
+  assert.equal(PLAN_OWED_MINUTES, 20);
+  assert.ok(PLAN_OWED_MINUTES < STUCK_AFTER_MINUTES);
 });
 
 // ---------------------------------------------------------------- reporter replies

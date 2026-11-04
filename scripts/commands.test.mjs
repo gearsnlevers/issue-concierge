@@ -88,6 +88,17 @@ test('situationOf: an agent that did not start waits for a maintainer, after a d
   assert.equal(situationOf(issue(['no-auto-processing', ...failed])), null);
 });
 
+// frodo-lib#754, 2026-11-04: the plan worker found that its plan still stood and ended in `noop`, so `plan-worker-ready` never
+// came. The classified hold kept the maintainer's commands away for a full hour. Now the commands are back after
+// PLAN_OWED_MINUTES when a worker fails or never starts, and the worker answers every hand-off.
+test('situationOf: a classified hold whose hand-off got no answer offers the commands again after the owed time, not before', () => {
+  const asked = (ageMs) => [labelled('issue-triage-handoff', ageMs), unlabelled('issue-triage-handoff', ageMs - 5000)];
+  assert.equal(situationOf(issue(classifiedHold), { events: asked(5 * 60000), now: NOW }), null, 'a plan is on its way');
+  assert.equal(situationOf(issue(classifiedHold), { events: asked(25 * 60000), now: NOW }), 'plan', 'the worker did not answer in time');
+  const answered = [...asked(5 * 60000), labelled('plan-worker-ready', 2 * 60000)];
+  assert.equal(situationOf(issue(classifiedHold), { events: answered, now: NOW }), 'plan', 'the answer ends the wait at once');
+});
+
 test('situationOf: a hold nobody has classified yet has no plan to approve, so no menu', () => {
   assert.equal(situationOf(issue(['plan-approval-required'])), null);
   assert.equal(situationOf(issue(['plan-approval-required', 'complexity/low'])), null);
@@ -100,13 +111,15 @@ test('situationOf: a gate label is stalled after an hour, not before', () => {
   assert.equal(situationOf(issue(['plan-worker-ready']), { events: [], now: NOW }), null);
 });
 
-test('planPending: a plan was asked for and has not come, for an hour at most', () => {
+test('planPending: a plan was asked for and has not come, for PLAN_OWED_MINUTES at most', () => {
   const asked = labelled('issue-triage-handoff', 3 * 60000);
   assert.equal(planPending([], NOW), false);
   assert.equal(planPending([asked], NOW), true);
   assert.equal(planPending([asked, labelled('plan-worker-ready', 60000)], NOW), false, 'the plan came');
   assert.equal(planPending([labelled('plan-worker-ready', 30 * 60000), asked], NOW), true, 'the plan that came before was the old one');
-  assert.equal(planPending([labelled('issue-triage-handoff', 2 * H)], NOW), false, 'a plan that does not come within the hour is taken as lost');
+  assert.equal(planPending([labelled('issue-triage-handoff', 2 * H)], NOW), false, 'a plan that does not come in time is taken as lost');
+  assert.equal(planPending([labelled('issue-triage-handoff', 19 * 60000)], NOW), true, 'still owed just inside the limit');
+  assert.equal(planPending([labelled('issue-triage-handoff', 21 * 60000)], NOW), false, 'taken as lost just outside it, not after an hour');
   assert.equal(planPending([asked, unlabelled('issue-triage-handoff', 20000)], NOW), true, 'the janitor taking the label away is not an answer');
 });
 
