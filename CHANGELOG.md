@@ -1,5 +1,12 @@
 # Changelog
 
+## [v2.2.3] - 2026-11-04
+
+### What's Changed
+* fix: tell the plan worker and plan triage how to read files, and what a refused read means by @vscheuber in https://github.com/gearsnlevers/issue-concierge/pull/87
+
+**Full Changelog**: https://github.com/gearsnlevers/issue-concierge/compare/v2.2.2...v2.2.3
+
 ## [v2.2.2] - 2026-11-04
 
 ### What's Changed
