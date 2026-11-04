@@ -73,3 +73,8 @@ test('pr worker: the rule changes nothing about what the worker reads or does', 
   assert.doesNotMatch(source.split('\n---\n')[0], /min-integrity/);
   assert.match(prompt('pr-worker'), /stop on a missing dependency, stop instead of building on a fact the plan leaves unverified, follow the repository's/);
 });
+
+test('the compile smoke reads the instruction in the compiled PR worker, where it takes effect', () => {
+  const smoke = read('tools/ci-compile-smoke.sh');
+  assert.match(smoke, /grep -q 'Do not build on a guess' "\$tmp\/\.github\/workflows\/pr-worker\.lock\.yml"/);
+});
