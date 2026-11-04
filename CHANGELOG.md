@@ -1,5 +1,12 @@
 # Changelog
 
+## [v2.2.2] - 2026-11-04
+
+### What's Changed
+* fix: the plan worker answers every hand-off, so the options comment is not held back by @vscheuber in https://github.com/gearsnlevers/issue-concierge/pull/86
+
+**Full Changelog**: https://github.com/gearsnlevers/issue-concierge/compare/v2.2.1...v2.2.2
+
 ## [v2.2.1] - 2026-11-02
 
 ### What's Changed
