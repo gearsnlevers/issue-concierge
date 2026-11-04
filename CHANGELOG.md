@@ -1,5 +1,12 @@
 # Changelog
 
+## [v2.3.0] - 2026-11-04
+
+### What's Changed
+* feat: hold a plan that rests on a fact it could not confirm, and tell the coding agent not to build on a guess by @vscheuber in https://github.com/gearsnlevers/issue-concierge/pull/88
+
+**Full Changelog**: https://github.com/gearsnlevers/issue-concierge/compare/v2.2.3...v2.3.0
+
 ## [v2.2.3] - 2026-11-04
 
 ### What's Changed
