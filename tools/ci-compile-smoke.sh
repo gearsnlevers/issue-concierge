@@ -86,6 +86,12 @@ if grep -q 'issue_intent' "$tmp/.github/workflows/issue-worker.lock.yml"; then
   echo "::error::issue-worker turned the issue intent off: related-repo would lose its rationale and confidence (decision 0009)"
   exit 1
 fi
+# The coding agent is told not to build on a guess (decision 0042). The instruction travels only in the safe-output
+# configuration of the PR worker, so read the compiled lock: it must survive compilation.
+if ! grep -q 'Do not build on a guess' "$tmp/.github/workflows/pr-worker.lock.yml"; then
+  echo "::error::pr-worker lost the instruction not to build on a guess in its compiled lock (decision 0042)"
+  exit 1
+fi
 # What a release contains is decided by git, not by the release notes (frodo-lib#762, docs/multi-phase-design.md,
 # "Which fixes a release contains"): the closer's deterministic step must survive compilation, or the notes decide again.
 if ! grep -q "id: included_fixes" "$tmp/.github/workflows/release-closer.lock.yml"; then

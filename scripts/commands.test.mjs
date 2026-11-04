@@ -144,6 +144,10 @@ test('planReason reads the lines plan triage reads, from the latest plan only', 
   assert.equal(reason('Work item: o/r | x | where: y | order: this\nWork item: o/lib | x | where: y | order: first'), 'work-item');
   assert.equal(reason('### Decisions that apply\n- Conflicts with https://x/0003.md: needs a decision'), 'conflict');
   assert.equal(reason('Breaking change: removes `listWidgets` (src/widgets.js)'), 'breaking');
+  assert.equal(reason('Unverified: the name of the config entity | tried: the linked page was not readable'), 'unverified');
+  assert.equal(reason('- **Unverified:** the entity name | tried: a fetch that was blocked'), 'unverified');
+  assert.equal(reason('The cause is Unverified: but plausible'), 'plain', 'the line has to start with the marker');
+  assert.equal(reason('Breaking change: removes x\nUnverified: the entity name | tried: nothing'), 'breaking', 'a harder reason comes first');
   assert.equal(planReason([plan(1, 'Wrong layer: x'), plan(2, '')], REPO), 'plain', 'the latest plan wins');
   assert.equal(planReason([comment(1, `Wrong layer: nope\n<!-- gh-aw-workflow-call-id: ${REPO}/plan-worker -->`, { login: 'a-person' })], REPO), 'plain', 'a person can type the text and the marker');
   assert.equal(planReason([], REPO), 'plain');
@@ -186,6 +190,9 @@ test('optionsFor: a plan held for another reason says so, and adds what the main
   assert.match(o('Wrong layer: o/lib').body, /The plan found that the fix belongs in another repository/);
   assert.match(o('- Conflicts with https://x/0003.md: y').body, /conflicts with a decision the project has taken/);
   assert.match(o('Breaking change: removes x').body, /The plan found a change to something that already exists/);
+  assert.equal(o('Unverified: the entity name | tried: a blocked fetch').kind, 'plan.unverified');
+  assert.match(o('Unverified: the entity name | tried: a blocked fetch').body, /The plan could not confirm a fact the change depends on/);
+  assert.match(o('Unverified: the entity name | tried: a blocked fetch').body, /`\/replan` with the answer asks for a new plan/);
 });
 
 test('optionsFor: an agent that did not start says so in plain words and offers only a retry that takes the empty start back', () => {
