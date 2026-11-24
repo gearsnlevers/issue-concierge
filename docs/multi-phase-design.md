@@ -89,7 +89,7 @@ Every label event runs in its own concurrency group (the item number plus the la
 | `complexity/*`, `risk/*` | plan triage | never | stays |
 | `low-hanging-fruit`, `priority/*` | issue triage | never | stays |
 | `duplicate`, `invalid`, `already-fixed`, `out-of-scope`, `spam` | issue triage | never | stays (it explains the closure) |
-| `no-auto-processing` | a maintainer, by hand (no gate adds or removes it) | a maintainer, which hands the issue over | stays |
+| `no-auto-processing` | a maintainer, by hand, or the janitor's `assigned` job for an issue assigned to a person (no gate adds it) | a maintainer, which hands the issue over (nothing else removes it, unassigning included) | stays |
 | `related-repo` | issue worker | never | stays |
 | `original-in-related-repo` | issue worker's `create-issue` configuration | never | stays |
 | `waiting-for-release`, `released` | the `waiting-for-release` workflow, then the release closer | `waiting-for-release` goes when the release lands | `released` stays |
@@ -350,7 +350,7 @@ Not seen live yet: the first run in a sandbox, whether the fine-grained `SIGNAL_
 
 ## Opting an item out
 
-An issue or pull request that carries `no-auto-processing` is never touched by the Concierge. The rule is the decision record [an item labelled no-auto-processing is never touched](https://github.com/gearsnlevers/issue-concierge/blob/main/docs/decisions/0028-an-item-labelled-no-auto-processing-is-never-touched.md).
+An issue or pull request that carries `no-auto-processing` is never touched by the Concierge. The rule is the decision record [an item a person handles is never touched by the Concierge](https://github.com/gearsnlevers/issue-concierge/blob/main/docs/decisions/0043-an-item-a-person-handles-is-never-touched-by-the-concierge.md), which replaces [an item labelled no-auto-processing is never touched](https://github.com/gearsnlevers/issue-concierge/blob/main/docs/decisions/0028-an-item-labelled-no-auto-processing-is-never-touched.md): the label is still a hard stop, and the Concierge also applies it to an issue a person handles ("An issue a person handles" below).
 
 **Why it exists.** The issue worker starts on any new, edited or reopened issue and on any comment, and a maintainer's comment on frodo-cli#518, an issue from before the Concierge that had never been through it, started intake, then triage, then a plan with a hold label, three bot comments in all. The maintainers wanted to handle that issue by hand and had no way to say so. Closed issues and bot-authored issues already start nothing ("Who may start when", "Bot activity is not work"); this is the equivalent for an issue a person wants out.
 
@@ -364,7 +364,7 @@ An issue or pull request that carries `no-auto-processing` is never touched by t
 | PR triage | `if:`, on the pull request's labels |
 | Waiting for Release | `if:`, and the script |
 | release closer | the `included_fixes` step skips it, and the prompt repeats it |
-| janitor | `if:` for events, `scripts/janitor.mjs` for sweeps and manual runs |
+| janitor | `if:` for events, `scripts/janitor.mjs` for sweeps and manual runs; its `assigned` job adds the label, so its `if:` and `scripts/assigned.mjs` check that it is not there |
 | reporter notices | `if:`, and the script for the issue and for its original |
 | plan approval resume, PR ready signal | `if:`, and the script |
 | dependency watcher | `if:` for the label event, and the script's loop |
@@ -372,7 +372,15 @@ An issue or pull request that carries `no-auto-processing` is never touched by t
 
 **Handing an issue over.** Removing the label starts the issue worker once: it listens for `unlabeled` and its condition lets that event through for this label only (removing any other label starts nothing). It then follows its other conditions: the issue must be open, not written by a bot, and not a pull request. A manual dispatch of the issue worker works on a labelled issue, because a dispatch carries no issue payload and is the explicit act of a person.
 
-**Limits, on purpose.** The label belongs to the item that carries it. A pull request is its own item: a labelled pull request is skipped by PR triage, the janitor and the ready signal, and a labelled issue does not opt out a pull request somebody opened for it. The dependency watcher still reads the state of a labelled issue that another issue depends on, because it cannot tell whether that issue is finished otherwise; it changes nothing on it. The label is applied by a person only: no gate adds it, and none removes it.
+**An issue a person handles.** A maintainer who opens an issue and assigns it to a person has said that person handles it; without a rule for that, the issue would still get intake, triage and a plan unless the label was added too. An open issue assigned to a person (an account of type User) is given the label by the `assigned` job of the janitor workflow, which already starts on assignment (so no workflow is added to the Actions list). The job reads the issue as it is when it runs, not the event, and writes only when all of these hold: the issue is open and is not a pull request; a person is among its assignees and no bot is (the coding agent is a bot); it carries no outcome of the plan gate (`plan-triage-handoff`, a `complexity/*` or a `risk/*` label: the evidence the janitor and the stalled issue sweep already read, `planGateOutcome` in `scripts/janitor.mjs`); and it does not carry the label already. It writes with the workflow token, so no event follows and nothing starts, adds no comment (the label is the visible effect, and the status issue counts the issue as opted out), and never writes for a pull request, a bot or the coding agent. Unassigning does nothing: the label is sticky, and handing the issue back is removing it, which starts the issue worker once as above. Handing an issue back by unassigning is not supported. The janitor's `if:` for the job repeats the assignee test on the event payload only to save a runner on the assignments of the coding agent.
+
+The issue worker also does not start for an issue that is opened or reopened with a person among its assignees and no bot (a term of its `if:`, next to the label test, for those two events only), because the label would come a second after the run had started. It does not look at the assignees for an edit, a comment or the removal of the label, so handing an issue back works while the person is still assigned, and a manual dispatch still starts it.
+
+**Why a person alone is not a claim.** When the PR worker assigns the coding agent with a personal token, GitHub assigns the owner of that token too, in the same second (two `assigned` events one second apart, measured on two issues of a deployment), and `/retry` unassigns only the agent. A rule that read "a person is assigned" would make the Concierge stand down on its own work. The two conditions that prevent it are mandatory and tested: no bot among the assignees, and no outcome of the plan gate, which is on the issue when the Concierge assigns the agent whichever of the two events is read first.
+
+**Limits, on purpose.** The label belongs to the item that carries it. A pull request is its own item: a labelled pull request is skipped by PR triage, the janitor and the ready signal, and a labelled issue does not opt out a pull request somebody opened for it. The dependency watcher still reads the state of a labelled issue that another issue depends on, because it cannot tell whether that issue is finished otherwise; it changes nothing on it. The label is applied by a person, or by the `assigned` job for an issue a person handles: no gate adds it, and nothing but a person removes it. A repository whose issue templates or automation assign every new issue to someone has every issue labelled, and `check-deployment` warns about a template with `assignees:`.
+
+Not seen live yet: whether the `opened` event of an issue created with an assignee already lists it in the payload a deployment's workflows read (public event feeds show it, followed by the `assigned` event about a second later). If it does not, the issue worker starts for that issue, the `assigned` job labels it a second later, and a run that began before the label continues, as for a label added by hand. The `assigned` job shares the janitor's concurrency group for the item (an assignment has no label name in the key); the newest run of a group is never cancelled and every run reads the issue as it is, so a cancelled pending run does not lose the label. `scripts/assigned.test.mjs`, `tools/opt-out.test.mjs` and `tools/assigned-workflow.test.mjs` pin the rest.
 
 ## Split-repo routing (linked issues)
 

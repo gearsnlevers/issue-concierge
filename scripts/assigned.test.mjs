@@ -9,7 +9,7 @@ import { decide, handledByPerson, isBotAssignee, isPerson, main, run } from './a
 // A maintainer who assigns an issue to a person has said that person handles it (decision 0043). The Concierge then gives the issue
 // `no-auto-processing`, with the workflow token so that no event follows. The hazard that shapes every case below: when the PR worker
 // assigns the coding agent with a personal token, GitHub assigns the OWNER of that token as well, in the same second (measured on two
-// issues of the frodo repositories, 2026-11), and `/retry` unassigns only the agent. A person among the assignees is therefore not
+// issues of a deployment, 2026-11), and `/retry` unassigns only the agent. A person among the assignees is therefore not
 // enough: no bot may be among them, and the issue must not have an outcome of the plan gate (plan triage's hand-off or its
 // classification), which is on the issue when the Concierge assigns the agent.
 

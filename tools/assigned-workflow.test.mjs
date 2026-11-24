@@ -54,3 +54,26 @@ test('the label job and the held-run job keep what they had: their conditions, t
   assert.match(code, /^permissions:\n {2}contents: read\n {2}issues: write\n {2}pull-requests: write$/m);
   assert.match(code, /group: janitor-\$\{\{ github\.event\.issue\.number \|\| github\.event\.pull_request\.number \|\| inputs\.issue_number \|\| 'sweep' \}\}-\$\{\{ github\.event\.label\.name \}\}\n {2}cancel-in-progress: false/);
 });
+
+test('the record, its index row, the status of the record it replaces and the docs say the same', () => {
+  const record = read('docs/decisions/0043-an-item-a-person-handles-is-never-touched-by-the-concierge.md');
+  assert.match(record, /^status: (proposed|accepted)$/m);
+  assert.match(record, /^# An item a person handles is never touched by the Concierge$/m);
+  for (const word of ['`no-auto-processing`', '`plan-triage-handoff`', '`complexity/*` or `risk/*`', 'workflow token', 'Unassigning does not remove it', 'no coding agent or other bot']) assert.ok(record.includes(word), `the record says ${word}`);
+  assert.match(read('docs/decisions/0028-an-item-labelled-no-auto-processing-is-never-touched.md'), /^status: superseded by 0043$/m);
+  const index = read('docs/decisions/README.md');
+  assert.match(index, /^\| 0028 \| \[[^\]]+\]\(0028-[^)]+\.md\) \| superseded by 0043 \|$/m);
+  assert.match(index, /^\| 0043 \| \[An item a person handles is never touched by the Concierge\]\(0043-[^)]+\.md\) \| (proposed|accepted) \|$/m);
+  const design = read('docs/multi-phase-design.md');
+  const section = design.split('\n## Opting an item out\n')[1].split('\n## ')[0];
+  assert.match(section, /\*\*An issue a person handles\.\*\*/);
+  assert.match(section, /0043-an-item-a-person-handles-is-never-touched-by-the-concierge\.md/);
+  assert.match(section, /Handing an issue back by unassigning is not supported/);
+  assert.match(section, /Not seen live yet: whether the `opened` event/);
+  assert.match(design, /\| `no-auto-processing` \| a maintainer, by hand, or the janitor's `assigned` job/);
+  assert.match(read('README.md'), /the janitor adds the label when the issue is assigned/);
+  const deployment = read('docs/deployment.md');
+  assert.match(deployment, /^\| `scripts\/assigned\.mjs` \| `\.github\/scripts\/assigned\.mjs` \(the `assigned` job\) \|$/m);
+  assert.match(deployment, /`check-deployment` warns about a template with `assignees:`/);
+  assert.match(read('docs/flows.md'), /An open issue assigned to a person gets the label from the janitor/);
+});
