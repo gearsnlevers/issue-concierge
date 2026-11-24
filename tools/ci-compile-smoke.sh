@@ -148,6 +148,12 @@ if ! activation_if "$tmp/.github/workflows/issue-worker.lock.yml" | tr '\n' ' ' 
   echo "::error::the issue worker's compiled activation condition lets the removal of any label through"
   exit 1
 fi
+# An issue opened or reopened with a person among its assignees and no bot among them starts no intake (decision 0043): the
+# term is in the compiled activation condition, where it stops the run before it starts.
+if ! activation_if "$tmp/.github/workflows/issue-worker.lock.yml" | tr '\n' ' ' | tr -s ' ' | grep -qF "(github.event_name == 'workflow_dispatch' || (github.event.action != 'opened' && github.event.action != 'reopened') || !(contains(github.event.issue.assignees.*.type, 'User') && !contains(github.event.issue.assignees.*.type, 'Bot')))"; then
+  echo "::error::the issue worker's compiled activation condition no longer stops an issue opened or reopened with a person assigned"
+  exit 1
+fi
 if ! grep -qF "if (names.includes('no-auto-processing')) continue;" "$tmp/.github/workflows/release-closer.lock.yml"; then
   echo "::error::release-closer lost the no-auto-processing skip of its included_fixes step in the compiled lock"
   exit 1

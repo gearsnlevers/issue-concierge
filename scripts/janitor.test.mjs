@@ -20,6 +20,8 @@ import {
   TRIAGE_OUTCOMES,
   OPEN_WORK_STATE,
   LABEL_AGENT_FAILED,
+  isClassificationLabel,
+  planGateOutcome,
 } from './janitor.mjs';
 
 const issue = (labels, extra = {}) => ({ labels, state: 'open', assignees: [], ...extra });
@@ -30,6 +32,18 @@ const stale = (labels, extra) => staleLabels(issue(labels, extra)).sort();
 test('the coding agent is recognised by login, and only it', () => {
   for (const login of ['Copilot', 'copilot', 'copilot-swe-agent', 'copilot-swe-agent[bot]']) assert.equal(isCodingAgent(login), true, login);
   for (const login of ['vscheuber', 'copilot-fan', 'github-copilot', '', undefined]) assert.equal(isCodingAgent(login), false, String(login));
+});
+
+test('the outcome of the plan gate is plan triage\'s hand-off or its classification, and nothing earlier or later (scripts/assigned.mjs reads it)', () => {
+  for (const label of ['complexity/low', 'complexity/high', 'risk/medium', 'risk/high']) assert.equal(isClassificationLabel(label), true, label);
+  for (const label of ['complexity', 'risk', 'complexity-low', 'enhancement', 'plan-triage-handoff', 'xcomplexity/low']) assert.equal(isClassificationLabel(label), false, label);
+  assert.equal(planGateOutcome(['bug', 'plan-triage-handoff']), 'plan-triage-handoff');
+  assert.equal(planGateOutcome(new Set(['complexity/low'])), 'complexity/low');
+  assert.equal(planGateOutcome(['risk/high', 'plan-triage-handoff']), 'plan-triage-handoff', 'the hand-off is named first when both are there');
+  assert.equal(planGateOutcome([]), null);
+  for (const label of ['issue-worker-ready', 'issue-triage-handoff', 'plan-worker-ready', 'plan-approval-required', 'backlog', 'needs-info', 'no-auto-processing']) {
+    assert.equal(planGateOutcome([label]), null, `${label} is not an outcome of the plan gate`);
+  }
 });
 
 test('issue gate labels: each is removed only once the next signal exists', () => {

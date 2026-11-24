@@ -9,20 +9,21 @@ import fs from 'node:fs';
 // with a hold label and three bot comments (2026-10-25), though the maintainer wanted to handle it by hand. The rule is
 // https://github.com/gearsnlevers/issue-concierge/blob/main/docs/decisions/0028-an-item-labelled-no-auto-processing-is-never-touched.md
 // (the decision: the label is a hard stop for every workflow and script, removing it hands the issue over, a manual
-// dispatch of the issue worker still works) and docs/multi-phase-design.md, "Opting an item out".
+// dispatch of the issue worker still works) and docs/multi-phase-design.md, "Opting an item out". Record 0043 supersedes it: the
+// label stays a hard stop, and the Concierge also applies it to an issue assigned to a person (the section on that below).
 //
 // A guarantee belongs in the `if:` of the workflow, where no run starts and nothing is spent, so these tests EVALUATE
 // each condition for an event with and without the label (tools/workflow-condition.mjs) instead of matching its text.
 // Every case has its control: the same event without the label starts the workflow, so a condition that is merely
 // false for another reason cannot pass. The scripts are pinned in scripts/*.test.mjs, the release closer's code step here.
 
-const issueEvent = ({ event_name = 'issues', action, labels = [], state = 'open', author = 'User', label, pull_request = null, commenter } = {}) => ({
+const issueEvent = ({ event_name = 'issues', action, labels = [], state = 'open', author = 'User', label, pull_request = null, commenter, assignees } = {}) => ({
   github: {
     event_name,
     repository_id: 7,
     event: {
       action,
-      issue: { state, user: { type: author }, labels: labels.map((name) => ({ name })), pull_request },
+      issue: { state, user: { type: author }, labels: labels.map((name) => ({ name })), pull_request, assignees: assignees?.map((type) => ({ type })) },
       label: label ? { name: label } : undefined,
       comment: commenter ? { user: { type: commenter } } : undefined,
     },
@@ -183,6 +184,82 @@ test('PR ready signal: a labelled pull request is not signalled; the sweep and a
   guarded(cond, prEvent({ action: 'ready_for_review' }), 'ready for review');
   assert.equal(holds(cond, scheduled), true);
   assert.equal(holds(cond, dispatched), true);
+});
+
+// ------------------------------------------------------------------ an issue a person handles (decision 0043)
+//
+// An issue assigned to a person is handled by that person, and the Concierge keeps out of it in two places: the issue worker does not
+// start for an issue that is opened or reopened with such an assignee (the `if:` below), and a job of the janitor gives the issue the
+// label when it is assigned (the next test). "Such an assignee" is a person (type User) with NO bot among the assignees: when the PR
+// worker assigns the coding agent with a personal token, GitHub assigns the token's owner too, in the same second, and `/retry`
+// unassigns only the agent, so a person among the assignees alone would make the Concierge stand down on its own work. The assignees
+// are given by their `type`, as the event payload has them. scripts/assigned.test.mjs pins the live decision of the job.
+
+const USER = 'User';
+const BOT = 'Bot';
+
+test('issue worker: opened or reopened with a person among the assignees and no bot starts nothing; every other combination starts as before', () => {
+  const cond = frontmatterIf(md('issue-worker'));
+  for (const action of ['opened', 'reopened']) {
+    assert.equal(holds(cond, issueEvent({ action })), true, `${action}, no assignees (the control)`);
+    assert.equal(holds(cond, issueEvent({ action, assignees: [] })), true, `${action}, an empty list of assignees`);
+    assert.equal(holds(cond, issueEvent({ action, assignees: [USER] })), false, `${action}, a person`);
+    assert.equal(holds(cond, issueEvent({ action, assignees: [USER, USER] })), false, `${action}, two people`);
+    assert.equal(holds(cond, issueEvent({ action, assignees: [BOT] })), true, `${action}, only the coding agent`);
+    assert.equal(holds(cond, issueEvent({ action, assignees: [USER, BOT] })), true, `${action}, a person and the agent (the co-assignee case)`);
+    assert.equal(holds(cond, issueEvent({ action, assignees: [BOT, USER] })), true, `${action}, the agent and a person, the other way round`);
+    assert.equal(holds(cond, issueEvent({ action, assignees: ['Organization'] })), true, `${action}, an assignee that is not a person`);
+  }
+});
+
+test('issue worker: the guard is for opened and reopened only; an edit, a comment and the hand-over still start it for an issue assigned to a person', () => {
+  const cond = frontmatterIf(md('issue-worker'));
+  const person = { assignees: [USER] };
+  assert.equal(holds(cond, issueEvent({ action: 'edited', ...person })), true, 'edited');
+  assert.equal(holds(cond, issueEvent({ event_name: 'issue_comment', action: 'created', commenter: 'User', ...person })), true, 'a comment');
+  assert.equal(holds(cond, issueEvent({ action: 'unlabeled', label: LABEL_OPT_OUT, ...person })), true, 'the hand-over works while the person is still assigned');
+  assert.equal(holds(cond, issueEvent({ action: 'unlabeled', label: 'needs-info', ...person })), false, 'another label, as before');
+});
+
+test('issue worker: a manual dispatch starts whoever is assigned, and the guard changes none of the conditions it had', () => {
+  const cond = frontmatterIf(md('issue-worker'));
+  assert.equal(holds(cond, dispatched), true);
+  const withPerson = { ...dispatched, github: { ...dispatched.github, event: { ...dispatched.github.event, issue: { state: 'open', assignees: [{ type: USER }] } } } };
+  assert.equal(holds(cond, withPerson), true, 'even if a payload carried an issue with a person');
+  assert.equal(holds(cond, { ...withPerson, vars: { ISSUE_CONCIERGE_PAUSED: 'true' } }), true, 'and while paused, as before');
+  const opened = { ...withPerson, github: { ...withPerson.github, event: { ...withPerson.github.event, action: 'opened' } } };
+  assert.equal(holds(cond, opened), true, 'the dispatch term is explicit: not even a payload that names an action can stop a manual run');
+  // the label test is what it was: a labelled issue starts nothing, with or without assignees
+  guarded(cond, issueEvent({ action: 'opened' }), 'opened without assignees');
+  guarded(cond, issueEvent({ action: 'edited', assignees: [USER] }), 'edited with a person');
+  guarded(cond, issueEvent({ action: 'opened', assignees: [BOT] }), 'opened with only the agent');
+  guarded(cond, issueEvent({ action: 'reopened', assignees: [USER, BOT] }), 'reopened with a person and the agent');
+});
+
+test('the compile smoke reads the guard in the compiled activation condition, and it is the one the source carries', () => {
+  const term = "(github.event_name == 'workflow_dispatch' || (github.event.action != 'opened' && github.event.action != 'reopened') || !(contains(github.event.issue.assignees.*.type, 'User') && !contains(github.event.issue.assignees.*.type, 'Bot')))";
+  assert.ok(frontmatterIf(md('issue-worker')).includes(term), 'the source has the term');
+  assert.ok(read('tools/ci-compile-smoke.sh').includes(`grep -qF "${term}"`), 'the smoke looks for the same term');
+});
+
+test('janitor assigned job: starts when a person is assigned to an open issue, and for nothing else', () => {
+  const cond = jobIf(yml('janitor'), 'assigned');
+  guarded(cond, issueEvent({ action: 'assigned', assignees: [USER] }), 'a person is assigned');
+  assert.equal(holds(cond, issueEvent({ action: 'assigned', assignees: [USER, USER] })), true, 'two people');
+  assert.equal(holds(cond, issueEvent({ action: 'assigned', assignees: [USER, BOT] })), false, 'a person and the agent: the co-assignee case');
+  assert.equal(holds(cond, issueEvent({ action: 'assigned', assignees: [BOT, USER] })), false, 'the agent and a person');
+  assert.equal(holds(cond, issueEvent({ action: 'assigned', assignees: [BOT] })), false, 'only the agent');
+  assert.equal(holds(cond, issueEvent({ action: 'assigned', assignees: [] })), false, 'nobody');
+  assert.equal(holds(cond, issueEvent({ action: 'assigned' })), false, 'no list at all');
+  assert.equal(holds(cond, issueEvent({ action: 'assigned', assignees: [USER], state: 'closed' })), false, 'a closed issue');
+  assert.equal(holds(cond, issueEvent({ action: 'assigned', assignees: [USER], pull_request: {} })), false, 'a pull request');
+  assert.equal(holds(cond, issueEvent({ action: 'assigned', assignees: [USER], labels: ['plan-triage-handoff'] })), true, 'the plan-gate outcome is read live by the script, not by this condition');
+  for (const action of ['unassigned', 'labeled', 'unlabeled', 'closed', 'opened', 'reopened', 'edited']) {
+    assert.equal(holds(cond, issueEvent({ action, assignees: [USER], label: 'issue-worker-ready' })), false, `${action}: unassigning does nothing, and the label is sticky`);
+  }
+  assert.equal(holds(cond, prEvent({ action: 'closed' })), false, 'a pull request event');
+  assert.equal(holds(cond, scheduled), false, 'the hourly sweep');
+  assert.equal(holds(cond, dispatched), false, 'a manual run of the janitor starts no assignment job');
 });
 
 // ------------------------------------------------------------------ nothing is left out

@@ -38,6 +38,7 @@ files:
   - scripts/spawn-work-items.mjs
   - workflows/janitor.yml
   - scripts/janitor.mjs
+  - scripts/assigned.mjs
   - scripts/opt-out.mjs
   - workflows/issue-concierge-updater.yml
   - scripts/issue-concierge-updater.mjs
