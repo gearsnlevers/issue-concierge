@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { checkDecisions, checkDeployment, checkGuidance, checkLegacyFolder, DECISIONS_DIRS, GUIDANCE_FILES, main, readSafeOutputsConfig } from './check-deployment.mjs';
+import { checkDecisions, checkDeployment, checkGuidance, checkLegacyFolder, checkTemplates, DECISIONS_DIRS, GUIDANCE_FILES, main, readSafeOutputsConfig, TEMPLATE_DIR } from './check-deployment.mjs';
 
 const RELATED = (secret = 'FRODO_CLI_ISSUES_TOKEN') => `
 this: rockcarver/frodo-lib
@@ -330,4 +330,51 @@ test('main: settings.yml is read from the old folder when the new one has none, 
 
 test('main: nothing to check names the place the file belongs in, which is the new folder', () => {
   assert.match(runMain({}).out, /^No \.github\/issue-concierge\/related-repos\.md: nothing to check\.$/m);
+});
+
+// Issue templates that assign: a warning, never a failure. An issue assigned to a person is handled by that person, and the Concierge
+// gives it no-auto-processing (docs/decisions/0043), so a template that assigns every issue would keep every one of them out of the gates.
+
+const MD = (frontmatter) => `---\nname: Bug report\nabout: Something is broken\n${frontmatter}---\n\nDescribe the bug.\n`;
+
+test('checkTemplates: a markdown template or a form that assigns someone is named, one warning each', () => {
+  assert.equal(TEMPLATE_DIR, '.github/ISSUE_TEMPLATE');
+  for (const fm of ["assignees: octocat\n", "assignees: 'octocat'\n", 'assignees: a, b\n', 'assignees:\n  - octocat\n', 'assignees: [octocat]\n']) {
+    const warnings = checkTemplates({ 'bug.md': MD(fm) });
+    assert.equal(warnings.length, 1, fm);
+    assert.match(warnings[0], /^\.github\/ISSUE_TEMPLATE\/bug\.md assigns every issue it creates \(assignees:\)/);
+    assert.match(warnings[0], /no-auto-processing/);
+  }
+  assert.equal(checkTemplates({ 'form.yml': 'name: Bug\nassignees:\n  - octocat\nbody:\n  - type: input\n' }).length, 1, 'a form');
+  assert.equal(checkTemplates({ 'form.yaml': 'name: Bug\nassignees: octocat\n' }).length, 1, 'either extension');
+  assert.equal(checkTemplates({ 'a.md': MD('assignees: x\n'), 'b.md': MD('assignees: y\n') }).length, 2);
+});
+
+test('checkTemplates: no assignees, an empty value, a config file, other files and nested keys give no warning', () => {
+  for (const fm of ['', "assignees: ''\n", 'assignees: ""\n', 'assignees: []\n', 'assignees:\nlabels: bug\n', "assignees: '' # nobody\n"]) assert.deepEqual(checkTemplates({ 'bug.md': MD(fm) }), [], JSON.stringify(fm));
+  assert.deepEqual(checkTemplates({ 'config.yml': 'blank_issues_enabled: false\nassignees: octocat\n' }), [], 'config.yml has no such key');
+  assert.deepEqual(checkTemplates({ 'notes.txt': 'assignees: octocat\n' }), []);
+  assert.deepEqual(checkTemplates({ 'form.yml': 'name: x\nbody:\n  - type: input\n    attributes:\n      assignees: octocat\n' }), [], 'only the top-level key counts');
+  assert.deepEqual(checkTemplates({ 'bug.md': '# not front matter\nassignees: octocat\n' }), [], 'a markdown template without front matter assigns nobody');
+  assert.deepEqual(checkTemplates({}), []);
+  assert.deepEqual(checkTemplates(undefined), []);
+});
+
+test('main: a template that assigns gives a warning and never changes the outcome; the folder is read only when it exists', () => {
+  const assigning = runMain({ '.github/ISSUE_TEMPLATE/bug.md': MD('assignees: octocat\n') });
+  assert.equal(assigning.code, 0);
+  assert.match(assigning.out, /^::warning::\.github\/ISSUE_TEMPLATE\/bug\.md assigns every issue it creates/m);
+  assert.equal(runMain({ '.github/ISSUE_TEMPLATE/bug.md': MD("assignees: ''\n") }).out.includes('assigns every issue'), false);
+  assert.equal(runMain({}).out.includes('assigns every issue'), false, 'no folder');
+  assert.equal(runMain({ '.github/ISSUE_TEMPLATE': 'x' }).code, 0, 'a file of that name is not a folder');
+  assert.equal(runMain({ '.github/ISSUE_TEMPLATE/sub': null }).code, 0, 'a directory inside the folder is not a template');
+  const related = 'this: a/b\n\nrelated:\n  - role: cli\n    repo: a/c\n    secret: C_TOKEN\n    when: |\n      x\n';
+  const failing = runMain({ '.github/ISSUE_TEMPLATE/bug.md': MD('assignees: octocat\n'), '.github/issue-concierge/related-repos.md': related });
+  assert.equal(failing.code, 1, 'the real checks decide the exit code');
+  assert.match(failing.out, /::warning::\.github\/ISSUE_TEMPLATE\/bug\.md/);
+});
+
+test('the deployment check runs for a pull request that changes an issue template', () => {
+  const on = fs.readFileSync(new URL('../workflows/check-deployment.yml', import.meta.url), 'utf8').split('\njobs:')[0];
+  assert.ok(on.includes("- '.github/ISSUE_TEMPLATE/**'"));
 });
