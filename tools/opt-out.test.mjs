@@ -236,6 +236,12 @@ test('issue worker: a manual dispatch starts whoever is assigned, and the guard 
   guarded(cond, issueEvent({ action: 'reopened', assignees: [USER, BOT] }), 'reopened with a person and the agent');
 });
 
+test('the compile smoke reads the guard in the compiled activation condition, and it is the one the source carries', () => {
+  const term = "(github.event_name == 'workflow_dispatch' || (github.event.action != 'opened' && github.event.action != 'reopened') || !(contains(github.event.issue.assignees.*.type, 'User') && !contains(github.event.issue.assignees.*.type, 'Bot')))";
+  assert.ok(frontmatterIf(md('issue-worker')).includes(term), 'the source has the term');
+  assert.ok(read('tools/ci-compile-smoke.sh').includes(`grep -qF "${term}"`), 'the smoke looks for the same term');
+});
+
 test('janitor assigned job: starts when a person is assigned to an open issue, and for nothing else', () => {
   const cond = jobIf(yml('janitor'), 'assigned');
   guarded(cond, issueEvent({ action: 'assigned', assignees: [USER] }), 'a person is assigned');
