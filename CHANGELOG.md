@@ -1,5 +1,12 @@
 # Changelog
 
+## [v2.4.0] - 2026-11-24
+
+### What's Changed
+* feat: an issue assigned to a person is kept out of the Concierge (record 0043) by @vscheuber in https://github.com/gearsnlevers/issue-concierge/pull/92
+
+**Full Changelog**: https://github.com/gearsnlevers/issue-concierge/compare/v2.3.0...v2.4.0
+
 ## [v2.3.0] - 2026-11-04
 
 ### What's Changed
