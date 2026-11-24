@@ -40,6 +40,8 @@ const COVERED = [
   { file: 'release-closer.md', where: 'step:included_fixes', event: { name: 'release', payload: { action: 'published' } } },
   { file: 'dependency-watch.yml', where: 'job:watch', event: { name: 'schedule' }, manual: true },
   { file: 'janitor.yml', where: 'job:clean', event: issuesEvent('labeled', [], 'issue-worker-ready'), manual: true },
+  // The `assigned` job starts for an assignment only, so a dispatch starts nothing in it: it has the term, and is not in the manual list.
+  { file: 'janitor.yml', where: 'job:assigned', event: issuesEvent('assigned', [], 'x', { assignees: [{ login: 'maint', type: 'User' }] }) },
   { file: 'janitor.yml', where: 'job:held-runs', event: { name: 'schedule' }, needs: { clean: { result: 'success' } }, manual: true },
   { file: 'plan-approval-resume.yml', where: 'job:resume', event: issuesEvent('unlabeled', [], 'plan-approval-required'), manual: true },
   { file: 'pr-ready-signal.yml', where: 'job:signal', event: { name: 'pull_request', payload: { pull_request: { labels: [] } } }, manual: true },

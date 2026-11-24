@@ -16,13 +16,13 @@ import fs from 'node:fs';
 // Every case has its control: the same event without the label starts the workflow, so a condition that is merely
 // false for another reason cannot pass. The scripts are pinned in scripts/*.test.mjs, the release closer's code step here.
 
-const issueEvent = ({ event_name = 'issues', action, labels = [], state = 'open', author = 'User', label, pull_request = null, commenter } = {}) => ({
+const issueEvent = ({ event_name = 'issues', action, labels = [], state = 'open', author = 'User', label, pull_request = null, commenter, assignees } = {}) => ({
   github: {
     event_name,
     repository_id: 7,
     event: {
       action,
-      issue: { state, user: { type: author }, labels: labels.map((name) => ({ name })), pull_request },
+      issue: { state, user: { type: author }, labels: labels.map((name) => ({ name })), pull_request, assignees: assignees?.map((type) => ({ type })) },
       label: label ? { name: label } : undefined,
       comment: commenter ? { user: { type: commenter } } : undefined,
     },
@@ -183,6 +183,37 @@ test('PR ready signal: a labelled pull request is not signalled; the sweep and a
   guarded(cond, prEvent({ action: 'ready_for_review' }), 'ready for review');
   assert.equal(holds(cond, scheduled), true);
   assert.equal(holds(cond, dispatched), true);
+});
+
+// ------------------------------------------------------------------ an issue a person handles (decision 0043)
+//
+// An issue assigned to a person is handled by that person, and a job of the janitor gives the issue the label when it is assigned.
+// "Handled by a person" is a person (type User) with NO bot among the assignees: when the PR worker assigns the coding agent with a
+// personal token, GitHub assigns the token's owner too, in the same second, and `/retry` unassigns only the agent, so a person among
+// the assignees alone would make the Concierge stand down on its own work. The assignees are given by their `type`, as the event
+// payload has them. scripts/assigned.test.mjs pins the live decision of the job.
+
+const USER = 'User';
+const BOT = 'Bot';
+
+test('janitor assigned job: starts when a person is assigned to an open issue, and for nothing else', () => {
+  const cond = jobIf(yml('janitor'), 'assigned');
+  guarded(cond, issueEvent({ action: 'assigned', assignees: [USER] }), 'a person is assigned');
+  assert.equal(holds(cond, issueEvent({ action: 'assigned', assignees: [USER, USER] })), true, 'two people');
+  assert.equal(holds(cond, issueEvent({ action: 'assigned', assignees: [USER, BOT] })), false, 'a person and the agent: the co-assignee case');
+  assert.equal(holds(cond, issueEvent({ action: 'assigned', assignees: [BOT, USER] })), false, 'the agent and a person');
+  assert.equal(holds(cond, issueEvent({ action: 'assigned', assignees: [BOT] })), false, 'only the agent');
+  assert.equal(holds(cond, issueEvent({ action: 'assigned', assignees: [] })), false, 'nobody');
+  assert.equal(holds(cond, issueEvent({ action: 'assigned' })), false, 'no list at all');
+  assert.equal(holds(cond, issueEvent({ action: 'assigned', assignees: [USER], state: 'closed' })), false, 'a closed issue');
+  assert.equal(holds(cond, issueEvent({ action: 'assigned', assignees: [USER], pull_request: {} })), false, 'a pull request');
+  assert.equal(holds(cond, issueEvent({ action: 'assigned', assignees: [USER], labels: ['plan-triage-handoff'] })), true, 'the plan-gate outcome is read live by the script, not by this condition');
+  for (const action of ['unassigned', 'labeled', 'unlabeled', 'closed', 'opened', 'reopened', 'edited']) {
+    assert.equal(holds(cond, issueEvent({ action, assignees: [USER], label: 'issue-worker-ready' })), false, `${action}: unassigning does nothing, and the label is sticky`);
+  }
+  assert.equal(holds(cond, prEvent({ action: 'closed' })), false, 'a pull request event');
+  assert.equal(holds(cond, scheduled), false, 'the hourly sweep');
+  assert.equal(holds(cond, dispatched), false, 'a manual run of the janitor starts no assignment job');
 });
 
 // ------------------------------------------------------------------ nothing is left out
