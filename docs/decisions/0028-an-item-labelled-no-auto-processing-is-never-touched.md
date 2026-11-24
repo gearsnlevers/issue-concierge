@@ -1,5 +1,5 @@
 ---
-status: accepted
+status: superseded by 0043
 date: 2026-10-25
 decision-makers:
   - maintainers

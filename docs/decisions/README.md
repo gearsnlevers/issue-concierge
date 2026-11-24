@@ -50,7 +50,7 @@ Copy `template.md` to `NNNN-short-title.md` (the next number, starting at 0001),
 | 0025 | [Both issues of a link carry a label](0025-both-issues-of-a-link-carry-a-label.md) | accepted |
 | 0026 | [The related-repo closer is code, not a model](0026-the-related-repo-closer-is-code-not-a-model.md) | superseded by 0027 |
 | 0027 | [The related-repo closer trusts the proof of the link, not the author of the issue](0027-the-related-repo-closer-trusts-the-proof-of-the-link-not-its-author.md) | accepted |
-| 0028 | [An item labelled no-auto-processing is never touched by the Concierge](0028-an-item-labelled-no-auto-processing-is-never-touched.md) | accepted |
+| 0028 | [An item labelled no-auto-processing is never touched by the Concierge](0028-an-item-labelled-no-auto-processing-is-never-touched.md) | superseded by 0043 |
 | 0029 | [The reporter is told how an issue was resolved](0029-the-reporter-is-told-how-an-issue-was-resolved.md) | accepted |
 | 0030 | [A stalled issue is given the gate label again by code](0030-a-stalled-issue-is-given-the-gate-label-again-by-code.md) | accepted |
 | 0031 | [The work of a link is routed back by one explicit act](0031-the-work-of-a-link-is-routed-back-by-one-explicit-act.md) | accepted |
@@ -65,3 +65,4 @@ Copy `template.md` to `NNNN-short-title.md` (the next number, starting at 0001),
 | 0040 | [Each repository has a status view of its own, and it tells a reporter from a maintainer by role](0040-each-repository-has-a-status-view-of-its-own-and-it-names-the-reporter-by-role.md) | accepted |
 | 0041 | [A coding agent that did not start is reported, and only a maintainer starts it again](0041-a-coding-agent-that-did-not-start-is-reported-and-only-a-maintainer-starts-it-again.md) | accepted |
 | 0042 | [A plan that rests on a fact it could not confirm is held for a maintainer](0042-a-plan-that-rests-on-a-fact-it-could-not-confirm-is-held-for-a-maintainer.md) | accepted |
+| 0043 | [An item a person handles is never touched by the Concierge](0043-an-item-a-person-handles-is-never-touched-by-the-concierge.md) | proposed |
