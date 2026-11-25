@@ -8,6 +8,7 @@ applies-to:
   - docs/multi-phase-design.md
 issues:
   - rockcarver/frodo-lib#762
+seal: sha256-g1:bec0e167f86a2494c32b25c0e4bc7b6edded3d0a4e3808cbfbb1895e317a62c5
 ---
 
 # A release contains a fix when git says so, not when the notes do

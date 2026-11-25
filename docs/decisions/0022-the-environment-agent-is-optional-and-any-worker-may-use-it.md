@@ -8,6 +8,7 @@ applies-to:
   - workflows/issue-worker.md
   - workflows/plan-worker.md
   - workflows/pr-worker.md
+seal: sha256-g1:628842044b8e35eb6367aec4151895308a74e4f3b5d5639028564e3831f18274
 ---
 
 # The environment agent is optional, and any worker may use it

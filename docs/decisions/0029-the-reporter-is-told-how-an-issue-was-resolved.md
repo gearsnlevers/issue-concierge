@@ -15,6 +15,9 @@ applies-to:
 issues:
   - rockcarver/frodo-cli#886
   - rockcarver/frodo-lib#806
+supersedes:
+  - 0018
+seal: sha256-g1:11ec7795c2c360185c55efaa2de94b96c58992f1ddc8c9a53ef7efdaf38bf7eb
 ---
 
 # The reporter is told how an issue was resolved

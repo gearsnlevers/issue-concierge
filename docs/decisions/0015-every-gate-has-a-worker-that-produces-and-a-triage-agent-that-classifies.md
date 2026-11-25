@@ -11,6 +11,7 @@ applies-to:
   - workflows/pr-worker.md
   - workflows/pr-triage.md
   - docs/multi-phase-design.md
+seal: sha256-g1:4fb3b8c8aabfc5db2167d9cd8c3d0da8afb870c12c1db87b31f146c455dfdd09
 ---
 
 # Every gate has a worker that produces and a triage agent that classifies

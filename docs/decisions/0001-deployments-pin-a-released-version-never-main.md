@@ -9,6 +9,7 @@ applies-to:
   - tools/build-release-manifest.mjs
 issues:
   - vscheuber/repo-concierge#6
+seal: sha256-g1:6987ce3ac3fdb03343e373c911cb266b503706cdd17c02a3462125be3885b4d5
 ---
 
 # Deployments pin a released version, never main

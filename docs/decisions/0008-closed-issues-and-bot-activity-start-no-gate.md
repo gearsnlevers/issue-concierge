@@ -8,6 +8,7 @@ applies-to:
 issues:
   - vscheuber/repo-concierge#4
   - vscheuber/repo-concierge#35
+seal: sha256-g1:ab6f569c450bd5552b0204624cf3d192831afeeb0123592b318ef5a10a54c336
 ---
 
 # Closed issues and bot activity start no gate

@@ -7,6 +7,7 @@ applies-to:
   - workflows/*.md
   - shared/safety-policy.md
   - docs/deployment.md
+seal: sha256-g1:9633dc4b63de5872bc09674fad0471d509346fa81bb47432bdc1fda34109db4b
 ---
 
 # Agents are read-only, and threat detection runs where untrusted text meets a write

@@ -11,6 +11,7 @@ issues:
   - vscheuber/repo-concierge#4
   - vscheuber/repo-concierge#32
   - vscheuber/repo-concierge#43
+seal: sha256-g1:239f386e643012ccdf5a9356eae5c68a4078691e22a2602a79da03fbdcad442f
 ---
 
 # Gate budgets follow measured runs

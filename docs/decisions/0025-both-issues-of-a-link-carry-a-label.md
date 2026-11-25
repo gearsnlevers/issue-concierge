@@ -11,6 +11,7 @@ applies-to:
 issues:
   - rockcarver/frodo-cli#920
   - rockcarver/frodo-lib#804
+seal: sha256-g1:2ef3e01bfa76e880b33ded200b2d8b0d3563825c5b8a3fae08a9fcb479244080
 ---
 
 # Both issues of a link carry a label

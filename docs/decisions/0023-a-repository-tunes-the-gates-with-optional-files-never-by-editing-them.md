@@ -7,7 +7,8 @@ applies-to:
   - shared/**
   - docs/deployment.md
   - docs/updater.md
-  - scripts/concierge-updater.mjs
+  - scripts/issue-concierge-updater.mjs
+seal: sha256-g1:c4c1fbdcd3278121b833d077c9dfb0592f43b4d829a99e940a1582d27d1e7278
 ---
 
 # A repository tunes the gates with optional files, never by editing them

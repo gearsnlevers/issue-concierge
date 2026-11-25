@@ -8,6 +8,7 @@ applies-to:
   - tools/workflow-names.test.mjs
 issues:
   - vscheuber/repo-concierge#21
+seal: sha256-g1:5bec4ff917f34053ebec16e4cdb249a37880effc856178bbe43093e62817e530
 ---
 
 # Workflows are named in run order

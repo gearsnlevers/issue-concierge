@@ -9,6 +9,9 @@ applies-to:
   - shared/**
   - docs/deployment.md
   - docs/updater.md
+supersedes:
+  - 0023
+seal: sha256-g1:11b07064d3a4facdbdf0f88520fd9ef4c1a90b4100128249062b8e2e5f319db5
 ---
 
 # Everything the Issue Concierge puts in a repository is named for the product

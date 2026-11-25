@@ -11,6 +11,7 @@ issues:
   - vscheuber/repo-concierge#5
   - vscheuber/repo-concierge#19
   - vscheuber/repo-concierge#22
+seal: sha256-g1:fe29a8d784603799d77dad79992cf23728926cf77583fccf429e63f84dd8c92f
 ---
 
 # Gates advance by labels

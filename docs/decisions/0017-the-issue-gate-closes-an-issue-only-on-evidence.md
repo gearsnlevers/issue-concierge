@@ -7,6 +7,7 @@ applies-to:
   - workflows/issue-worker.md
   - workflows/issue-triage.md
   - shared/scope.md
+seal: sha256-g1:c29af1b644934239c66600cff94bf92f167b4c908246de35b5edd336cdb1b4dc
 ---
 
 # The issue gate closes an issue only on evidence

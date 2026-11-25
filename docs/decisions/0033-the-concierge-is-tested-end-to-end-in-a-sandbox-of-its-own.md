@@ -11,6 +11,7 @@ applies-to:
 issues:
   - gearsnlevers/issue-concierge#60
   - gearsnlevers/issue-concierge#61
+seal: sha256-g1:b61b29024684fadc9a391767f091d7940696dbf8c92037c239c455d11ac07c8b
 ---
 
 # The Concierge is tested end to end in a sandbox of its own

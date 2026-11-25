@@ -9,6 +9,7 @@ applies-to:
 issues:
   - vscheuber/repo-concierge#7
   - vscheuber/repo-concierge#15
+seal: sha256-g1:fd24e4b21bfc31df6c79ee156da839d229403ed0857bba1ee95a534d6afe2568
 ---
 
 # Deployments pull their updates through one pull request
