@@ -1,6 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 import { buildManifest } from './build-release-manifest.mjs';
 
 // Decision records: the plan and PR gates read the repository's design decisions from docs/decisions/
@@ -207,6 +209,18 @@ test('pr triage: the section sits between the repository rules and the handoff, 
 
 test('pr triage: the budget has room for the records', () => {
   assert.match(prTriage.frontmatter, /^max-ai-credits: 28$/m);
+});
+
+// ---- This repository's own records -----------------------------------------------------------
+
+// The format of the records is checked by the validate command of Record Keeper, which is installed in .github/record-keeper/.
+test("this repository's decision records are valid", () => {
+  const run = spawnSync(process.execPath, ['.github/record-keeper/record-keeper.mjs', 'validate', 'docs/decisions'], {
+    cwd: fileURLToPath(REPO),
+    encoding: 'utf8',
+  });
+  assert.equal(run.status, 0, `${run.stdout}${run.stderr}`);
+  assert.match(run.stdout, /^docs\/decisions: 0 problems$/m);
 });
 
 // ---- Template, manifest, docs ----------------------------------------------------------------

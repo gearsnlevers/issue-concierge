@@ -11,6 +11,7 @@ applies-to:
   - workflows/reporter-notify.yml
   - shared/related-repos.md
   - docs/updater.md
+seal: sha256-g1:244737508f37aa71f9a6f2e8c66d4da7e452278da3276572527d850fd4ac4e66
 ---
 
 # Split repositories link issues and never transfer them

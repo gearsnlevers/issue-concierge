@@ -8,6 +8,7 @@ applies-to:
   - workflows/issue-triage.md
   - workflows/reporter-notify.yml
   - shared/issue-completeness.md
+seal: sha256-g1:28a86b0398a3527c4bd53a18f85ccde4b4e6326355d8058d668e6e812e5a0b89
 ---
 
 # Reporters are guided by plain comments, never by labels

@@ -10,6 +10,7 @@ applies-to:
   - shared/risk.md
 issues:
   - rockcarver/frodo-lib#783
+seal: sha256-g1:e45b5a044bd62ffcec493cc187395a36c6832ea63bf4895cd836c4d71d47c151
 ---
 
 # Complexity and risk are separate gauges, and either one at high stops for approval

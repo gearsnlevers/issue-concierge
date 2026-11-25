@@ -11,6 +11,7 @@ applies-to:
 issues:
   - vscheuber/repo-concierge#30
   - vscheuber/repo-concierge#39
+seal: sha256-g1:4a3dcedd8bdf2aacbc4adae3d2a4863972bcec98a81d49f8aeecf6ac491b3927
 ---
 
 # Gates read the repository's own guidance and decision records

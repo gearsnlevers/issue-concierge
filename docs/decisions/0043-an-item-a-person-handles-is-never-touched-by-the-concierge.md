@@ -6,6 +6,9 @@ decision-makers:
 applies-to:
   - workflows/**
   - scripts/**
+supersedes:
+  - 0028
+seal: sha256-g1:b98aadb00679ccf2a7cb404e7e6539f76605d9a0da4b09383d4afb0c39603c7f
 ---
 
 # An item a person handles is never touched by the Concierge

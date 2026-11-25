@@ -16,6 +16,7 @@ applies-to:
 issues:
   - rockcarver/frodo-lib#783
   - rockcarver/frodo-lib#754
+seal: sha256-g1:fee6d3e19da2274360f7f96a567e0d2a7f2719f246ae8670cea61faebe48cc6f
 ---
 
 # A coding agent that did not start is reported, and only a maintainer starts it again

@@ -13,6 +13,7 @@ applies-to:
 issues:
   - rockcarver/frodo-lib#803
   - rockcarver/frodo-cli#919
+seal: sha256-g1:d2c647801b6ba59915d2832a541a70ec98f76bef3015a5edb18c2aa39b16067f
 ---
 
 # A fix that needs two repositories is split from its plan by a maintainer

@@ -7,7 +7,7 @@ Issue Concierge is an issue-to-release harness for GitHub, built on GitHub Agent
 - `workflows/`: the sources a deployment installs. `*.md` are gh-aw definitions (frontmatter, then the prompt); `*.yml` are plain workflows. **This repository holds no lock files**: a deployment compiles the definitions itself, with the gh-aw version in `requirements.json`.
 - `scripts/`: Node scripts behind the plain workflows (`issue-concierge-updater`, `janitor`, `dependency-watch`, ...), each with its test beside it. `shared/`: prompt fragments the gates read.
 - `aw.yml`: the list of files a deployment installs. `requirements.json`: the labels and secrets a release needs, and the gh-aw version.
-- `tools/`: tests for the workflows and prompts, `build-release-manifest.mjs`, `ci-compile-smoke.sh`, `check-currency.mjs`, `validate-decision-records.mjs`. `tools/e2e/` is the end-to-end runner, its scenarios and the sandbox template ([docs/e2e.md](docs/e2e.md)); it is not delivered to deployments and costs model credits when run with `--yes`, so run it only when a maintainer asks.
+- `tools/`: tests for the workflows and prompts, `build-release-manifest.mjs`, `ci-compile-smoke.sh`, `check-currency.mjs`. `tools/e2e/` is the end-to-end runner, its scenarios and the sandbox template ([docs/e2e.md](docs/e2e.md)); it is not delivered to deployments and costs model credits when run with `--yes`, so run it only when a maintainer asks.
 - `.github/workflows/`: this repository's own `ci.yml`, `release.yml` and `currency-check.yml`. They are not delivered to deployments.
 - `docs/`: `deployment.md` and `multi-phase-design.md` are delivered; `releases.md`, `updater.md` and `decisions/` are not.
 
@@ -16,7 +16,7 @@ Issue Concierge is an issue-to-release harness for GitHub, built on GitHub Agent
 - `npm test` runs every `scripts/*.test.mjs` and `tools/*.test.mjs` (`node:test`, no dependencies).
 - `XDG_DATA_HOME="$(mktemp -d)" bash tools/ci-compile-smoke.sh` compiles every definition with the pinned gh-aw. It needs `gh` and the network, prints warnings and still passes; a workflow that does not compile fails it.
 - `node tools/build-release-manifest.mjs --version 0.0.0-ci --out "$M"` and then `--verify "$M"` build and check the manifest.
-- `node tools/check-currency.mjs --dry-run` lists pinned actions and the gh-aw pin that are behind. `node tools/validate-decision-records.mjs` checks `docs/decisions/`.
+- `node tools/check-currency.mjs --dry-run` lists pinned actions and the gh-aw pin that are behind. `node .github/record-keeper/record-keeper.mjs validate` checks `docs/decisions/`.
 
 ## Rules
 
@@ -38,3 +38,19 @@ Accepted records are binding for humans and agents until a newer record supersed
 - [0013](docs/decisions/0013-the-gh-aw-version-moves-only-by-release-and-the-pins-stay-current.md) and [0014](docs/decisions/0014-the-concierge-does-not-configure-dependabot-in-deployments.md): the gh-aw version moves only by release, and the Concierge forces nothing about Dependabot into a deployment.
 
 The frodo repositories record the same rule on agent work as core 0002 and the role of the gates as core 0004, in [frodo-cli](https://github.com/rockcarver/frodo-cli/tree/main/docs/decisions/core).
+
+<!-- record-keeper:begin -->
+<!-- Managed by Record Keeper: the updater rewrites everything between the two markers, so a change made here is lost. Change the text in the kit. -->
+## Decision records
+
+Lasting decisions are kept as records in the folder named by `folder` in `.github/record-keeper/settings.yml` (`docs/decisions` when the setting is absent). Read its `README.md` and its index before you change behaviour that a record may cover.
+
+- An accepted record binds people and coding agents. Never edit one. It changes only by a new record that supersedes it, by an erratum, or by an entry in its deviations section, and the owners approve all three.
+- If your task conflicts with an accepted record, stop and say so in the issue or pull request. Do not work around the record.
+- A pull request that changes a decided behaviour adds a record, or supersedes the old one, in the same pull request.
+- To propose a decision, follow the `record-a-decision` skill in `.claude/skills/record-a-decision/SKILL.md`. Write the record with the status `proposed`.
+- Never accept or seal a record. Accepting is an act of the owners, made in their own pull request.
+- Numbers of records are never reused, and a record is never deleted, renamed or renumbered.
+- Before you push a change to a record, run `node .github/record-keeper/record-keeper.mjs validate` (give the folder when it is not `docs/decisions`).
+- Keep secrets, credentials, tenant names and personal data out of a record: it, its history and its pull request are read by many people.
+<!-- record-keeper:end -->

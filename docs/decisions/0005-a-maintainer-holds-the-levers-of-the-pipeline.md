@@ -14,6 +14,7 @@ issues:
   - vscheuber/repo-concierge#33
   - vscheuber/repo-concierge#34
   - vscheuber/repo-concierge#37
+seal: sha256-g1:6d4f6b37dda630c3ebcdfc502b124e74126b90a7930d7da797eb80fe11cf87a5
 ---
 
 # A maintainer holds the levers of the pipeline

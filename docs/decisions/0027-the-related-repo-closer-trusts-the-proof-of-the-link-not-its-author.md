@@ -11,6 +11,9 @@ applies-to:
 issues:
   - rockcarver/frodo-lib#806
   - rockcarver/frodo-cli#922
+supersedes:
+  - 0026
+seal: sha256-g1:19ddd8b99ba603868a3a587a3837b5256638ec55c4c26cec0decfefec513fe86
 ---
 
 # The related-repo closer trusts the proof of the link, not the author of the issue

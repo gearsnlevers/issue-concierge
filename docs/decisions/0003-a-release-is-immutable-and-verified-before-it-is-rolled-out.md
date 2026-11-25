@@ -8,6 +8,7 @@ applies-to:
   - .claude/skills/cut-an-issue-concierge-release/**
 issues:
   - vscheuber/repo-concierge#10
+seal: sha256-g1:5cc6b17ff391141d8fc4dd77f15b0796ffb1da03408d5f1eae3de0314e05d746
 ---
 
 # A release is immutable and verified before it is rolled out

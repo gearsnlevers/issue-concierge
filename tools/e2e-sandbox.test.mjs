@@ -4,8 +4,8 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 import { main, placeholderValues, renderTemplate, seed } from './e2e/seed-sandbox.mjs';
-import { validateDecisionRecords } from './validate-decision-records.mjs';
 import { parseRelatedRepos } from '../scripts/dependency-watch.mjs';
 
 // The sandbox pairs the end-to-end tests run against. A public pair is the baseline; a private pair finds what
@@ -16,6 +16,9 @@ const PAIRS = [
 ];
 const LIB_SECRET = 'E2E_APP_ISSUES_TOKEN'; // the secret the library repository holds: it writes into the app
 const APP_SECRET = 'E2E_LIB_ISSUES_TOKEN';
+
+// The validate command of the kit installed in this repository; it reads the folder it is given and nothing else.
+const KEEPER = fileURLToPath(new URL('../.github/record-keeper/record-keeper.mjs', import.meta.url));
 
 const read = (dir, file) => fs.readFileSync(path.join(dir, file), 'utf8');
 const lines = (text) => text.split('\n').filter((l, i, a) => i < a.length - 1 || l !== '').length;
@@ -71,9 +74,10 @@ for (const pair of PAIRS) {
     }
   });
 
-  test(`${label}: the decision records pass the Concierge's own validator, and one of them does not bind`, () => {
+  test(`${label}: the decision records pass the validate command of Record Keeper, and one of them does not bind`, () => {
     for (const dir of [libDir, appDir]) {
-      assert.deepEqual(validateDecisionRecords({ dir: path.join(dir, 'docs/decisions') }), []);
+      const run = spawnSync(process.execPath, [KEEPER, 'validate', path.join(dir, 'docs/decisions')], { encoding: 'utf8' });
+      assert.equal(run.status, 0, `${dir}: ${run.stdout}${run.stderr}`);
     }
     const statuses = (dir) =>
       fs.readdirSync(path.join(dir, 'docs/decisions')).filter((f) => /^\d{4}-/.test(f)).map((f) => read(dir, `docs/decisions/${f}`).match(/^status: (.+)$/m)[1]);

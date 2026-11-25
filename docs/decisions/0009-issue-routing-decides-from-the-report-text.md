@@ -9,6 +9,7 @@ applies-to:
   - shared/related-repos.md
 issues:
   - vscheuber/repo-concierge#41
+seal: sha256-g1:101c60e207b030d414e8d33cb57ea4e6847a08719b6f7ae2655aa71f0493ddcf
 ---
 
 # Issue routing decides from the report text

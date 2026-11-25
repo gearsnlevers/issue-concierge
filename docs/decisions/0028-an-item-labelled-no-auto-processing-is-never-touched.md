@@ -8,6 +8,7 @@ applies-to:
   - scripts/**
 issues:
   - rockcarver/frodo-cli#518
+seal: sha256-g1:60d5f23b9b598dab5d76e85e2762d3bc27c6065e4a70c3ea2690c8f5d1cf3b7a
 ---
 
 # An item labelled no-auto-processing is never touched by the Concierge

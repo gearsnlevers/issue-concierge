@@ -11,6 +11,7 @@ applies-to:
   - docs/multi-phase-design.md
 issues:
   - rockcarver/frodo-cli#591
+seal: sha256-g1:b2351d561ccd1698dab77563a936680b6ac0cdac3ad5c0ebffa75fa710af39af
 ---
 
 # A plan that rests on a fact it could not confirm is held for a maintainer

@@ -12,6 +12,7 @@ applies-to:
   - requirements.json
   - scripts/janitor.mjs
   - docs/multi-phase-design.md
+seal: sha256-g1:51bb692441ff009b6f140439314ce2437ec4682ef2b560b86ed8ec15446036b2
 ---
 
 # A request that changes what exists is held for a maintainer

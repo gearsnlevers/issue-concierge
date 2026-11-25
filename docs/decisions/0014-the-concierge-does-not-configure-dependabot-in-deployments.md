@@ -8,6 +8,7 @@ applies-to:
   - docs/releases.md
 issues:
   - vscheuber/repo-concierge#46
+seal: sha256-g1:962b9a293a99cd02de6b5c5ae6ca3b8296ef42b4edfc306b2d505a619a8c0d82
 ---
 
 # The Concierge does not configure Dependabot in deployments

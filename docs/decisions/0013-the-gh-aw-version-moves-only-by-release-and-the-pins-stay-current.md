@@ -12,6 +12,7 @@ issues:
   - vscheuber/repo-concierge#45
   - vscheuber/repo-concierge#46
   - vscheuber/repo-concierge#47
+seal: sha256-g1:08328d096a27d18448aec89cca7dd567dacd3eff4e923065872e456545a8db1f
 ---
 
 # The gh-aw version moves only by release, and the pins stay current
