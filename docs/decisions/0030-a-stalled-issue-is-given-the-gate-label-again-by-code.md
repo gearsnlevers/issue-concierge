@@ -9,6 +9,7 @@ applies-to:
   - docs/multi-phase-design.md
 issues:
   - rockcarver/frodo-lib#803
+seal: sha256-g1:a56a07d0c7eeeadf33cd22e3dc219ec917b72c8fa3323ec7d0cfc75b65288b8c
 ---
 
 # A stalled issue is given the gate label again by code

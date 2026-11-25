@@ -10,6 +10,7 @@ applies-to:
   - shared/settings.yml
   - requirements.json
   - docs/multi-phase-design.md
+seal: sha256-g1:3db137680c34e898a3af4851638da78d4d0014491daaeb9891508471b5963463
 ---
 
 # A maintainer decides by command, from the issue

@@ -10,6 +10,7 @@ applies-to:
   - scripts/issue-concierge-settings.mjs
   - shared/settings.yml
   - docs/multi-phase-design.md
+seal: sha256-g1:384566c84d05857602e067d5e843aca95d0a35a752be63c5b04d17e57a9017ba
 ---
 
 # Each repository has a status view of its own

@@ -7,6 +7,7 @@ applies-to:
   - requirements.json
   - docs/deployment.md
   - workflows/**
+seal: sha256-g1:14c9b26b859377a40664304317871c877514e5fb583279f439323d053b7e6a63
 ---
 
 # One secret per privilege

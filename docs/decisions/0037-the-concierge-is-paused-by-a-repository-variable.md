@@ -20,6 +20,7 @@ applies-to:
   - workflows/waiting-for-release.yml
   - workflows/stalled-issue-sweep.yml
   - docs/multi-phase-design.md
+seal: sha256-g1:125548c8685edd416c0081028c86caf8f054a447e04b1d1a4a395d252bb80ba1
 ---
 
 # The Concierge is paused by a repository variable

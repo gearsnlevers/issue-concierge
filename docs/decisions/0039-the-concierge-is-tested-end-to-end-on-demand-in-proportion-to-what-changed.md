@@ -12,6 +12,9 @@ applies-to:
 issues:
   - gearsnlevers/issue-concierge#60
   - gearsnlevers/issue-concierge#61
+supersedes:
+  - 0033
+seal: sha256-g1:70ccb52fcd4010f93aa3d499b2cd4135e3e8397df404bea397f2405774615089
 ---
 
 # The Concierge is tested end to end on demand, in proportion to what changed

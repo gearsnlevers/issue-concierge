@@ -6,11 +6,12 @@ decision-makers:
 applies-to:
   - workflows/related-repo-closer.yml
   - scripts/related-repo-closer.mjs
-  - scripts/concierge-updater.mjs
+  - scripts/issue-concierge-updater.mjs
   - scripts/check-deployment.mjs
 issues:
   - rockcarver/frodo-lib#806
   - rockcarver/frodo-cli#922
+seal: sha256-g1:21afe25951e3857b00e4c1c6ce65baa8fe31831cafaa8351546fadd662986b92
 ---
 
 # The related-repo closer is code, not a model

@@ -9,6 +9,7 @@ applies-to:
   - docs/deployment.md
 issues:
   - vscheuber/repo-concierge#31
+seal: sha256-g1:281c5b333263f951a57faf4564f55640245b2e2ef09d45fd1997382a2d62b34e
 ---
 
 # Only the issue worker is open to every reporter

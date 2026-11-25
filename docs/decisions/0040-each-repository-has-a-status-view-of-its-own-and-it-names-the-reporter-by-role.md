@@ -13,6 +13,9 @@ applies-to:
 issues:
   - gearsnlevers/issue-concierge#79
   - rockcarver/frodo-lib#851
+supersedes:
+  - 0035
+seal: sha256-g1:b72bcf7f93fcb148ee1c0d8ec07629cac4608d275aba290eef2f6298be8faaf7
 ---
 
 # Each repository has a status view of its own, and it tells a reporter from a maintainer by role

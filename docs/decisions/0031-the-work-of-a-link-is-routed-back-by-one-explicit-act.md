@@ -12,6 +12,7 @@ applies-to:
 issues:
   - rockcarver/frodo-lib#803
   - rockcarver/frodo-cli#919
+seal: sha256-g1:0e0c3c7100c48bbc331ab4e3d7da5df54995a5d61db6f15419f814f8f572e7f2
 ---
 
 # The work of a link is routed back by one explicit act
