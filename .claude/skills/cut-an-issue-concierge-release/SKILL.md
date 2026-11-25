@@ -45,7 +45,7 @@ XDG_DATA_HOME="$(mktemp -d)" bash tools/ci-compile-smoke.sh
 
 ## 2. Cut the release
 
-Run the Release workflow from `main`. A dry run first is cheap when anything is unclear; it commits, tags and publishes nothing and shows the version it would cut.
+Run the Release workflow from `main`. A dry run first is cheap when anything is unclear; it tags and publishes nothing and shows the version it would cut. Neither a dry run nor a real release commits anything or pushes a branch: a real release writes the tag, on the commit `main` was at when you dispatched it, and the release.
 
 ```bash
 gh workflow run release.yml -R gearsnlevers/issue-concierge --ref main -f release-type=patch -f dry-run=true   # optional

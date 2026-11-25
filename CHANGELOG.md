@@ -1,5 +1,7 @@
 # Changelog
 
+From the release after v2.4.0 on, the changelog is the notes of the releases: https://github.com/gearsnlevers/issue-concierge/releases. No release writes to this file ([how a release is cut](docs/releases.md#cutting-a-release)). The history up to v2.4.0 stays below.
+
 ## [v2.4.0] - 2026-11-24
 
 ### What's Changed
