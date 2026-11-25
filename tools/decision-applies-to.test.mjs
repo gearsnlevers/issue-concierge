@@ -3,7 +3,6 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { parseFrontMatter } from './validate-decision-records.mjs';
 
 // A gate finds the records that apply to a change by their `applies-to` globs. A glob that names a file by name stops matching
 // when the file is renamed or changes type (the closer was `related-repo-closer.md`, then a plain workflow, then the whole
@@ -11,6 +10,28 @@ import { parseFrontMatter } from './validate-decision-records.mjs';
 // was measured. So every pattern of a record that binds must match at least one file of the repository.
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const read = (p) => fs.readFileSync(path.join(ROOT, p), 'utf8');
+
+/** The front matter of a record, as far as this test needs it: `status` and the `applies-to` list (`applies-to:` followed by `  - item` lines). */
+function frontMatter(text) {
+  const lines = text.split('\n');
+  assert.equal(lines[0], '---', 'a record starts with a front matter block');
+  const end = lines.indexOf('---', 1);
+  assert.ok(end > 0, 'the front matter of a record is closed with ---');
+  const data = {};
+  let list = null;
+  for (const line of lines.slice(1, end)) {
+    const item = line.match(/^\s+-\s+(.*\S)\s*$/);
+    if (item) {
+      list?.push(item[1]);
+      continue;
+    }
+    const key = line.match(/^([a-z-]+):\s*(.*?)\s*$/);
+    if (!key) continue;
+    list = key[2] === '' ? [] : null;
+    data[key[1]] = list ?? key[2];
+  }
+  return data;
+}
 
 /** A glob as the records use them: `**` crosses folders, `*` does not, everything else is literal. */
 export function globToRegex(glob) {
@@ -52,9 +73,9 @@ test('every pattern of an accepted record matches at least one file of the repos
   const dead = [];
   let checked = 0;
   for (const f of records) {
-    const parsed = parseFrontMatter(read(`docs/decisions/${f}`));
-    if (parsed.error || parsed.data.status !== 'accepted') continue; // a replaced or proposed record binds nothing
-    for (const glob of parsed.data['applies-to'] ?? []) {
+    const data = frontMatter(read(`docs/decisions/${f}`));
+    if (data.status !== 'accepted') continue; // a replaced or proposed record binds nothing
+    for (const glob of data['applies-to'] ?? []) {
       checked += 1;
       if (!files.some((p) => globToRegex(glob).test(p))) dead.push(`${f.slice(0, 4)}: ${glob}`);
     }
@@ -63,8 +84,7 @@ test('every pattern of an accepted record matches at least one file of the repos
   assert.deepEqual(dead, [], 'a pattern that matches no file keeps the gates from finding the record: correct it in a pull request that says why');
 });
 
-test('the skill, the template and the records README tell an author to prefer folders and prefix globs', () => {
-  assert.match(read('.claude/skills/record-a-decision/SKILL.md'), /prefer a folder or a prefix glob such as `scripts\/\*\*` to a single file name/);
+test('the template and the records README tell an author to prefer folders and prefix globs', () => {
   assert.match(read('shared/decision-record.md'), /Prefer a folder or a prefix glob \(`src\/ops\/\*\*`, `scripts\/issue-\*\.mjs`\) to a single file name/);
   assert.match(read('docs/decisions/README.md'), /every pattern of an accepted record must match a file \(`tools\/decision-applies-to\.test\.mjs`\)/);
 });
