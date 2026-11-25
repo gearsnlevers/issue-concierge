@@ -1,0 +1,2 @@
+# Who owns what. The setup check of Record Keeper reads this file: the settings file, the pin and the workflows of the kit must have an owner.
+/.github/ @vscheuber
