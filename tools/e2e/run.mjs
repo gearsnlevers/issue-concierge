@@ -21,6 +21,11 @@ import { CHECK_TYPES, FAIL_FAST, describeSnapshot, evaluateChecks } from './chec
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 export const STEP_KINDS = ['wait', 'expect', 'comment', 'label', 'unlabel', 'close', 'dispatch', 'settle'];
 export const OPT_OUT = 'no-auto-processing';
+/**
+ * The one assignee a scenario may name: the login of the person whose token runs it (`gh api user`), read once per run. Never a
+ * literal login, never a bot, never the coding agent: filing an issue assigned to the agent starts a real coding session.
+ */
+export const RUNNER = '{{runner}}';
 const MARKER = (tag) => `<!-- e2e-run: ${tag} -->`;
 const MINUTE = 60 * 1000;
 const SETTLE_EXTRA_MINUTES = 10;
@@ -80,13 +85,21 @@ export function validateScenario(s, config) {
   for (const issue of filed) {
     if (!issue || !issue.title || !issue.body || !Array.isArray(issue.labels)) bad('an issue needs a title, a body and labels');
     else if (issue.repo !== undefined && !['lib', 'app'].includes(issue.repo)) bad('an issue repo must be lib or app');
+    if (issue && issue.assignees !== undefined && (!Array.isArray(issue.assignees) || issue.assignees.length === 0 || issue.assignees.some((a) => a !== RUNNER))) {
+      bad(`an issue's assignees must be a list that holds only ${RUNNER}, the person whose token runs the scenario: never a literal login, never a bot, never the coding agent`);
+    }
   }
   const ids = (s.files ?? []).map((f) => f.id);
   if (ids.some((id) => !/^[a-z][a-z0-9]*$/.test(id ?? '') || id === 'issue') || new Set(ids).size !== ids.length) bad('file ids must be unique lower case words other than "issue"');
   if (!Array.isArray(s.steps) || s.steps.length === 0) bad('needs steps');
+  const logins = (list) => Array.isArray(list) && list.every((login) => typeof login === 'string' && login.length > 0);
   const checkProblems = (checks, where) => {
     if (!Array.isArray(checks) || checks.length === 0) return bad(`${where} needs checks`);
-    for (const c of checks) if (!CHECK_TYPES.includes(c.type)) bad(`${where}: unknown check type "${c.type}"`);
+    for (const c of checks) {
+      if (!CHECK_TYPES.includes(c.type)) bad(`${where}: unknown check type "${c.type}"`);
+      else if (c.type === 'assignees' && !logins(c.only)) bad(`${where}: an assignees check needs only, a list of logins (empty for nobody)`);
+      if (c.allowAssigned !== undefined && (c.type !== 'noPullRequest' || !logins(c.allowAssigned) || c.allowAssigned.length === 0)) bad(`${where}: allowAssigned is a non-empty list of logins, and only for a noPullRequest check`);
+    }
   };
   for (const [i, step] of (s.steps ?? []).entries()) {
     const where = `step ${i + 1}`;
@@ -116,7 +129,7 @@ export function validateScenario(s, config) {
     }
   }
   try {
-    const vars = { lib: 'o/lib', app: 'o/app', 'issue.number': '1', ...Object.fromEntries(ids.map((id) => [`${id}.number`, '2'])) };
+    const vars = { lib: 'o/lib', app: 'o/app', runner: 'a-person', 'issue.number': '1', ...Object.fromEntries(ids.map((id) => [`${id}.number`, '2'])) };
     expandDeep({ issue: s.issue, files: s.files, steps: s.steps }, vars);
   } catch (error) {
     bad(error.message);
@@ -135,7 +148,8 @@ async function runAttempt(scenario, profileName, ctx, attempt) {
   const startedAt = ctx.now();
   const tag = `e2e ${ctx.runId}-${scenario.id}${attempt > 1 ? `-r${attempt}` : ''}`;
   const windowStart = isoSeconds(startedAt - CLOCK_SKEW_MS);
-  const vars = { lib: repos.lib, app: repos.app };
+  // The runner's own person, read once per run in main() (gh api user): the same login for every scenario, profile and attempt.
+  const vars = { lib: repos.lib, app: repos.app, ...(ctx.runner ? { runner: ctx.runner } : {}) };
   const created = {};
   const results = [];
   const log = (message) => ctx.log(`${scenario.id} (${profileName}${attempt > 1 ? `, attempt ${attempt}` : ''}): ${message}`);
@@ -150,7 +164,9 @@ async function runAttempt(scenario, profileName, ctx, attempt) {
   async function file(id, spec) {
     const repo = repos[spec.repo ?? scenario.repo];
     const body = `${expand(spec.body, vars)}\n\n${MARKER(tag)}`;
-    const issue = await gh.createIssue(repo, { title: `[${tag}] ${expand(spec.title, vars)}`, body, labels: spec.labels });
+    if (spec.assignees !== undefined && !ctx.runner) throw new Error(`cannot assign ${RUNNER}: the runner does not know whose token it runs (gh api user gave no login)`);
+    const assignees = spec.assignees === undefined ? undefined : expandDeep(spec.assignees, vars);
+    const issue = await gh.createIssue(repo, { title: `[${tag}] ${expand(spec.title, vars)}`, body, labels: spec.labels, assignees });
     created[id] = { repo, number: issue.number, url: issue.html_url ?? `https://github.com/${repo}/issues/${issue.number}`, other: repos[(spec.repo ?? scenario.repo) === 'lib' ? 'app' : 'lib'] };
     vars[`${id}.number`] = String(issue.number);
     log(`filed ${created[id].url}`);
@@ -422,7 +438,14 @@ export async function main(argv = process.argv.slice(2), env = process.env, io =
     }
     if (!opts.yes && !opts['cleanup-stale']) {
       io.out(`Plan only (add --yes to run). Sandbox owner ${owner}; retries ${opts.retries ?? 1}.`);
-      for (const s of selected) for (const p of profiles.filter((p) => s.profiles.includes(p))) io.out(`- scenario ${s.number}, ${s.id}, on ${owner}/${config.profiles[p][s.repo]} (${p}): ${s.title}`);
+      for (const s of selected) {
+        for (const p of profiles.filter((p) => s.profiles.includes(p))) {
+          io.out(`- scenario ${s.number}, ${s.id}, on ${owner}/${config.profiles[p][s.repo]} (${p}): ${s.title}`);
+          // The plan reads nothing from GitHub, so it cannot name the person: it says whose assignment the scenario files.
+          const assigned = [['issue', s.issue], ...(s.files ?? []).map((f) => [f.id, f])].filter(([, issue]) => issue.assignees?.length);
+          if (assigned.length) io.out(`  assigned to the runner (the person whose token runs it, read when run with --yes): ${assigned.map(([id]) => id).join(', ')}`);
+        }
+      }
       return 0;
     }
 

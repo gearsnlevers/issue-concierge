@@ -1,0 +1,45 @@
+{
+  "id": "assigned-issue-is-left-alone",
+  "title": "An issue opened with a person assigned starts no issue worker run, and the janitor gives it no-auto-processing without a word",
+  "covers": [
+    "an issue opened with a person (the runner's own account) among its assignees and no bot among them starts no issue worker run, although only the hold is on it: the issue worker's condition has no term for the hold, so the assignee term of record 0043 is the only thing that can stop the opened event",
+    "the janitor's assigned job gives such an issue no-auto-processing, with the workflow token and no comment, although the hold is on it: the hold is not an outcome of the plan gate",
+    "nothing else the Concierge does touches it: no comment, no other label, no failed run, no pull request, and the assignee stays",
+    "not covered: handing the issue back by removing the label (scenario 5 does it, and it costs a model run), and the coding agent as an assignee (it starts a real coding session and costs a pull request; the unit tests cover the bot case)"
+  ],
+  "profiles": ["public", "private"],
+  "repo": "lib",
+  "issue": {
+    "title": "listWidgets: accept a limit for the number of names returned",
+    "body": "## Proposal\n\nLet `listWidgets` take an optional limit, for example `listWidgets(widgets, 3)`, and return only the first three widgets of the sorted list. Without it, nothing changes.\n\n## Acceptance\n\n- A test that asks for 2 of 4 widgets and gets the first two by name.",
+    "labels": ["enhancement", "plan-approval-required"],
+    "assignees": ["{{runner}}"]
+  },
+  "steps": [
+    {
+      "wait": {
+        "timeoutMinutes": 8,
+        "checks": [
+          { "name": "the janitor gave the issue the opt-out label", "type": "labels", "include": ["no-auto-processing"] },
+          { "name": "no run failed", "type": "noFailedRuns" },
+          { "name": "no failure issue was opened", "type": "noFailureIssues" }
+        ]
+      }
+    },
+    { "settle": { "minutes": 6 } },
+    {
+      "expect": {
+        "checks": [
+          { "name": "the issue worker left no comment", "type": "comments", "workflow": "issue-worker", "count": 0 },
+          { "name": "the Concierge said nothing", "type": "noBotComments" },
+          { "name": "the Concierge added no label but the opt-out", "type": "labels", "only": ["enhancement", "plan-approval-required", "no-auto-processing"] },
+          { "name": "the assignee is still the runner's person", "type": "assignees", "only": ["{{runner}}"] },
+          { "name": "the issue is still open", "type": "state", "state": "open" },
+          { "name": "nothing started coding", "type": "noPullRequest", "allowAssigned": ["{{runner}}"] },
+          { "name": "no run failed", "type": "noFailedRuns" },
+          { "name": "no failure issue was opened", "type": "noFailureIssues" }
+        ]
+      }
+    }
+  ]
+}
