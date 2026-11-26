@@ -58,11 +58,27 @@ const TYPES = {
   },
 
   // No pull request refers to the issue and nobody, the coding agent included, is assigned: nothing started coding.
-  noPullRequest(_check, s) {
+  // allowAssigned: logins that may be assigned all the same (the runner's own person, for a scenario that files its issue
+  // assigned to them). Anyone else, the coding agent included, still fails the check.
+  noPullRequest(check, s) {
+    const allowed = new Set((check.allowAssigned ?? []).map((login) => login.toLowerCase()));
+    const others = s.issue.assignees.filter((login) => !allowed.has(login.toLowerCase()));
     const problems = [];
     if (s.pullRequests.length) problems.push(`pull requests ${s.pullRequests.map((n) => `#${n}`).join(', ')}`);
-    if (s.issue.assignees.length) problems.push(`assigned to ${s.issue.assignees.join(', ')}`);
-    return { ok: problems.length === 0, detail: problems.length ? problems.join('; ') : 'no pull request, nobody assigned' };
+    if (others.length) problems.push(`assigned to ${others.join(', ')}`);
+    return { ok: problems.length === 0, detail: problems.length ? problems.join('; ') : allowed.size ? `no pull request, nobody assigned but ${list(check.allowAssigned)}` : 'no pull request, nobody assigned' };
+  },
+
+  // only: the exact set of logins the issue is assigned to (an empty list: nobody). Logins are compared without regard to case.
+  assignees(check, s) {
+    const have = s.issue.assignees;
+    const want = (check.only ?? []).map((login) => login.toLowerCase());
+    const extra = have.filter((login) => !want.includes(login.toLowerCase()));
+    const missing = (check.only ?? []).filter((login) => !have.some((h) => h.toLowerCase() === login.toLowerCase()));
+    const problems = [];
+    if (extra.length) problems.push(`unexpected ${extra.join(', ')}`);
+    if (missing.length) problems.push(`missing ${missing.join(', ')}`);
+    return { ok: problems.length === 0, detail: `${problems.length ? `${problems.join('; ')}; ` : ''}assigned to ${list(have)}` };
   },
 
   // How many workflow runs belong to the issue (min, max). Without it "no run failed" would pass on zero runs, which is
@@ -128,7 +144,7 @@ export function describeSnapshot(s) {
   const gates = [...new Set(s.comments.filter((c) => c.author === BOT).map((c) => c.body.match(/gh-aw-workflow-call-id:\s*\S*\/([a-z]+(?:-[a-z]+)*)/i)?.[1] ?? 'other'))];
   const runs = s.runs.map((r) => `${r.name}: ${r.status === 'completed' ? r.conclusion : r.status}`);
   return [
-    `state ${s.issue.state}${s.issue.state_reason ? ` (${s.issue.state_reason})` : ''}; labels ${list(s.issue.labels)}`,
+    `state ${s.issue.state}${s.issue.state_reason ? ` (${s.issue.state_reason})` : ''}; labels ${list(s.issue.labels)}${s.issue.assignees.length ? `; assigned to ${list(s.issue.assignees)}` : ''}`,
     `bot comments from ${list(gates)}`,
     `runs ${runs.length ? runs.join('; ') : 'none yet'}`,
   ].join('. ');

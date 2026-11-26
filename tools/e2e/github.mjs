@@ -65,7 +65,8 @@ export function createGitHub({ run = ghRunner(), sleep = (ms) => new Promise((r)
     api,
     user: () => api('GET', '/user'),
     getIssue: (repo, n) => api('GET', `/repos/${repo}/issues/${n}`),
-    createIssue: (repo, { title, body, labels }) => api('POST', `/repos/${repo}/issues`, { title, body, labels }),
+    // `assignees`: logins, optional; the field is left out of the request when there are none (JSON drops an undefined value).
+    createIssue: (repo, { title, body, labels, assignees }) => api('POST', `/repos/${repo}/issues`, { title, body, labels, assignees }),
     comment: (repo, n, body) => api('POST', `/repos/${repo}/issues/${n}/comments`, { body }),
     addLabels: (repo, n, labels) => api('POST', `/repos/${repo}/issues/${n}/labels`, { labels }),
     async removeLabel(repo, n, label) {
