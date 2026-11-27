@@ -4,20 +4,24 @@ A decision record explains one lasting decision: why we chose it, what it means 
 
 This folder holds the decisions of Repo Concierge itself: how it is released and delivered, how its gates behave, what they may and may not do, and how it stays current. It is not delivered to deployments. A deployment writes its own records in its own `docs/decisions/` (or `decisions/` at the root), which the gates read ([0006](0006-gates-read-the-repositorys-own-guidance-and-decision-records.md)). The frodo repositories keep a few records that describe the Concierge from their side (core 0002 and core 0004 in [frodo-cli](https://github.com/rockcarver/frodo-cli/tree/main/docs/decisions/core)).
 
+[Record Keeper](https://github.com/gearsnlevers/record-keeper) keeps these records trustworthy. It is installed in `.github/record-keeper/` (its owners and their approvals are in `.github/record-keeper/settings.yml`), its skill is [record-a-decision](../../.claude/skills/record-a-decision/SKILL.md), and the check `Records integrity` runs on every pull request. An accepted record carries a seal. The kit defines what an act is and what it must contain; this page says what to do and links where it is defined, and does not copy it.
+
 ## Rules
 
 - An accepted record is binding for humans and agents until a newer record supersedes it. An agent whose task conflicts with one stops and says so in the issue or pull request.
 - Only lasting decisions get a record: something you would be surprised to see reversed without discussion. Not minor implementation notes or routine refactors.
-- An accepted record is not edited, except for typos and for a `Known deviations` section, a status note that may be added, edited or removed, without a new record, in the pull request that fixes the deviation or opens its tracking issue. A changed decision is a new record: set the old record's status to `superseded by NNNN` and update the index.
+- An accepted record is not edited. It changes only by one of three acts, and the owners approve each one: a new record that replaces it, an erratum that corrects its text, or an entry in its `Known deviations` that notes a case in which it was not followed. What each act must contain and how long it waits are defined in [errata and deviations](https://github.com/gearsnlevers/record-keeper/blob/main/docs/errata-and-deviations.md) and in [checking a change](https://github.com/gearsnlevers/record-keeper/blob/main/docs/checking-a-change.md).
+- A changed decision is a new record that lists the records it replaces in `supersedes:`. The pull request that accepts it also sets the status of each of them to `superseded by NNNN` and updates their rows in the index ([checking a change](https://github.com/gearsnlevers/record-keeper/blob/main/docs/checking-a-change.md) checks both sides). Numbers are never reused, and a record is never deleted or renamed.
+- A coding agent proposes a record with the status `proposed` and never accepts or seals one: accepting is an act of the owners, made in their own pull request ([approvals](https://github.com/gearsnlevers/record-keeper/blob/main/docs/approvals.md)).
 - A pull request that changes a decided behaviour adds or supersedes a record in the same pull request.
 - Records are public. No credentials, tenant names, security-incident details or personal information.
 - Write a record so it stays true: state the rule, not a value that changes. Leave out "currently", "now", "the latest" and any current version, count, size or line number. Say "e.g." or "for example" when an example helps, and date a fact that explains the decision ("on 2026-10-24 the pin was ..."). An accepted record is not edited to keep up with such a fact, so it must not contain one.
-- `applies-to:` lists path globs where that helps, preferably folders and prefix globs, because files are renamed; every pattern of an accepted record must match a file (`tools/decision-applies-to.test.mjs`). `issues:` lists related issues and pull requests as `owner/repo#N`.
+- `applies-to:` lists path globs where that helps, preferably folders and prefix globs, because files are renamed; every pattern of an accepted record must match a file (`tools/decision-applies-to.test.mjs`), and the check of a pull request enforces it for a change ([where a record applies](https://github.com/gearsnlevers/record-keeper/blob/main/docs/applies-to.md)). `issues:` lists related issues and pull requests as `owner/repo#N`.
 - A record written after the fact says so in its context ("Recorded retroactively from ...") and describes what the code and the history show.
 
 ## Writing one
 
-Copy `template.md` to `NNNN-short-title.md` (the next number, starting at 0001), fill it in (aim for under 40 lines) and add a row to the index. Besides the three required sections, a record may have `## Known deviations` and `## Alternatives considered`. `node .github/record-keeper/record-keeper.mjs validate` checks this folder; CI runs the same check (`tools/decision-records.test.mjs`).
+Follow the `record-a-decision` skill. Copy `template.md` to `NNNN-short-title.md` (the next number, starting at 0001), fill it in and add a row to the index. Keep a record short: the front matter keys, the sections and their order, and the length limit are on [the format page](https://github.com/gearsnlevers/record-keeper/blob/main/docs/record-format.md). `node .github/record-keeper/record-keeper.mjs validate docs/decisions` checks this folder; CI runs the same check (`tools/decision-records.test.mjs`).
 
 ## Index
 
