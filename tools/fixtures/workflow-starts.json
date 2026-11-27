@@ -1,0 +1,945 @@
+{
+  "about": "The table of tools/workflow-starts.test.mjs: for each event, which jobs of the plain workflows and which gh-aw agents start. 'starts' names the plain jobs (the file stem for the first job of a workflow, stem/job for another), 'agents' the gh-aw definitions. The test file says how to read and extend it.",
+  "defaults": {"issue": {"state": "open", "author": "User", "labels": [], "assignees": [], "pr": false, "body": ""}, "comment": {"author": "User", "login": "maintainer", "body": "Thanks, that works for me."}, "pull_request": {"labels": [], "merged": false, "fork": false}},
+  "groups": [
+    {
+      "title": "issues: opened, edited, reopened, unlabeled",
+      "fixtures": [
+        {
+          "name": "issues-opened-plain",
+          "note": "The baseline: a person opens an issue. The status page and the issue worker start; the notifier needs a \"Reported from\" line.",
+          "event": "issues", "action": "opened",
+          "starts": ["status"], "agents": ["issue-worker"]
+        },
+        {
+          "name": "issues-opened-linked-issue",
+          "note": "The body has a \"Reported from\" line, so the reporter notifier starts as well.",
+          "event": "issues", "action": "opened", "issue": {"body": "Reported from o/other#12"},
+          "starts": ["reporter-notify", "status"], "agents": ["issue-worker"]
+        },
+        {
+          "name": "issues-opened-by-a-bot",
+          "note": "A bot-written issue: the issue worker stands down, the status page does not look at the author.",
+          "event": "issues", "action": "opened", "issue": {"author": "Bot"},
+          "starts": ["status"], "agents": []
+        },
+        {
+          "name": "issues-opened-by-a-bot-linked",
+          "note": "Border: the notifier has no author term, so a bot-written linked issue still starts it (its script decides).",
+          "event": "issues", "action": "opened", "issue": {"author": "Bot", "body": "Reported from o/other#12"},
+          "starts": ["reporter-notify", "status"], "agents": []
+        },
+        {
+          "name": "issues-opened-opted-out",
+          "note": "The opt-out label stops every handler and the issue worker, a linked body or not.",
+          "event": "issues", "action": "opened", "issue": {"labels": ["no-auto-processing"], "body": "Reported from o/other#12"},
+          "starts": [], "agents": []
+        },
+        {
+          "name": "issues-opened-paused",
+          "note": "Paused by the new variable: the notifier and the issue worker do not start; the status page has no pause term (its script reads it).",
+          "event": "issues", "action": "opened", "issue": {"body": "Reported from o/other#12"}, "vars": {"ISSUE_CONCIERGE_PAUSED": "true"},
+          "starts": ["status"], "agents": []
+        },
+        {
+          "name": "issues-edited-open",
+          "note": "Only the issue worker listens to an edit.",
+          "event": "issues", "action": "edited",
+          "starts": [], "agents": ["issue-worker"]
+        },
+        {
+          "name": "issues-edited-closed",
+          "note": "Border: a closed issue is not analysed again.",
+          "event": "issues", "action": "edited", "issue": {"state": "closed"},
+          "starts": [], "agents": []
+        },
+        {
+          "name": "issues-edited-opted-out",
+          "note": "The opt-out label stops the issue worker on an edit.",
+          "event": "issues", "action": "edited", "issue": {"labels": ["no-auto-processing"]},
+          "starts": [], "agents": []
+        },
+        {
+          "name": "issues-reopened-plain",
+          "note": "A reopened issue: the commands handler and the status page start, and the issue worker analyses it again.",
+          "event": "issues", "action": "reopened",
+          "starts": ["commands", "status"], "agents": ["issue-worker"]
+        },
+        {
+          "name": "issues-reopened-opted-out",
+          "note": "The opt-out label stops all three.",
+          "event": "issues", "action": "reopened", "issue": {"labels": ["no-auto-processing"]},
+          "starts": [], "agents": []
+        },
+        {
+          "name": "issues-reopened-paused",
+          "note": "Paused by the old variable: the commands handler and the status page have no pause term, the issue worker has.",
+          "event": "issues", "action": "reopened", "vars": {"CONCIERGE_PAUSED": "true"},
+          "starts": ["commands", "status"], "agents": []
+        },
+        {
+          "name": "issues-unlabeled-plan-approval-required",
+          "note": "The hold is lifted by a person: the approval resume starts.",
+          "event": "issues", "action": "unlabeled", "label": "plan-approval-required",
+          "starts": ["plan-approval-resume"], "agents": []
+        },
+        {
+          "name": "issues-unlabeled-plan-approval-required-bot-issue",
+          "note": "Border: the approval resume has no author term.",
+          "event": "issues", "action": "unlabeled", "label": "plan-approval-required", "issue": {"author": "Bot"},
+          "starts": ["plan-approval-resume"], "agents": []
+        },
+        {
+          "name": "issues-unlabeled-plan-approval-required-opted-out",
+          "note": "The opt-out label stops the approval resume.",
+          "event": "issues", "action": "unlabeled", "label": "plan-approval-required", "issue": {"labels": ["no-auto-processing"]},
+          "starts": [], "agents": []
+        },
+        {
+          "name": "issues-unlabeled-plan-approval-required-paused",
+          "note": "Paused: the approval resume does not start.",
+          "event": "issues", "action": "unlabeled", "label": "plan-approval-required", "vars": {"ISSUE_CONCIERGE_PAUSED": "true"},
+          "starts": [], "agents": []
+        },
+        {
+          "name": "issues-unlabeled-another-label",
+          "note": "Border: removing any other label starts nothing, though the event is listened to.",
+          "event": "issues", "action": "unlabeled", "label": "needs-info",
+          "starts": [], "agents": []
+        },
+        {
+          "name": "issues-unlabeled-opt-out-label",
+          "note": "The hand-over: removing the opt-out label starts the issue worker once (the payload no longer lists the label).",
+          "event": "issues", "action": "unlabeled", "label": "no-auto-processing",
+          "starts": [], "agents": ["issue-worker"]
+        },
+        {
+          "name": "issues-unlabeled-opt-out-label-closed",
+          "note": "Border: a closed issue stays closed to the gates after the hand-over.",
+          "event": "issues", "action": "unlabeled", "label": "no-auto-processing", "issue": {"state": "closed"},
+          "starts": [], "agents": []
+        }
+      ]
+    },
+    {
+      "title": "issues: labeled",
+      "fixtures": [
+        {
+          "name": "issues-labeled-irrelevant-label",
+          "note": "Border: a label that changes nothing (bug) starts no handler and no agent, though nine workflows listen to the event (GitHub lists a skipped run for each).",
+          "event": "issues", "action": "labeled", "label": "bug",
+          "starts": [], "agents": []
+        },
+        {
+          "name": "issues-labeled-issue-worker-ready",
+          "note": "The gate label of issue triage: the janitor and the status page list it, issue triage starts.",
+          "event": "issues", "action": "labeled", "label": "issue-worker-ready",
+          "starts": ["janitor", "status"], "agents": ["issue-triage"]
+        },
+        {
+          "name": "issues-labeled-issue-worker-ready-linked",
+          "note": "The notifier starts for this label when the issue has a \"Reported from\" line.",
+          "event": "issues", "action": "labeled", "label": "issue-worker-ready", "issue": {"body": "Reported from o/other#12"},
+          "starts": ["janitor", "reporter-notify", "status"], "agents": ["issue-triage"]
+        },
+        {
+          "name": "issues-labeled-issue-worker-ready-by-a-bot",
+          "note": "Border: the janitor and the status page have no author term, issue triage has.",
+          "event": "issues", "action": "labeled", "label": "issue-worker-ready", "issue": {"author": "Bot"},
+          "starts": ["janitor", "status"], "agents": []
+        },
+        {
+          "name": "issues-labeled-issue-worker-ready-closed",
+          "note": "Border: a closed issue; the janitor and the status page have no state term, the gate and the notifier have.",
+          "event": "issues", "action": "labeled", "label": "issue-worker-ready", "issue": {"state": "closed", "body": "Reported from o/other#12"},
+          "starts": ["janitor", "status"], "agents": []
+        },
+        {
+          "name": "issues-labeled-issue-worker-ready-opted-out",
+          "note": "The opt-out label stops every handler and issue triage.",
+          "event": "issues", "action": "labeled", "label": "issue-worker-ready", "issue": {"labels": ["no-auto-processing"], "body": "Reported from o/other#12"},
+          "starts": [], "agents": []
+        },
+        {
+          "name": "issues-labeled-issue-worker-ready-paused",
+          "note": "Paused by the new variable: only the status page, which has no pause term, starts.",
+          "event": "issues", "action": "labeled", "label": "issue-worker-ready", "vars": {"ISSUE_CONCIERGE_PAUSED": "true"},
+          "starts": ["status"], "agents": []
+        },
+        {
+          "name": "issues-labeled-issue-worker-ready-paused-old-name",
+          "note": "Paused by the old variable on a linked issue: the notifier and the janitor stop, the status page does not.",
+          "event": "issues", "action": "labeled", "label": "issue-worker-ready", "issue": {"body": "Reported from o/other#12"}, "vars": {"CONCIERGE_PAUSED": "true"},
+          "starts": ["status"], "agents": []
+        },
+        {
+          "name": "issues-labeled-issue-triage-handoff",
+          "note": "The gate label of the plan worker; the commands handler lists it too.",
+          "event": "issues", "action": "labeled", "label": "issue-triage-handoff",
+          "starts": ["commands", "janitor", "status"], "agents": ["plan-worker"]
+        },
+        {
+          "name": "issues-labeled-plan-worker-ready",
+          "note": "The gate label of plan triage.",
+          "event": "issues", "action": "labeled", "label": "plan-worker-ready",
+          "starts": ["commands", "janitor", "status"], "agents": ["plan-triage"]
+        },
+        {
+          "name": "issues-labeled-plan-triage-handoff",
+          "note": "The gate label of the PR worker.",
+          "event": "issues", "action": "labeled", "label": "plan-triage-handoff",
+          "starts": ["commands", "janitor", "status"], "agents": ["pr-worker"]
+        },
+        {
+          "name": "issues-labeled-plan-triage-handoff-plan-approval-held",
+          "note": "Border: the hold is on the issue, so the PR worker does not start; the handlers do.",
+          "event": "issues", "action": "labeled", "label": "plan-triage-handoff", "issue": {"labels": ["plan-approval-required"]},
+          "starts": ["commands", "janitor", "status"], "agents": []
+        },
+        {
+          "name": "issues-labeled-plan-triage-handoff-dependency-held",
+          "note": "Border: the dependency label is on the issue, so the PR worker does not start.",
+          "event": "issues", "action": "labeled", "label": "plan-triage-handoff", "issue": {"labels": ["dependency-required"]},
+          "starts": ["commands", "janitor", "status"], "agents": []
+        },
+        {
+          "name": "issues-labeled-plan-triage-handoff-paused",
+          "note": "Paused: the commands handler and the status page have no pause term, the janitor and the PR worker have.",
+          "event": "issues", "action": "labeled", "label": "plan-triage-handoff", "vars": {"ISSUE_CONCIERGE_PAUSED": "true"},
+          "starts": ["commands", "status"], "agents": []
+        },
+        {
+          "name": "issues-labeled-plan-approval-required-linked",
+          "note": "The hold label on a linked issue: the notifier tells the reporter, the commands handler writes its options comment.",
+          "event": "issues", "action": "labeled", "label": "plan-approval-required", "issue": {"body": "Reported from o/other#12"},
+          "starts": ["commands", "janitor", "reporter-notify", "status"], "agents": []
+        },
+        {
+          "name": "issues-labeled-needs-info-linked",
+          "note": "Border: needs-info is in the janitor, status and notifier lists but not in the commands list.",
+          "event": "issues", "action": "labeled", "label": "needs-info", "issue": {"body": "Reported from o/other#12"},
+          "starts": ["janitor", "reporter-notify", "status"], "agents": []
+        },
+        {
+          "name": "issues-labeled-dependency-required",
+          "note": "The dependency watch starts for its own label, the janitor and the status page list it.",
+          "event": "issues", "action": "labeled", "label": "dependency-required",
+          "starts": ["dependency-watch", "janitor", "status"], "agents": []
+        },
+        {
+          "name": "issues-labeled-dependency-required-opted-out",
+          "note": "The opt-out label stops the dependency watch on its label event.",
+          "event": "issues", "action": "labeled", "label": "dependency-required", "issue": {"labels": ["no-auto-processing"]},
+          "starts": [], "agents": []
+        },
+        {
+          "name": "issues-labeled-complexity-medium",
+          "note": "Border: a classification label is in the commands list only.",
+          "event": "issues", "action": "labeled", "label": "complexity/medium",
+          "starts": ["commands"], "agents": []
+        },
+        {
+          "name": "issues-labeled-agent-start-failed",
+          "note": "In both lists: the commands handler, the janitor and the status page.",
+          "event": "issues", "action": "labeled", "label": "agent-start-failed",
+          "starts": ["commands", "janitor", "status"], "agents": []
+        },
+        {
+          "name": "issues-labeled-opt-out-label",
+          "note": "Applying the opt-out label itself: the payload lists it, so no handler starts.",
+          "event": "issues", "action": "labeled", "label": "no-auto-processing",
+          "starts": [], "agents": []
+        }
+      ]
+    },
+    {
+      "title": "issues: closed",
+      "fixtures": [
+        {
+          "name": "issues-closed-plain",
+          "note": "The six handlers that listen to a close; the original-in-related-repo label is what the related-repo closer needs.",
+          "event": "issues", "action": "closed", "issue": {"state": "closed"},
+          "starts": ["commands", "dependency-watch", "janitor", "status", "waiting-for-release"], "agents": []
+        },
+        {
+          "name": "issues-closed-linked-original",
+          "note": "With the link label the related-repo closer starts too.",
+          "event": "issues", "action": "closed", "issue": {"state": "closed", "labels": ["original-in-related-repo"]},
+          "starts": ["commands", "dependency-watch", "janitor", "related-repo-closer", "status", "waiting-for-release"], "agents": []
+        },
+        {
+          "name": "issues-closed-by-a-bot",
+          "note": "Border: a bot-written issue stops the related-repo closer and waiting-for-release, not the others.",
+          "event": "issues", "action": "closed", "issue": {"state": "closed", "author": "Bot", "labels": ["original-in-related-repo"]},
+          "starts": ["commands", "dependency-watch", "janitor", "status"], "agents": []
+        },
+        {
+          "name": "issues-closed-opted-out",
+          "note": "Border: the dependency watch starts for every close, even of an opted-out issue (its script skips it); the others stop.",
+          "event": "issues", "action": "closed", "issue": {"state": "closed", "labels": ["no-auto-processing", "original-in-related-repo"]},
+          "starts": ["dependency-watch"], "agents": []
+        },
+        {
+          "name": "issues-closed-paused",
+          "note": "Paused: only the commands handler and the status page, which have no pause term, start.",
+          "event": "issues", "action": "closed", "issue": {"state": "closed", "labels": ["original-in-related-repo"]}, "vars": {"ISSUE_CONCIERGE_PAUSED": "true"},
+          "starts": ["commands", "status"], "agents": []
+        }
+      ]
+    },
+    {
+      "title": "the assignee rule (record 0043)",
+      "fixtures": [
+        {
+          "name": "issues-opened-assigned-to-a-person",
+          "note": "Record 0043: an issue opened with a person among its assignees and no bot starts no issue worker; the status page still starts.",
+          "event": "issues", "action": "opened", "issue": {"assignees": ["User"]},
+          "starts": ["status"], "agents": []
+        },
+        {
+          "name": "issues-opened-assigned-to-a-person-linked",
+          "note": "The guard is in the issue worker only: the notifier starts for a linked issue that is assigned.",
+          "event": "issues", "action": "opened", "issue": {"assignees": ["User"], "body": "Reported from o/other#12"},
+          "starts": ["reporter-notify", "status"], "agents": []
+        },
+        {
+          "name": "issues-opened-assigned-person-and-agent",
+          "note": "The co-assignee case: a bot among the assignees means the Concierge's own assignment, so the issue worker starts.",
+          "event": "issues", "action": "opened", "issue": {"assignees": ["User", "Bot"]},
+          "starts": ["status"], "agents": ["issue-worker"]
+        },
+        {
+          "name": "issues-opened-assigned-to-the-agent-only",
+          "note": "Only the coding agent is assigned: not a person, so the issue worker starts.",
+          "event": "issues", "action": "opened", "issue": {"assignees": ["Bot"]},
+          "starts": ["status"], "agents": ["issue-worker"]
+        },
+        {
+          "name": "issues-reopened-assigned-to-a-person",
+          "note": "The guard covers a reopened issue too.",
+          "event": "issues", "action": "reopened", "issue": {"assignees": ["User"]},
+          "starts": ["commands", "status"], "agents": []
+        },
+        {
+          "name": "issues-edited-assigned-to-a-person",
+          "note": "Border: the guard is for opened and reopened only; an edit still starts the issue worker.",
+          "event": "issues", "action": "edited", "issue": {"assignees": ["User"]},
+          "starts": [], "agents": ["issue-worker"]
+        },
+        {
+          "name": "issues-unlabeled-opt-out-label-assigned-to-a-person",
+          "note": "Border: the hand-over works while the person is still assigned.",
+          "event": "issues", "action": "unlabeled", "label": "no-auto-processing", "issue": {"assignees": ["User"]},
+          "starts": [], "agents": ["issue-worker"]
+        },
+        {
+          "name": "issues-assigned-a-person",
+          "note": "Record 0043: assigned to a person, no bot: the janitor starts its label job and its assigned job; the status page does not look at a person.",
+          "event": "issues", "action": "assigned", "assignee": "maintainer", "issue": {"assignees": ["User"]},
+          "starts": ["janitor", "janitor/assigned"], "agents": []
+        },
+        {
+          "name": "issues-assigned-the-agent",
+          "note": "The coding agent is assigned: the status page starts (it lists the agent's logins), the assigned job does not.",
+          "event": "issues", "action": "assigned", "assignee": "Copilot", "issue": {"assignees": ["Bot"]},
+          "starts": ["janitor", "status"], "agents": []
+        },
+        {
+          "name": "issues-assigned-the-agent-bot-login",
+          "note": "The other spelling of the agent's login in the status page list.",
+          "event": "issues", "action": "assigned", "assignee": "copilot-swe-agent[bot]", "issue": {"assignees": ["Bot"]},
+          "starts": ["janitor", "status"], "agents": []
+        },
+        {
+          "name": "issues-assigned-the-agent-with-its-owner",
+          "note": "The coding agent is assigned to an issue that a person already has: a bot is among the assignees, so no assigned job; the status page still sees the agent.",
+          "event": "issues", "action": "assigned", "assignee": "Copilot", "issue": {"assignees": ["User", "Bot"]},
+          "starts": ["janitor", "status"], "agents": []
+        },
+        {
+          "name": "issues-assigned-the-owner-after-the-agent",
+          "note": "The co-assignee: when the PR worker assigns the agent with a personal token, GitHub assigns the token's owner too, in the same second (record 0043). A person is assigned and a bot is among the assignees, so no assigned job.",
+          "event": "issues", "action": "assigned", "assignee": "maintainer", "issue": {"assignees": ["Bot", "User"]},
+          "starts": ["janitor"], "agents": []
+        },
+        {
+          "name": "issues-assigned-a-person-closed",
+          "note": "Border: a closed issue; the label job still starts, the assigned job does not.",
+          "event": "issues", "action": "assigned", "assignee": "maintainer", "issue": {"state": "closed", "assignees": ["User"]},
+          "starts": ["janitor"], "agents": []
+        },
+        {
+          "name": "issues-assigned-a-person-opted-out",
+          "note": "The opt-out label stops both janitor jobs and the status page.",
+          "event": "issues", "action": "assigned", "assignee": "maintainer", "issue": {"labels": ["no-auto-processing"], "assignees": ["User"]},
+          "starts": [], "agents": []
+        },
+        {
+          "name": "issues-assigned-a-person-paused",
+          "note": "Paused: both janitor jobs stop.",
+          "event": "issues", "action": "assigned", "assignee": "maintainer", "issue": {"assignees": ["User"]}, "vars": {"ISSUE_CONCIERGE_PAUSED": "true"},
+          "starts": [], "agents": []
+        },
+        {
+          "name": "issues-assigned-the-agent-paused",
+          "note": "Paused: the status page has no pause term and starts for the agent.",
+          "event": "issues", "action": "assigned", "assignee": "Copilot", "issue": {"assignees": ["Bot"]}, "vars": {"CONCIERGE_PAUSED": "true"},
+          "starts": ["status"], "agents": []
+        },
+        {
+          "name": "issues-assigned-a-person-after-the-plan-gate",
+          "note": "Border: the plan gate's outcome is read live by the script, not by the condition, so the job still starts.",
+          "event": "issues", "action": "assigned", "assignee": "maintainer", "issue": {"assignees": ["User"], "labels": ["plan-triage-handoff", "complexity/low"]},
+          "starts": ["janitor", "janitor/assigned"], "agents": []
+        },
+        {
+          "name": "issues-unassigned-a-person",
+          "note": "Unassigning does nothing to the label: only the janitor's label job starts.",
+          "event": "issues", "action": "unassigned", "assignee": "maintainer",
+          "starts": ["janitor"], "agents": []
+        },
+        {
+          "name": "issues-unassigned-the-agent",
+          "note": "The agent is unassigned (a retry): the janitor and the status page start.",
+          "event": "issues", "action": "unassigned", "assignee": "Copilot",
+          "starts": ["janitor", "status"], "agents": []
+        },
+        {
+          "name": "issue-comment-on-an-issue-assigned-to-a-person",
+          "note": "Border: a comment still starts the issue worker for an issue assigned to a person (the guard is for opened and reopened).",
+          "event": "issue_comment", "action": "created", "issue": {"assignees": ["User"]},
+          "starts": ["commands", "status"], "agents": ["issue-worker"]
+        }
+      ]
+    },
+    {
+      "title": "issue_comment: created",
+      "fixtures": [
+        {
+          "name": "issue-comment-by-a-person",
+          "note": "The baseline: the commands handler, the status page and the issue worker start.",
+          "event": "issue_comment", "action": "created",
+          "starts": ["commands", "status"], "agents": ["issue-worker"]
+        },
+        {
+          "name": "issue-comment-on-a-pull-request",
+          "note": "Border: a comment on a pull request starts nothing, though four workflows listen to the event (GitHub lists a skipped run for each).",
+          "event": "issue_comment", "action": "created", "issue": {"pr": true},
+          "starts": [], "agents": []
+        },
+        {
+          "name": "issue-comment-on-a-closed-issue",
+          "note": "Border: no state term in the handlers; the issue worker needs an open issue.",
+          "event": "issue_comment", "action": "created", "issue": {"state": "closed"},
+          "starts": ["commands", "status"], "agents": []
+        },
+        {
+          "name": "issue-comment-on-a-bot-issue",
+          "note": "Border: the issue worker stands down for a bot-written issue, the handlers do not.",
+          "event": "issue_comment", "action": "created", "issue": {"author": "Bot"},
+          "starts": ["commands", "status"], "agents": []
+        },
+        {
+          "name": "issue-comment-on-an-opted-out-issue",
+          "note": "The opt-out label stops every handler and the issue worker.",
+          "event": "issue_comment", "action": "created", "issue": {"labels": ["no-auto-processing"]},
+          "starts": [], "agents": []
+        },
+        {
+          "name": "issue-comment-paused",
+          "note": "Paused: the commands handler and the status page have no pause term; the issue worker has.",
+          "event": "issue_comment", "action": "created", "vars": {"ISSUE_CONCIERGE_PAUSED": "true"},
+          "starts": ["commands", "status"], "agents": []
+        },
+        {
+          "name": "issue-comment-by-another-bot",
+          "note": "A comment of a bot that is not the coding agent starts nothing.",
+          "event": "issue_comment", "action": "created", "comment": {"author": "Bot", "login": "github-actions[bot]"},
+          "starts": [], "agents": []
+        },
+        {
+          "name": "issue-comment-quoting-the-agent-words",
+          "note": "Border: a person who writes the agent's words does not start the agent start watch (it needs a bot).",
+          "event": "issue_comment", "action": "created", "comment": {"body": "The agent encountered an error and was unable to start working on this issue: the session failed."},
+          "starts": ["commands", "status"], "agents": ["issue-worker"]
+        },
+        {
+          "name": "issue-comment-agent-could-not-start",
+          "note": "The coding agent says it could not start: only the agent start watch starts (the others stand down for a bot comment).",
+          "event": "issue_comment", "action": "created", "comment": {"author": "Bot", "login": "Copilot", "body": "The agent encountered an error and was unable to start working on this issue: the session failed."},
+          "starts": ["agent-start-watch"], "agents": []
+        },
+        {
+          "name": "issue-comment-agent-could-not-start-bot-login",
+          "note": "The other spelling of the agent's login in the agent start watch list.",
+          "event": "issue_comment", "action": "created", "comment": {"author": "Bot", "login": "copilot-swe-agent[bot]", "body": "The agent encountered an error and was unable to start working on this issue: the session failed."},
+          "starts": ["agent-start-watch"], "agents": []
+        },
+        {
+          "name": "issue-comment-agent-other-words",
+          "note": "Border: the agent comments, but not that it could not start.",
+          "event": "issue_comment", "action": "created", "comment": {"author": "Bot", "login": "Copilot", "body": "I have opened a draft pull request."},
+          "starts": [], "agents": []
+        },
+        {
+          "name": "issue-comment-agent-could-not-start-on-a-pull-request",
+          "note": "Border: on a pull request the agent start watch stands down.",
+          "event": "issue_comment", "action": "created", "issue": {"pr": true}, "comment": {"author": "Bot", "login": "Copilot", "body": "The agent encountered an error and was unable to start working on this issue: the session failed."},
+          "starts": [], "agents": []
+        },
+        {
+          "name": "issue-comment-agent-could-not-start-opted-out",
+          "note": "The opt-out label stops the agent start watch.",
+          "event": "issue_comment", "action": "created", "issue": {"labels": ["no-auto-processing"]}, "comment": {"author": "Bot", "login": "Copilot", "body": "The agent encountered an error and was unable to start working on this issue: the session failed."},
+          "starts": [], "agents": []
+        },
+        {
+          "name": "issue-comment-agent-could-not-start-paused",
+          "note": "Paused: the agent start watch stops.",
+          "event": "issue_comment", "action": "created", "comment": {"author": "Bot", "login": "Copilot", "body": "The agent encountered an error and was unable to start working on this issue: the session failed."}, "vars": {"ISSUE_CONCIERGE_PAUSED": "true"},
+          "starts": [], "agents": []
+        },
+        {
+          "name": "issue-comment-command-accept",
+          "note": "A \"/accept\" command: the commands handler and the status page start, the issue worker does not (a command is not a reply).",
+          "event": "issue_comment", "action": "created", "comment": {"body": "/accept"},
+          "starts": ["commands", "status"], "agents": []
+        },
+        {
+          "name": "issue-comment-command-decline",
+          "note": "A \"/decline\" command: the commands handler and the status page start, the issue worker does not (a command is not a reply).",
+          "event": "issue_comment", "action": "created", "comment": {"body": "/decline not now"},
+          "starts": ["commands", "status"], "agents": []
+        },
+        {
+          "name": "issue-comment-command-approve",
+          "note": "A \"/approve\" command: the commands handler and the status page start, the issue worker does not (a command is not a reply).",
+          "event": "issue_comment", "action": "created", "comment": {"body": "/approve"},
+          "starts": ["commands", "status"], "agents": []
+        },
+        {
+          "name": "issue-comment-command-replan",
+          "note": "A \"/replan\" command: the commands handler and the status page start, the issue worker does not (a command is not a reply).",
+          "event": "issue_comment", "action": "created", "comment": {"body": "/replan make it smaller"},
+          "starts": ["commands", "status"], "agents": []
+        },
+        {
+          "name": "issue-comment-command-retry",
+          "note": "A \"/retry\" command: the commands handler and the status page start, the issue worker does not (a command is not a reply).",
+          "event": "issue_comment", "action": "created", "comment": {"body": "/retry"},
+          "starts": ["commands", "status"], "agents": []
+        },
+        {
+          "name": "issue-comment-command-help",
+          "note": "A \"/help\" command: the commands handler and the status page start, the issue worker does not (a command is not a reply).",
+          "event": "issue_comment", "action": "created", "comment": {"body": "/help"},
+          "starts": ["commands", "status"], "agents": []
+        },
+        {
+          "name": "issue-comment-command-prefix",
+          "note": "Border: the issue worker tests the start of the text, so \"/acceptable\" counts as a command.",
+          "event": "issue_comment", "action": "created", "comment": {"body": "/acceptable"},
+          "starts": ["commands", "status"], "agents": []
+        },
+        {
+          "name": "issue-comment-command-not-at-the-start",
+          "note": "Border: a command in the middle of a comment is a reply, so the issue worker starts.",
+          "event": "issue_comment", "action": "created", "comment": {"body": "Thanks, /accept it if you agree."},
+          "starts": ["commands", "status"], "agents": ["issue-worker"]
+        }
+      ]
+    },
+    {
+      "title": "pull_request_target and pull_request",
+      "fixtures": [
+        {
+          "name": "pull-request-target-closed-merged",
+          "note": "A merged pull request: the dependency watch, and the janitor with its held-run job.",
+          "event": "pull_request_target", "action": "closed", "pull_request": {"merged": true},
+          "starts": ["dependency-watch", "janitor", "janitor/held-runs"], "agents": []
+        },
+        {
+          "name": "pull-request-target-closed-not-merged",
+          "note": "Border: closed without a merge: the dependency watch stands down.",
+          "event": "pull_request_target", "action": "closed",
+          "starts": ["janitor", "janitor/held-runs"], "agents": []
+        },
+        {
+          "name": "pull-request-target-closed-merged-opted-out",
+          "note": "Border: the dependency watch has no opt-out term for a merge; the janitor has, and its held-run job follows it.",
+          "event": "pull_request_target", "action": "closed", "pull_request": {"merged": true, "labels": ["no-auto-processing"]},
+          "starts": ["dependency-watch"], "agents": []
+        },
+        {
+          "name": "pull-request-target-closed-paused",
+          "note": "Paused: neither the dependency watch nor the janitor starts, though the pull request was merged.",
+          "event": "pull_request_target", "action": "closed", "pull_request": {"merged": true}, "vars": {"ISSUE_CONCIERGE_PAUSED": "true"},
+          "starts": [], "agents": []
+        },
+        {
+          "name": "pull-request-target-labeled-pr-worker-ready",
+          "note": "The gate label of PR triage: the janitor and its held-run job, and the agent for a pull request of this repository.",
+          "event": "pull_request_target", "action": "labeled", "label": "pr-worker-ready",
+          "starts": ["janitor", "janitor/held-runs"], "agents": ["pr-triage"]
+        },
+        {
+          "name": "pull-request-target-labeled-pr-worker-ready-from-a-fork",
+          "note": "Border: a pull request from a fork is not triaged; the janitor does not look at the head repository.",
+          "event": "pull_request_target", "action": "labeled", "label": "pr-worker-ready", "pull_request": {"fork": true},
+          "starts": ["janitor", "janitor/held-runs"], "agents": []
+        },
+        {
+          "name": "pull-request-target-labeled-pr-worker-ready-opted-out",
+          "note": "The opt-out label on the pull request stops the janitor and PR triage.",
+          "event": "pull_request_target", "action": "labeled", "label": "pr-worker-ready", "pull_request": {"labels": ["no-auto-processing"]},
+          "starts": [], "agents": []
+        },
+        {
+          "name": "pull-request-target-labeled-pr-worker-ready-paused",
+          "note": "Paused: the janitor and PR triage stop.",
+          "event": "pull_request_target", "action": "labeled", "label": "pr-worker-ready", "vars": {"ISSUE_CONCIERGE_PAUSED": "true"},
+          "starts": [], "agents": []
+        },
+        {
+          "name": "pull-request-target-labeled-pr-triage-handoff",
+          "note": "A gate label of the janitor list that is not the one PR triage listens to.",
+          "event": "pull_request_target", "action": "labeled", "label": "pr-triage-handoff",
+          "starts": ["janitor", "janitor/held-runs"], "agents": []
+        },
+        {
+          "name": "pull-request-target-labeled-another-label",
+          "note": "Border: a label outside the janitor list: the label job is skipped, and the held-run job needs it.",
+          "event": "pull_request_target", "action": "labeled", "label": "complexity/low",
+          "starts": [], "agents": []
+        },
+        {
+          "name": "pull-request-target-ready-for-review",
+          "note": "The PR ready signal starts for the pull request that left draft.",
+          "event": "pull_request_target", "action": "ready_for_review",
+          "starts": ["pr-ready-signal"], "agents": []
+        },
+        {
+          "name": "pull-request-target-ready-for-review-opted-out",
+          "note": "The opt-out label stops the PR ready signal.",
+          "event": "pull_request_target", "action": "ready_for_review", "pull_request": {"labels": ["no-auto-processing"]},
+          "starts": [], "agents": []
+        },
+        {
+          "name": "pull-request-target-ready-for-review-paused",
+          "note": "Paused: the PR ready signal stops.",
+          "event": "pull_request_target", "action": "ready_for_review", "vars": {"CONCIERGE_PAUSED": "true"},
+          "starts": [], "agents": []
+        },
+        {
+          "name": "pull-request-target-opened",
+          "note": "Border: an action no workflow listens to starts nothing.",
+          "event": "pull_request_target", "action": "opened",
+          "starts": [], "agents": []
+        },
+        {
+          "name": "pull-request-opened-workflow-definition",
+          "note": "The deployment check starts for a pull request that changes a definition (its `paths` filter).",
+          "event": "pull_request", "action": "opened", "changed": [".github/workflows/plan-worker.md"],
+          "starts": ["check-deployment"], "agents": []
+        },
+        {
+          "name": "pull-request-synchronize-lock-file",
+          "note": "A push to the pull request (synchronize) with a changed lock file.",
+          "event": "pull_request", "action": "synchronize", "changed": [".github/workflows/plan-worker.lock.yml"],
+          "starts": ["check-deployment"], "agents": []
+        },
+        {
+          "name": "pull-request-reopened-concierge-folder",
+          "note": "A reopened pull request that changes a file under the folder of the Concierge.",
+          "event": "pull_request", "action": "reopened", "changed": [".github/issue-concierge/settings.yml"],
+          "starts": ["check-deployment"], "agents": []
+        },
+        {
+          "name": "pull-request-opened-nested-workflow-file",
+          "note": "Border: `*` does not cross a slash, so a file in a subfolder of the workflows folder does not match.",
+          "event": "pull_request", "action": "opened", "changed": [".github/workflows/sub/plan-worker.md"],
+          "starts": [], "agents": []
+        },
+        {
+          "name": "pull-request-opened-unrelated-files",
+          "note": "Border: no changed file matches a path of the filter.",
+          "event": "pull_request", "action": "opened", "changed": ["src/index.js", "README.md"],
+          "starts": [], "agents": []
+        },
+        {
+          "name": "pull-request-labeled-workflow-definition",
+          "note": "Border: a label is not one of the default actions of `pull_request`, though a file matches.",
+          "event": "pull_request", "action": "labeled", "label": "bug", "changed": [".github/workflows/plan-worker.md"],
+          "starts": [], "agents": []
+        },
+        {
+          "name": "pull-request-opened-workflow-definition-paused",
+          "note": "The deployment check is not paused: it reads files, not issues.",
+          "event": "pull_request", "action": "opened", "changed": [".github/workflows/plan-worker.md"], "vars": {"ISSUE_CONCIERGE_PAUSED": "true"},
+          "starts": ["check-deployment"], "agents": []
+        }
+      ]
+    },
+    {
+      "title": "release and push",
+      "fixtures": [
+        {
+          "name": "release-published",
+          "note": "A published release: the dependency watch and the release closer.",
+          "event": "release", "action": "published",
+          "starts": ["dependency-watch"], "agents": ["release-closer"]
+        },
+        {
+          "name": "release-prereleased",
+          "note": "A prerelease is a release too.",
+          "event": "release", "action": "prereleased",
+          "starts": ["dependency-watch"], "agents": ["release-closer"]
+        },
+        {
+          "name": "release-created",
+          "note": "Border: an action that no workflow listens to (they listen to published and prereleased) starts nothing.",
+          "event": "release", "action": "created",
+          "starts": [], "agents": []
+        },
+        {
+          "name": "release-published-paused",
+          "note": "Paused: the dependency watch and the release closer stop.",
+          "event": "release", "action": "published", "vars": {"ISSUE_CONCIERGE_PAUSED": "true"},
+          "starts": [], "agents": []
+        },
+        {
+          "name": "push-main-package-json",
+          "note": "A push to the default branch that changes package.json starts the dependency watch.",
+          "event": "push", "branch": "main", "changed": ["package.json"],
+          "starts": ["dependency-watch"], "agents": []
+        },
+        {
+          "name": "push-main-lock-file",
+          "note": "The lock file is the other path of the filter.",
+          "event": "push", "branch": "main", "changed": ["src/a.js", "package-lock.json"],
+          "starts": ["dependency-watch"], "agents": []
+        },
+        {
+          "name": "push-main-other-files",
+          "note": "Border: a push that changes neither file starts nothing.",
+          "event": "push", "branch": "main", "changed": ["src/a.js"],
+          "starts": [], "agents": []
+        },
+        {
+          "name": "push-main-nested-package-json",
+          "note": "Border: the path is the root package.json, not any file of that name.",
+          "event": "push", "branch": "main", "changed": ["packages/a/package.json"],
+          "starts": [], "agents": []
+        },
+        {
+          "name": "push-other-branch-package-json",
+          "note": "Border: only the default branch.",
+          "event": "push", "branch": "feature", "changed": ["package.json"],
+          "starts": [], "agents": []
+        },
+        {
+          "name": "push-main-package-json-paused",
+          "note": "Paused: the dependency watch stops.",
+          "event": "push", "branch": "main", "changed": ["package.json"], "vars": {"ISSUE_CONCIERGE_PAUSED": "true"},
+          "starts": [], "agents": []
+        }
+      ]
+    },
+    {
+      "title": "schedule",
+      "fixtures": [
+        {
+          "name": "schedule-17-past-the-hour",
+          "note": "Hourly at :17: the dependency watch and the status page.",
+          "event": "schedule", "schedule": "17 * * * *",
+          "starts": ["dependency-watch", "status"], "agents": []
+        },
+        {
+          "name": "schedule-47-past-the-hour",
+          "note": "Hourly at :47: the janitor (label job and held-run job) and the stalled-issue sweep.",
+          "event": "schedule", "schedule": "47 * * * *",
+          "starts": ["janitor", "janitor/held-runs", "stalled-issue-sweep"], "agents": []
+        },
+        {
+          "name": "schedule-41-past-the-hour",
+          "note": "Hourly at :41: the commands handler.",
+          "event": "schedule", "schedule": "41 * * * *",
+          "starts": ["commands"], "agents": []
+        },
+        {
+          "name": "schedule-every-15-minutes",
+          "note": "Every 15 minutes: the PR ready signal.",
+          "event": "schedule", "schedule": "*/15 * * * *",
+          "starts": ["pr-ready-signal"], "agents": []
+        },
+        {
+          "name": "schedule-daily",
+          "note": "Daily at 05:23: the updater, the only workflow with this schedule string.",
+          "event": "schedule", "schedule": "23 5 * * *",
+          "starts": ["issue-concierge-updater"], "agents": []
+        },
+        {
+          "name": "schedule-undeclared",
+          "note": "Border: a schedule string no workflow declares starts nothing.",
+          "event": "schedule", "schedule": "0 0 * * 0",
+          "starts": [], "agents": []
+        },
+        {
+          "name": "schedule-17-paused",
+          "note": "Paused: the dependency watch stops, the status page does not.",
+          "event": "schedule", "schedule": "17 * * * *", "vars": {"ISSUE_CONCIERGE_PAUSED": "true"},
+          "starts": ["status"], "agents": []
+        },
+        {
+          "name": "schedule-47-paused",
+          "note": "Paused: the janitor, its held-run job and the sweep stop.",
+          "event": "schedule", "schedule": "47 * * * *", "vars": {"ISSUE_CONCIERGE_PAUSED": "true"},
+          "starts": [], "agents": []
+        },
+        {
+          "name": "schedule-daily-paused",
+          "note": "The updater is not paused: it changes the Concierge's own files, not an issue.",
+          "event": "schedule", "schedule": "23 5 * * *", "vars": {"ISSUE_CONCIERGE_PAUSED": "true"},
+          "starts": ["issue-concierge-updater"], "agents": []
+        }
+      ]
+    },
+    {
+      "title": "workflow_dispatch",
+      "fixtures": [
+        {
+          "name": "dispatch-agent-start-watch",
+          "note": "A run by hand of agent-start-watch: it starts that workflow only.",
+          "event": "workflow_dispatch", "handler": "agent-start-watch", "inputs": {"issue_number": "12"},
+          "starts": ["agent-start-watch"], "agents": []
+        },
+        {
+          "name": "dispatch-check-deployment",
+          "note": "A run by hand of check-deployment: it starts that workflow only.",
+          "event": "workflow_dispatch", "handler": "check-deployment", "inputs": {},
+          "starts": ["check-deployment"], "agents": []
+        },
+        {
+          "name": "dispatch-commands",
+          "note": "A run by hand of commands: it starts that workflow only.",
+          "event": "workflow_dispatch", "handler": "commands", "inputs": {"issue_number": "12"},
+          "starts": ["commands"], "agents": []
+        },
+        {
+          "name": "dispatch-commands-for-every-issue",
+          "note": "Without its input: no condition reads an input, so the result is the same.",
+          "event": "workflow_dispatch", "handler": "commands", "inputs": {},
+          "starts": ["commands"], "agents": []
+        },
+        {
+          "name": "dispatch-dependency-watch",
+          "note": "A run by hand of dependency-watch: it starts that workflow only.",
+          "event": "workflow_dispatch", "handler": "dependency-watch", "inputs": {"issue_number": "12"},
+          "starts": ["dependency-watch"], "agents": []
+        },
+        {
+          "name": "dispatch-dependency-watch-for-every-issue",
+          "note": "Without its input: no condition reads an input, so the result is the same.",
+          "event": "workflow_dispatch", "handler": "dependency-watch", "inputs": {},
+          "starts": ["dependency-watch"], "agents": []
+        },
+        {
+          "name": "dispatch-issue-concierge-updater",
+          "note": "A run by hand of issue-concierge-updater: it starts that workflow only.",
+          "event": "workflow_dispatch", "handler": "issue-concierge-updater", "inputs": {"target": "v2.5.0", "dry-run": "true"},
+          "starts": ["issue-concierge-updater"], "agents": []
+        },
+        {
+          "name": "dispatch-janitor",
+          "note": "A run by hand of the janitor: the label job and the held-run job start, the assigned job does not (it needs an assignment).",
+          "event": "workflow_dispatch", "handler": "janitor", "inputs": {"issue_number": "12"},
+          "starts": ["janitor", "janitor/held-runs"], "agents": []
+        },
+        {
+          "name": "dispatch-janitor-sweep",
+          "note": "Without its input: the same jobs start.",
+          "event": "workflow_dispatch", "handler": "janitor", "inputs": {},
+          "starts": ["janitor", "janitor/held-runs"], "agents": []
+        },
+        {
+          "name": "dispatch-plan-approval-resume",
+          "note": "A run by hand of plan-approval-resume: it starts that workflow only.",
+          "event": "workflow_dispatch", "handler": "plan-approval-resume", "inputs": {"issue_number": "12"},
+          "starts": ["plan-approval-resume"], "agents": []
+        },
+        {
+          "name": "dispatch-pr-ready-signal",
+          "note": "A run by hand of pr-ready-signal: it starts that workflow only.",
+          "event": "workflow_dispatch", "handler": "pr-ready-signal", "inputs": {"pr_number": "34"},
+          "starts": ["pr-ready-signal"], "agents": []
+        },
+        {
+          "name": "dispatch-related-repo-closer",
+          "note": "A run by hand of related-repo-closer: it starts that workflow only.",
+          "event": "workflow_dispatch", "handler": "related-repo-closer", "inputs": {"issue_number": "12", "dry_run": "true"},
+          "starts": ["related-repo-closer"], "agents": []
+        },
+        {
+          "name": "dispatch-reporter-notify",
+          "note": "A run by hand of reporter-notify: it starts that workflow only.",
+          "event": "workflow_dispatch", "handler": "reporter-notify", "inputs": {"issue_number": "12"},
+          "starts": ["reporter-notify"], "agents": []
+        },
+        {
+          "name": "dispatch-route-back",
+          "note": "A run by hand of route-back, which can be started in no other way.",
+          "event": "workflow_dispatch", "handler": "route-back", "inputs": {"issue_number": "12"},
+          "starts": ["route-back"], "agents": []
+        },
+        {
+          "name": "dispatch-spawn-work-items",
+          "note": "A run by hand of spawn-work-items, which can be started in no other way.",
+          "event": "workflow_dispatch", "handler": "spawn-work-items", "inputs": {"issue_number": "12"},
+          "starts": ["spawn-work-items"], "agents": []
+        },
+        {
+          "name": "dispatch-stalled-issue-sweep",
+          "note": "A run by hand of stalled-issue-sweep: it starts that workflow only.",
+          "event": "workflow_dispatch", "handler": "stalled-issue-sweep", "inputs": {"issue_number": "12", "dry_run": "true"},
+          "starts": ["stalled-issue-sweep"], "agents": []
+        },
+        {
+          "name": "dispatch-status",
+          "note": "A run by hand of status: it starts that workflow only.",
+          "event": "workflow_dispatch", "handler": "status", "inputs": {"dry_run": "true"},
+          "starts": ["status"], "agents": []
+        },
+        {
+          "name": "dispatch-waiting-for-release",
+          "note": "A run by hand of waiting-for-release: it starts that workflow only.",
+          "event": "workflow_dispatch", "handler": "waiting-for-release", "inputs": {"issue_number": "12"},
+          "starts": ["waiting-for-release"], "agents": []
+        },
+        {
+          "name": "dispatch-issue-worker",
+          "note": "A run by hand of the issue worker (the only agent with a manual run): no issue payload, and a person asked for it.",
+          "event": "workflow_dispatch", "handler": "issue-worker", "inputs": {"issue_number": "12"},
+          "starts": [], "agents": ["issue-worker"]
+        },
+        {
+          "name": "dispatch-janitor-paused",
+          "note": "A run by hand overrides the pause (new variable).",
+          "event": "workflow_dispatch", "handler": "janitor", "inputs": {"issue_number": "12"}, "vars": {"ISSUE_CONCIERGE_PAUSED": "true"},
+          "starts": ["janitor", "janitor/held-runs"], "agents": []
+        },
+        {
+          "name": "dispatch-waiting-for-release-paused",
+          "note": "A run by hand overrides the pause (old variable).",
+          "event": "workflow_dispatch", "handler": "waiting-for-release", "inputs": {"issue_number": "12"}, "vars": {"CONCIERGE_PAUSED": "true"},
+          "starts": ["waiting-for-release"], "agents": []
+        },
+        {
+          "name": "dispatch-issue-worker-paused",
+          "note": "A run by hand overrides the pause (both variables).",
+          "event": "workflow_dispatch", "handler": "issue-worker", "inputs": {"issue_number": "12"}, "vars": {"ISSUE_CONCIERGE_PAUSED": "true", "CONCIERGE_PAUSED": "true"},
+          "starts": [], "agents": ["issue-worker"]
+        }
+      ]
+    }
+  ]
+}

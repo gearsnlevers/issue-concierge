@@ -2,6 +2,8 @@
 
 The unit tests pin what the prompts say and what the scripts decide. They cannot say what a model does with a prompt, or what GitHub does with a label, a comment or a run. The end-to-end suite does: it files mock enhancements in sandbox repositories, lets the real gates run on them, and asserts what the design promises. Why it exists, when it runs and what it may and may not do: [record 0039](decisions/0039-the-concierge-is-tested-end-to-end-on-demand-in-proportion-to-what-changed.md), which carries forward [record 0033](decisions/0033-the-concierge-is-tested-end-to-end-in-a-sandbox-of-its-own.md).
 
+The unit tests also pin which workflow starts for which event, without a sandbox. `tools/fixtures/workflow-starts.json` lists the events (an issue opened, a label removed, a comment, a schedule, a run by hand, and the borders between them) with the jobs of the plain workflows and the agents that start for each, written out by hand; `tools/workflow-starts.test.mjs` computes the same sets from the real `on:` and `if:` of `workflows/` and says they are equal. This table is the pin for the entry workflow that a later change will make of the plain workflows.
+
 ## The sandbox
 
 Two pairs of tiny repositories in the organisation `gearsnlevers`, each pair a library and an app that calls it (the shape of a project split in two):
