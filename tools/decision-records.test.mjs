@@ -223,26 +223,68 @@ test("this repository's decision records are valid", () => {
   assert.match(run.stdout, /^docs\/decisions: 0 problems$/m);
 });
 
+// The README of this folder states its rules by pointing to the pages of Record Keeper for the acts, and keeps no copy of them.
+test("this repository's records README points to the kit for the acts and copies none of its rules", () => {
+  const r = flat(read('docs/decisions/README.md'));
+  const page = (name) => `https://github.com/gearsnlevers/record-keeper/blob/main/docs/${name}.md`;
+  assert.match(r, /\[Record Keeper\]\(https:\/\/github\.com\/gearsnlevers\/record-keeper\) keeps these records trustworthy/);
+  assert.match(r, /An accepted record is not edited\. It changes only by one of three acts, and the owners approve each one: a new record that replaces it, an erratum that corrects its text, or an entry in its `Known deviations` that notes a case in which it was not followed/);
+  assert.ok(r.includes(`[errata and deviations](${page('errata-and-deviations')})`));
+  assert.ok(r.includes(`[checking a change](${page('checking-a-change')})`));
+  assert.ok(r.includes(`[approvals](${page('approvals')})`));
+  assert.ok(r.includes(`[the format page](${page('record-format')})`));
+  assert.match(r, /A changed decision is a new record that lists the records it replaces in `supersedes:`\. The pull request that accepts it also sets the status of each of them to `superseded by NNNN` and updates their rows in the index/);
+  assert.match(r, /A coding agent proposes a record with the status `proposed` and never accepts or seals one/);
+  assert.match(r, /Follow the `record-a-decision` skill\./);
+  // the older text that the kit contradicts is gone
+  assert.doesNotMatch(r, /edited or removed/);
+  assert.doesNotMatch(r, /set the old record's status to `superseded by NNNN`/);
+  assert.doesNotMatch(r, /aim for under 40 lines/);
+  assert.doesNotMatch(r, /except for typos/);
+  // the kit that these pages describe is the one installed in this repository
+  assert.match(read('.github/record-keeper.yml'), /^source: gearsnlevers\/record-keeper$/m);
+});
+
 // ---- Template, manifest, docs ----------------------------------------------------------------
 
 test('template: shared/decision-record.md carries the frontmatter, the sections and the guide', () => {
   const t = read('shared/decision-record.md');
-  assert.match(t, /^---\nstatus: proposed\ndate: YYYY-MM-DD\ndecision-makers: /m);
-  assert.match(t, /^applies-to:\n/m);
-  assert.match(t, /^issues:\n/m);
+  // the front matter is what the format of Record Keeper accepts: `decision-makers` is a list, an issue is `owner/repo#N`, and the title has no number
+  assert.match(t, /^---\nstatus: proposed\ndate: YYYY-MM-DD\ndecision-makers:\n  - <names or roles who decided>\napplies-to:\n/m);
+  assert.match(t, /^issues:\n  - <owner\/repo#N of an issue or pull request this came from; leave the whole key out when there is none>\n/m);
+  assert.match(t, /^# <short title in the form of the decision/m);
+  assert.doesNotMatch(t, /^# NNNN:/m);
   for (const h of ['Context and problem statement', 'Decision', 'Consequences', 'Alternatives considered']) {
     assert.match(t, new RegExp(`^## ${h}$`, 'm'), `missing section: ${h}`);
   }
   const f = flat(t);
-  assert.match(f, /`proposed` while it is discussed, `accepted` when it binds, `rejected` or `deprecated` when it no longer does, `superseded by NNNN` when a newer record replaces it/);
+  // the statuses are the ones the kit allows (no bare `deprecated`), and nobody is named as the one who writes `accepted` by hand
+  assert.match(f, /`proposed` while it is discussed, `accepted` once the maintainers have decided it, `rejected` for a proposal that was turned down, `superseded by NNNN` when a newer record replaces it/);
+  assert.doesNotMatch(f, /`deprecated`/);
   assert.match(f, /Only `accepted` records bind; the gates ignore the others/);
-  assert.match(f, /Accepted records are not edited\. To change a decision, write a new record that says what it replaces, and change only the `status:` line of the old one to `superseded by NNNN`/);
+  // a successor lists what it replaces, and the old status changes when the successor is accepted
+  assert.match(f, /Accepted records are not edited\. To change a decision, write a new record that lists the record it replaces in `supersedes:`, and when the new record is accepted change only the `status:` line of the old one to `superseded by NNNN`/);
   assert.match(f, /A pull request that changes a decided behaviour must add or supersede a record in the same change/);
   assert.match(f, /write for any contributor and any tool\. No tool names/);
   assert.match(f, /No secrets: records are public wherever the repository is\. No credentials, tokens, private URLs, customer or partner details, or security findings that have not been disclosed/);
-  assert.match(f, /`repos:` list/);
+  assert.match(f, /with a `repos:` list in its frontmatter \(a repository with the kit lists `repos` under `extra-keys` in `\.github\/record-keeper\/settings\.yml`, or the kit refuses the key\)/);
   assert.match(f, /use `decisions\/` at the repository root instead \(same file names, index `decisions\/README\.md`\)\. The gates use the first of the two folders that has a `README\.md` and never both/);
-  assert.match(f, /The index `docs\/decisions\/README\.md` \(or `decisions\/README\.md` at the repository root when `docs\/` is generated\) is a table with the number, the title \(linked\), the status and `applies-to`/);
+  assert.match(f, /The index `docs\/decisions\/README\.md` \(or `decisions\/README\.md` at the repository root when `docs\/` is generated\) is a table under the heading `## Index` with the number, the title \(linked\), the status and `applies-to`/);
+});
+
+test('template: the first lines send a repository that has Record Keeper to the kit, and both comments are deleted before a commit', () => {
+  const t = read('shared/decision-record.md');
+  const head = flat(t.split('\n').slice(0, 6).join('\n'));
+  assert.match(
+    head,
+    /^<!-- A repository that has Record Keeper \(https:\/\/github\.com\/gearsnlevers\/record-keeper, "the kit": a `\.github\/record-keeper\/` folder and the skill `\.claude\/skills\/record-a-decision\/SKILL\.md`\) does not use this file\. It follows that skill and the `template\.md` and `README\.md` of its records folder, and where this guide and the kit differ the kit wins\. The rest of this file is for a repository without the kit\./
+  );
+  assert.ok(t.indexOf('does not use this file') < t.indexOf('Template and guide for decision records'), 'the pointer to the kit comes first');
+  // a pointer that names a file names a real one: this repository has the kit installed
+  assert.ok(fs.existsSync(new URL('.claude/skills/record-a-decision/SKILL.md', REPO)));
+  assert.ok(fs.existsSync(new URL('.github/record-keeper/record-keeper.mjs', REPO)));
+  // a record that keeps either comment has `<!--` in it, which the kit refuses
+  assert.match(flat(t), /Delete this comment and the Guide at the end before you commit a record/);
 });
 
 test('template: shared/agents.md gets a short "Decisions" section that points at the folder, the binding rule and the template', () => {
@@ -255,6 +297,7 @@ test('template: shared/agents.md gets a short "Decisions" section that points at
   assert.match(f, /`docs\/decisions\/` \(or `decisions\/` at the repository root when `docs\/` is generated\)/);
   assert.match(f, /An accepted record binds until a newer record supersedes it/);
   assert.match(f, /`shared\/decision-record\.md`/);
+  assert.match(f, /To write one, follow the `record-a-decision` skill when the repository has Record Keeper, otherwise start from `shared\/decision-record\.md` of the Issue Concierge/);
 });
 
 test('manifest: shared/decision-record.md is listed in aw.yml and shipped as a reference, not installed', () => {
@@ -272,7 +315,12 @@ test('docs: the design explains the records, the conflict hold, the trust rule a
   assert.match(s, /`docs\/decisions\/`/);
   assert.match(s, /Only `accepted` records bind/);
   assert.match(s, /keeps the same folder at the repository root as `decisions\/`, with the index `decisions\/README\.md`\. The gates look for `docs\/decisions\/README\.md` first and then for `decisions\/README\.md`; the first one found wins, and records from both folders are never merged/);
-  assert.match(s, /A decision that binds several repositories is written once, in the repository the others list in their `AGENTS\.md`, with a `repos:` list/);
+  assert.match(s, /A decision that binds several repositories is written once, in the repository the others list in their `AGENTS\.md`, with a `repos:` list \(a repository with the kit lists `repos` under `extra-keys` in its settings, or the kit refuses the key\)/);
+  // the statuses of the gates' view, and the kit that governs how a record is written, accepted, corrected and superseded
+  assert.match(s, /`status:` \(`proposed`, `accepted`, `rejected` or `superseded by NNNN`, and `deprecated` in a repository without Record Keeper\)/);
+  assert.match(s, /A repository that has \[Record Keeper\]\(https:\/\/github\.com\/gearsnlevers\/record-keeper\) follows the kit for writing, accepting, correcting and superseding a record/);
+  assert.match(s, /\[what a change to an accepted record may be\]\(https:\/\/github\.com\/gearsnlevers\/record-keeper\/blob\/main\/docs\/checking-a-change\.md\): a record that supersedes it, an erratum or a deviation note, each approved by the owners/);
+  assert.match(s, /A repository that has the kit uses the kit's own `template\.md` and skill instead, and `shared\/decision-record\.md` says so in its first lines/);
   assert.match(s, /Conflicts with https:\/\/github\.com\/owner\/repo\/blob\/main\/docs\/decisions\/0003-short-title\.md: needs a maintainer decision/);
   assert.match(s, /add `plan-approval-required`, emit no `plan-triage-handoff`/);
   assert.match(s, /The default branch/);
@@ -291,6 +339,8 @@ test('docs: the deployment guide and the README describe the records and the not
   assert.match(dep, /The gates look for `docs\/decisions\/README\.md` first and then for `decisions\/README\.md`; the first one found wins, and records from both folders are never merged/);
   assert.match(dep, /`check-deployment` prints a notice, and never fails, when neither `docs\/decisions\/` nor `decisions\/` exists/);
   assert.match(dep, /"Decisions that apply"/);
+  assert.match(dep, /a repository that has Record Keeper follows the kit's own template and skill instead \(see \[multi-phase-design\.md\]\(multi-phase-design\.md#decision-records\)\)/);
+  assert.match(dep, /A repository that has \[Record Keeper\]\(https:\/\/github\.com\/gearsnlevers\/record-keeper\) writes, accepts, corrects and supersedes its records as the kit says/);
   assert.match(dep, /a "Decisions:" violation line in the triage comment/);
   const readme = read('README.md');
   assert.match(readme, /\[shared\/decision-record\.md\]\(shared\/decision-record\.md\)/);
