@@ -223,6 +223,28 @@ test("this repository's decision records are valid", () => {
   assert.match(run.stdout, /^docs\/decisions: 0 problems$/m);
 });
 
+// The README of this folder states its rules by pointing to the pages of Record Keeper for the acts, and keeps no copy of them.
+test("this repository's records README points to the kit for the acts and copies none of its rules", () => {
+  const r = flat(read('docs/decisions/README.md'));
+  const page = (name) => `https://github.com/gearsnlevers/record-keeper/blob/main/docs/${name}.md`;
+  assert.match(r, /\[Record Keeper\]\(https:\/\/github\.com\/gearsnlevers\/record-keeper\) keeps these records trustworthy/);
+  assert.match(r, /An accepted record is not edited\. It changes only by one of three acts, and the owners approve each one: a new record that replaces it, an erratum that corrects its text, or an entry in its `Known deviations` that notes a case in which it was not followed/);
+  assert.ok(r.includes(`[errata and deviations](${page('errata-and-deviations')})`));
+  assert.ok(r.includes(`[checking a change](${page('checking-a-change')})`));
+  assert.ok(r.includes(`[approvals](${page('approvals')})`));
+  assert.ok(r.includes(`[the format page](${page('record-format')})`));
+  assert.match(r, /A changed decision is a new record that lists the records it replaces in `supersedes:`\. The pull request that accepts it also sets the status of each of them to `superseded by NNNN` and updates their rows in the index/);
+  assert.match(r, /A coding agent proposes a record with the status `proposed` and never accepts or seals one/);
+  assert.match(r, /Follow the `record-a-decision` skill\./);
+  // the older text that the kit contradicts is gone
+  assert.doesNotMatch(r, /edited or removed/);
+  assert.doesNotMatch(r, /set the old record's status to `superseded by NNNN`/);
+  assert.doesNotMatch(r, /aim for under 40 lines/);
+  assert.doesNotMatch(r, /except for typos/);
+  // the kit that these pages describe is the one installed in this repository
+  assert.match(read('.github/record-keeper.yml'), /^source: gearsnlevers\/record-keeper$/m);
+});
+
 // ---- Template, manifest, docs ----------------------------------------------------------------
 
 test('template: shared/decision-record.md carries the frontmatter, the sections and the guide', () => {
